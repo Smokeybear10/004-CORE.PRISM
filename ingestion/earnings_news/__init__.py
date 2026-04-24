@@ -277,15 +277,27 @@ def get_news_as_of(ticker: str, as_of: date) -> list[TextChunk]:
 
 
 def fetch_earnings_transcripts(
-    ticker: str,
+    ticker: str | list[str],
     start_date: date,
     end_date: date,
 ) -> list[TextChunk]:
-    """Stub. Earnings transcripts live in Srilekha's Yahoo Finance workstream
-    (bundle: `Unstructured_Data/SNE/yahoo_finance/stock_earning_call_transcripts.parquet`).
-    Not implemented here to avoid duplication.
+    """Pull earnings-call transcripts as speaker-tagged TextChunks.
+
+    Accepts a single ticker or list. Dispatches to the submodule which handles
+    the HF download, caching, section inference (prepared vs qa), and
+    tiktoken-based chunking. See `ingestion.earnings_news.transcripts`.
     """
-    raise NotImplementedError(
-        "fetch_earnings_transcripts belongs to the yahoo-finance workstream; "
-        "use ingestion/earnings_news sibling or Srilekha's module."
+    from ingestion.earnings_news.transcripts import (
+        fetch_earnings_transcripts as _impl,
     )
+
+    return _impl(ticker, start_date, end_date)
+
+
+def get_earnings_transcripts_as_of(ticker: str, as_of: date) -> list[TextChunk]:
+    """All transcript chunks for `ticker` with publication_date <= as_of."""
+    from ingestion.earnings_news.transcripts import (
+        get_earnings_transcripts_as_of as _impl,
+    )
+
+    return _impl(ticker, as_of)
