@@ -143,8 +143,26 @@ def test_fetch_actions_sends_openfda_date_range():
     fda.fetch_fda_actions(None, as_of=date(2024, 6, 30),
                           since=date(2024, 1, 1), session=sess)
     search = sess.calls[0]["search"]
-    assert "[20240101+TO+20240630]" in search
+    # Must use spaces, not literal "+". requests encodes spaces to "+" or
+    # "%20" (openFDA accepts both); literal "+" becomes "%2B" and 500s.
+    assert "[20240101 TO 20240630]" in search
     assert "submission_status:AP" in search
+    assert "+" not in search  # regression guard for the 500-bug
+
+
+def test_fetch_actions_search_string_is_accepted_by_requests_encoding():
+    """Prove the URL we'd actually send has no literal '+' characters."""
+    import requests
+    sess = _FakeSession([[]])
+    fda.fetch_fda_actions(None, as_of=date(2024, 6, 30),
+                          since=date(2024, 1, 1), session=sess)
+    prepared = requests.Request(
+        "GET", fda.OPENFDA_URL, params={"search": sess.calls[0]["search"]}
+    ).prepare()
+    # A literal "+" inside the search value would be encoded to "%2B" — a
+    # known-bad signal that would 500 openFDA. Spaces are encoded to "+",
+    # which is accepted.
+    assert "%2B" not in prepared.url
 
 
 def test_fetch_actions_paginates_until_short_page():
@@ -196,18 +214,50 @@ def test_fetch_actions_404_means_no_results():
 
 
 def test_combined_events_dedup_calendar_wins_on_conflict():
-    # Hand-curated seed has fda_pdufa_BIIB_LEQEMBI_2023-01-06 of event_type=PDUFA.
-    # Make openFDA claim the same event_id but as APPROVAL. Calendar should win.
-    colliding_id = "fda_pdufa_BIIB_LEQEMBI_2023-01-06"
+    """
+    openFDA and the hand-curated seed use different event_id formats for the
+    same real-world event. Dedup happens on the canonical key
+    (ticker, drug_slug, event_date) instead of raw event_id; calendar wins.
 
-    class _Sess:
-        def get(self, url, params=None, timeout=None):
-            return _FakeResp({"results": []})
+    Seed has fda_pdufa_BIIB_LEQEMBI_2023-01-06 (event_type=PDUFA). We feed
+    openFDA the same drug on the same date, with a totally different
+    event_id shape, and assert the seed entry wins.
+    """
+    # Leqembi's BIOGEN-filed BLA approval on 2023-01-06
+    entries = [_openfda_entry(
+        "BIOGEN INC", "BLA761269", "LEQEMBI", "AP", "20230106",
+    )]
+    sess = _FakeSession([entries])
+    events = fda.fetch_fda_events(
+        as_of=date(2024, 12, 31), since=date(2015, 1, 1), session=sess,
+    )
+    biib_leqembi = [
+        e for e in events
+        if e.sponsor_ticker == "BIIB" and "LEQEMBI" in e.drug_name.upper()
+        and e.event_date == date(2023, 1, 6)
+    ]
+    assert len(biib_leqembi) == 1, "collision must dedup to exactly one record"
+    # Seed entry is PDUFA; openFDA entry is APPROVAL. Seed wins.
+    assert biib_leqembi[0].event_type == FDAEventType.PDUFA
 
-    events = fda.fetch_fda_events(as_of=date(2024, 12, 31), session=_Sess())
-    matches = [e for e in events if e.event_id == colliding_id]
-    assert len(matches) == 1
-    assert matches[0].event_type == FDAEventType.PDUFA  # from calendar seed
+
+def test_combined_events_keeps_distinct_drugs():
+    """Dedup key includes drug slug — different drugs from same sponsor stay."""
+    entries = [
+        _openfda_entry("BIOGEN INC", "BLA1", "DRUG_A", "AP", "20230106"),
+        _openfda_entry("BIOGEN INC", "BLA2", "DRUG_B", "AP", "20230106"),
+    ]
+    sess = _FakeSession([entries])
+    events = fda.fetch_fda_events(
+        as_of=date(2024, 12, 31), since=date(2015, 1, 1), session=sess,
+    )
+    # Drug_A and Drug_B should both survive alongside the seed
+    biogen_on_date = [
+        e for e in events
+        if e.sponsor_ticker == "BIIB" and e.event_date == date(2023, 1, 6)
+    ]
+    # >= 2 from openFDA; possibly + 1 seed (Leqembi)
+    assert len(biogen_on_date) >= 2
 
 
 # ---------- Event wrapping + TextChunk ----------
@@ -244,6 +294,32 @@ def test_events_to_chunks_uses_news_source_type():
               event_type="fda_approval", source="FDA", payload_ref="x", text="hi")
     chunks = fda.events_to_text_chunks([e])
     assert chunks[0].source_type == SourceType.NEWS
+
+
+def test_events_to_chunks_preserves_fda_source_url_when_threaded():
+    """Calendar entries carry FDA press-release URLs — they must survive."""
+    from schema import Event
+    press_url = "https://www.fda.gov/news-events/press-announcements/example"
+    f = FDAEvent(
+        event_id="pressrel_1", event_type=FDAEventType.APPROVAL,
+        event_date=date(2024, 6, 1), sponsor_ticker="BIIB",
+        drug_name="Test Drug", description="approved",
+        source_url=press_url,
+    )
+    e = Event(event_id="pressrel_1", ticker="BIIB", event_date=date(2024, 6, 1),
+              event_type="fda_approval", source="FDA",
+              payload_ref="pressrel_1", text="approved")
+    chunks = fda.events_to_text_chunks([e], fda_events=[f])
+    assert chunks[0].source_url == press_url
+
+
+def test_events_to_chunks_falls_back_to_openfda_url_without_index():
+    """No fda_events index → chunks point at the bulk openFDA endpoint."""
+    from schema import Event
+    e = Event(event_id="x", ticker="BIIB", event_date=date(2024, 6, 1),
+              event_type="fda_approval", source="FDA", payload_ref="x", text="hi")
+    chunks = fda.events_to_text_chunks([e])
+    assert chunks[0].source_url == fda.OPENFDA_URL
 
 
 # ---------- full pipeline writes parquet + JSONL ----------

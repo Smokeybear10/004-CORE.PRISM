@@ -51,8 +51,10 @@ CALENDAR_SEED_PATH = Path(__file__).parent / "fda_calendar_seed.json"
 # Top ~40 biotech / pharma sponsor → ticker map. openFDA's sponsor_name is
 # upper-cased and sometimes abbreviated ("LILLY", "PFIZER INC"); we normalize
 # both sides before lookup. Private companies / foreign sponsors / subsidiaries
-# we don't recognize return None (documented limitation).
-SPONSOR_TO_TICKER: dict[str, str] = {
+# we don't recognize return None (documented limitation). Entries with None
+# as the value are "known private" sponsors — listed explicitly so a future
+# contributor doesn't spend time tracking down a ticker that doesn't exist.
+SPONSOR_TO_TICKER: dict[str, Optional[str]] = {
     # Big pharma
     "pfizer": "PFE",
     "merck": "MRK",
@@ -141,7 +143,7 @@ def fetch_fda_actions(
         ticker: If provided, filter to sponsors that map to this ticker.
             openFDA has no ticker field, so we apply this post-fetch against
             SPONSOR_TO_TICKER.
-        as_of: Only return events with event_date <= as_of. Forkoreknowledge.
+        as_of: Only return events with event_date <= as_of. No foreknowledge.
         since: Optional lower bound on event_date (defaults to 2015-01-01).
         limit: Max records per request page (openFDA caps at 1000).
         session: Optional requests.Session for connection reuse / tests.
@@ -149,18 +151,23 @@ def fetch_fda_actions(
     Returns:
         List of FDAEvent(event_type=APPROVAL) records.
 
-    openFDA does NOT publish CRLs programmatically — those live in the
-    hand-curated seed only.
+    openFDA does NOT publish CRLs, denials, or AdComm outcomes via
+    `drugsfda` — the submission status enum only exposes AP (approved) and
+    TA (tentative approval). Those other `FDAEventType`s only come from the
+    hand-curated calendar seed.
     """
     since = since or date(2015, 1, 1)
     if since > as_of:
         return []
 
     sess = session or _session()
+    # openFDA's search grammar uses spaces as AND separators. requests
+    # URL-encodes spaces to "+" and "+" to "%2B", so we MUST use real
+    # spaces here — passing literal "+" makes openFDA return HTTP 500.
     params = {
         "search": (
-            f"submissions.submission_status:AP+AND+"
-            f"submissions.submission_status_date:[{_fda_date(since)}+TO+{_fda_date(as_of)}]"
+            f"submissions.submission_status:AP AND "
+            f"submissions.submission_status_date:[{_fda_date(since)} TO {_fda_date(as_of)}]"
         ),
         "limit": limit,
         "skip": 0,
@@ -204,16 +211,58 @@ def fetch_fda_events(
     *,
     session: Optional[requests.Session] = None,
 ) -> list[FDAEvent]:
-    """Combined calendar + live approvals, filtered to `event_date <= as_of`."""
+    """
+    Combined calendar + live approvals, filtered to `event_date <= as_of`.
+
+    Calendar and openFDA event_ids don't follow the same format, so we can't
+    dedup on event_id. Instead we compute a canonical key per event —
+    (sponsor_ticker, drug_slug, event_date) — and let the hand-curated
+    calendar win on collision. Drugs with long brand names where the slug
+    diverges between sources will still produce duplicates; that's an
+    accepted MVP limitation.
+
+    `since` is applied to openFDA results only. The hand-curated calendar
+    is small and fully filtered by `as_of`; adding a `since` filter there
+    would have little payoff.
+    """
     calendar = fetch_fda_calendar(as_of)
     actions = fetch_fda_actions(ticker, as_of, since=since, session=session)
-    # Deduplicate on event_id; calendar wins on conflict (hand-curated).
-    out: dict[str, FDAEvent] = {}
-    for ev in actions + calendar:  # calendar last → overwrites API dupes
-        out[ev.event_id] = ev
+
+    by_key: dict[tuple[Optional[str], str, date], FDAEvent] = {}
+    # Insert openFDA first; calendar entries then overwrite on collision.
+    for ev in actions:
+        by_key[_canonical_event_key(ev)] = ev
+    for ev in calendar:
+        by_key[_canonical_event_key(ev)] = ev
+
+    out = list(by_key.values())
     if ticker:
-        out = {k: v for k, v in out.items() if v.sponsor_ticker == ticker.upper()}
-    return sorted(out.values(), key=lambda e: e.event_date)
+        out = [v for v in out if v.sponsor_ticker == ticker.upper()]
+    return sorted(out, key=lambda e: e.event_date)
+
+
+def _canonical_event_key(ev: FDAEvent) -> tuple[Optional[str], str, date]:
+    """
+    Canonical dedup key for an FDAEvent: (ticker, drug_brand_slug, event_date).
+
+    Seed and openFDA name the same drug differently:
+      seed:    "Leqembi (lecanemab)"
+      openFDA: "LEQEMBI"
+    We normalize by taking only the first parenthetical-free token, so
+    "Leqembi (lecanemab)" and "LEQEMBI" both key on "LEQEMBI".
+    """
+    return (ev.sponsor_ticker, _brand_slug(ev.drug_name), ev.event_date)
+
+
+def _brand_slug(drug_name: str) -> str:
+    """First bracket-free token of a drug name, slugged. Empty → 'UNKNOWN'."""
+    if not drug_name:
+        return "UNKNOWN"
+    # Strip anything in parentheses or brackets (generic name suffixes)
+    head = drug_name.split("(")[0].split("[")[0].strip()
+    # First whitespace-separated token
+    first = head.split()[0] if head.split() else ""
+    return _slug(first) or "UNKNOWN"
 
 
 def fda_events_to_events(fda_events: list[FDAEvent]) -> list[Event]:
@@ -238,15 +287,28 @@ def fda_events_to_events(fda_events: list[FDAEvent]) -> list[Event]:
     return events
 
 
-def events_to_text_chunks(events: list[Event]) -> list[TextChunk]:
+def events_to_text_chunks(
+    events: list[Event],
+    fda_events: Optional[list[FDAEvent]] = None,
+) -> list[TextChunk]:
     """
     Materialize Events as TextChunks the attribution model can cite.
 
+    `fda_events` is an optional index of the upstream FDAEvent records keyed
+    by event_id. When provided, we preserve the FDAEvent's `source_url`
+    (FDA press-release URL, openFDA application URL, etc.) on the chunk. The
+    unified `Event` envelope has no source_url field, so without this we
+    lose provenance for the attribution model.
+
     NOTE: SourceType has no FDA-specific enum value, so we use NEWS as the
-    closest fit (FDA press releases ARE news). Flag this in commit message as
-    a schema gap — adding FDA to SourceType requires team sign-off per
+    closest fit (FDA press releases ARE news). Flag this in commit message
+    as a schema gap — adding FDA to SourceType requires team sign-off per
     CLAUDE.md rule #5.
     """
+    url_by_id: dict[str, Optional[str]] = {}
+    if fda_events is not None:
+        url_by_id = {f.event_id: f.source_url for f in fda_events}
+
     chunks: list[TextChunk] = []
     for e in events:
         if not e.text:
@@ -257,7 +319,7 @@ def events_to_text_chunks(events: list[Event]) -> list[TextChunk]:
                 ticker=e.ticker,
                 source_type=SourceType.NEWS,  # SourceType.FDA not defined — see note above
                 publication_date=e.event_date,
-                source_url="https://api.fda.gov/drug/drugsfda.json",
+                source_url=url_by_id.get(e.event_id) or OPENFDA_URL,
                 section_name=e.event_type,
                 text=e.text,
                 token_count=len(e.text.split()),
@@ -277,7 +339,7 @@ def run_fda_pipeline(
     """End-to-end: fetch, wrap, chunk, write parquet + JSONL."""
     fda_events = fetch_fda_events(as_of, ticker=ticker, since=since, session=session)
     events = fda_events_to_events(fda_events)
-    chunks = events_to_text_chunks(events)
+    chunks = events_to_text_chunks(events, fda_events=fda_events)
 
     output_dir = Path(output_dir)
     output_dir.mkdir(parents=True, exist_ok=True)
