@@ -101,6 +101,22 @@ def test_classify_action_uses_yf_hint_for_unknown_buckets():
     assert aa.classify_action("Special Buy", "Top Pick", "down") == RatingAction.DOWNGRADE
 
 
+def test_classify_action_unresolvable_logs_warning_and_defaults_reiterate(caplog):
+    """When both bucket lookup and yf hint fail on differing strings, warn."""
+    with caplog.at_level("WARNING", logger="ingestion.idiosyncratic.analyst_actions"):
+        result = aa.classify_action("Tactical Add", "Regional Pick")
+    assert result == RatingAction.REITERATE
+    assert any("unclassifiable rating change" in rec.message for rec in caplog.records)
+
+
+def test_classify_action_unresolvable_matching_strings_stays_silent(caplog):
+    """Same raw string on both sides is a legit REITERATE — no warning."""
+    with caplog.at_level("WARNING", logger="ingestion.idiosyncratic.analyst_actions"):
+        result = aa.classify_action("Tactical Add", "Tactical Add")
+    assert result == RatingAction.REITERATE
+    assert not any("unclassifiable" in rec.message for rec in caplog.records)
+
+
 # ---------- rating + target ID generation ----------
 
 

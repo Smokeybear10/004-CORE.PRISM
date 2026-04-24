@@ -320,10 +320,19 @@ def classify_action(
     # Bucket lookup failed → fall back to yfinance's Action hint
     if yf_action_hint and yf_action_hint in _YF_ACTION_HINTS:
         return _YF_ACTION_HINTS[yf_action_hint]
-    # Final fallback: unchanged strings → REITERATE, else UPGRADE as a
-    # non-erroring default (kept consistent so downstream never sees None).
-    if (prior_rating or "").strip().lower() == (new_rating or "").strip().lower():
+
+    # No buckets, no hint: direction is genuinely ambiguous. If the raw
+    # strings match we call REITERATE; otherwise we log a WARNING so
+    # downstream knows the classification is low-confidence, and still
+    # return REITERATE rather than picking an arbitrary up/down.
+    prior_norm = (prior_rating or "").strip().lower()
+    new_norm = (new_rating or "").strip().lower()
+    if prior_norm == new_norm:
         return RatingAction.REITERATE
+    LOG.warning(
+        "unclassifiable rating change %r -> %r (no bucket, no hint); "
+        "defaulting to REITERATE — review RATING_MAP", prior_rating, new_rating,
+    )
     return RatingAction.REITERATE
 
 
