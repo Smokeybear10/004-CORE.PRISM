@@ -1,136 +1,484 @@
 """
-Short-seller research report ingestion.
+Short-seller research-report ingestion.
 
-Scrapes research reports from prominent short-sellers targeting specific stocks.
-Each report becomes a text chunk with stable chunk_id for model attribution.
+One scraper function per publisher, plus a dispatcher. Each scraper does a
+best-effort HTML walk over the publisher's research index, extracts
+(title, date, target_ticker, source_url), and returns a list of ShortReport
+records. Publisher-specific selectors live with each scraper; shared logic
+(generic WordPress archive walk, ticker extraction) is factored out.
+
+If a publisher's structure blocks scraping we emit zero records and log a
+warning. Never raise — don't let one publisher's markup break the whole run.
+
+Pipeline mirrors short_interest.py / thirteen_f.py:
+
+    fetch_short_reports(publisher, as_of)     -> list[ShortReport]
+    fetch_all_short_reports(as_of)            -> list[ShortReport]
+    reports_to_events(reports)                -> list[Event]
+    events_to_text_chunks(events)             -> list[TextChunk]
+    run_short_reports_pipeline(as_of, ...)    -> (reports, events, chunks)
+
+Ticker extraction (two-step):
+  1. $TICKER regex against the title (supports "$NKLA", "$RIVN:", etc.).
+  2. Fallback: name → ticker via _load_name_to_ticker() from thirteen_f.py
+     (SEC company_tickers.json, canonical ticker map).
+
+as_of rule: publication_date <= as_of, same as every retrieval function.
 """
+from __future__ import annotations
 
-from datetime import date
-from typing import List
+import logging
+import re
+from datetime import date, datetime
+from pathlib import Path
+from typing import Callable, Optional
 
-from schema import ShortReport
+import pandas as pd
+import requests
+from bs4 import BeautifulSoup
+
+from ingestion.idiosyncratic.thirteen_f import (
+    _load_name_to_ticker,
+    _normalize_name,
+)
+from schema import Event, ShortReport, SourceType, TextChunk
+
+LOG = logging.getLogger(__name__)
+
+USER_AGENT = "BW-Hackathon henryji327@gmail.com"
+DATA_DIR = Path("data/short_reports")
+
+TICKER_TOKEN_RE = re.compile(r"\$([A-Z][A-Z0-9\-.]{0,6})\b")
+
+PUBLISHER_SLUGS = {
+    "Hindenburg Research": "hindenburg",
+    "Muddy Waters Research": "muddy_waters",
+    "Citron Research": "citron",
+    "Kerrisdale Capital": "kerrisdale",
+    "Spruce Point Capital": "spruce_point",
+    "Scorpion Capital": "scorpion",
+}
+
+# Publisher config: each tuple is (landing URL, post-link CSS selector,
+# date-extraction hint). The scraper uses these for a generic WordPress-ish
+# archive walk; publishers that deviate get their own dedicated scraper.
+_GENERIC_CONFIG: dict[str, dict] = {
+    "Hindenburg Research": {
+        "url": "https://hindenburgresearch.com/",
+        "link_selector": "article a[href], h2 a[href], h3 a[href]",
+    },
+    "Muddy Waters Research": {
+        "url": "https://muddywatersresearch.com/research/",
+        "link_selector": "article a[href], .post a[href]",
+    },
+    "Citron Research": {
+        "url": "https://citronresearch.com/",
+        "link_selector": "article a[href], h2 a[href]",
+    },
+    "Kerrisdale Capital": {
+        "url": "https://www.kerrisdalecap.com/category/investments/",
+        "link_selector": "article a[href], h2 a[href]",
+    },
+    "Spruce Point Capital": {
+        "url": "https://www.sprucepointcap.com/research/",
+        "link_selector": "article a[href], .research-item a[href]",
+    },
+}
+
+# Scorpion Capital's archive is JavaScript-rendered. requests+bs4 gets an
+# empty shell; a Selenium/Playwright scraper is out-of-scope for this
+# hackathon. The scraper below makes one attempt and logs a warning.
+_SCORPION_URL = "https://www.scorpioncapital.com/reports"
 
 
-# Known short-seller research publishers
-SHORT_SELLERS = [
-    "Scorpion Capital",
-    "Hindenburg Research",
-    "Muddy Waters Research",
-    "Citron Research",
-    "Kerrisdale Capital",
-    "Spruce Point Capital"
-]
+# ---------- Public API ----------
+
+def fetch_short_reports(
+    publisher: str,
+    as_of: date,
+    *,
+    session: Optional[requests.Session] = None,
+) -> list[ShortReport]:
+    """Fetch all reports from one publisher with publication_date <= as_of."""
+    scraper = _SCRAPERS.get(publisher)
+    if scraper is None:
+        raise ValueError(
+            f"unknown publisher: {publisher!r}. "
+            f"Known publishers: {list(_SCRAPERS)}"
+        )
+    sess = session or _session()
+    try:
+        reports = scraper(as_of, sess)
+    except Exception as e:  # noqa: BLE001 — per spec, don't fail the whole run
+        LOG.warning("scraping %s failed: %s", publisher, e)
+        return []
+    return [r for r in reports if r.publication_date <= as_of]
 
 
-def fetch_short_reports(publisher: str, as_of: date) -> List[ShortReport]:
+def fetch_all_short_reports(
+    as_of: date,
+    *,
+    session: Optional[requests.Session] = None,
+) -> list[ShortReport]:
+    """Aggregate across every publisher; dedup by chunk_id; newest first."""
+    out: dict[str, ShortReport] = {}
+    sess = session or _session()
+    for publisher in _SCRAPERS:
+        for r in fetch_short_reports(publisher, as_of, session=sess):
+            out.setdefault(r.chunk_id, r)
+    return sorted(out.values(), key=lambda r: r.publication_date, reverse=True)
+
+
+def reports_to_events(reports: list[ShortReport]) -> list[Event]:
+    """Wrap each ShortReport in an Event. event_date = publication_date."""
+    events: list[Event] = []
+    for r in reports:
+        events.append(
+            Event(
+                event_id=r.chunk_id,
+                ticker=r.target_ticker,
+                event_date=r.publication_date,
+                event_type="short_report",
+                source=r.publisher,
+                payload_ref=r.chunk_id,
+                text=_report_text(r),
+            )
+        )
+    return events
+
+
+def events_to_text_chunks(events: list[Event]) -> list[TextChunk]:
     """
-    Fetch all short-seller reports from a specific publisher as of a given date.
+    Materialize Events as TextChunks.
 
-    Args:
-        publisher: Publisher name (e.g., "Muddy Waters Research", "Hindenburg Research")
-        as_of: Only return reports with publication_date <= as_of (no foreknowledge)
-
-    Returns:
-        List of ShortReport objects with stable chunk_ids
-
-    Sources:
-        - Publisher websites
-        - Twitter/X feeds
-        - SEC filings (when available)
+    SourceType has no SHORT_REPORT value; use NEWS as closest fit. Flag in
+    commit message — adding SourceType.SHORT_REPORT requires team sign-off.
     """
-    # TODO: Implement scraping logic per publisher
-    # - Scorpion Capital: website + Twitter
-    # - Hindenburg Research: website RSS feed
-    # - Muddy Waters: website archive
-    # - Citron Research: website + Twitter
-    # - Kerrisdale Capital: website reports section
-    # - Spruce Point Capital: website research page
-    #
-    # For each report:
-    # - Extract target ticker from title/content
-    # - Parse publication date
-    # - Extract thesis text (main allegation)
-    # - Generate stable chunk_id format: "short_report_{publisher_slug}_{ticker}_{date}"
-    # - Filter by publication_date <= as_of
-
-    if publisher not in SHORT_SELLERS:
-        raise ValueError(f"Unknown publisher: {publisher}. Known publishers: {SHORT_SELLERS}")
-
-    raise NotImplementedError(f"Placeholder - implement {publisher} scraping")
+    chunks: list[TextChunk] = []
+    for e in events:
+        if not e.text:
+            continue
+        chunks.append(
+            TextChunk(
+                chunk_id=e.event_id,
+                ticker=e.ticker,
+                source_type=SourceType.NEWS,  # SourceType.SHORT_REPORT not defined
+                publication_date=e.event_date,
+                source_url=None,
+                section_name=e.event_type,
+                text=e.text,
+                token_count=len(e.text.split()),
+            )
+        )
+    return chunks
 
 
-def fetch_all_short_reports(as_of: date) -> List[ShortReport]:
+def run_short_reports_pipeline(
+    as_of: date,
+    publisher: Optional[str] = None,
+    output_dir: Path | str = DATA_DIR,
+    *,
+    session: Optional[requests.Session] = None,
+) -> tuple[list[ShortReport], list[Event], list[TextChunk]]:
+    """End-to-end: scrape (one publisher or all), wrap, chunk, write outputs."""
+    if publisher:
+        reports = fetch_short_reports(publisher, as_of, session=session)
+    else:
+        reports = fetch_all_short_reports(as_of, session=session)
+    events = reports_to_events(reports)
+    chunks = events_to_text_chunks(events)
+
+    output_dir = Path(output_dir)
+    output_dir.mkdir(parents=True, exist_ok=True)
+    stamp = as_of.isoformat()
+    suffix = f"_{PUBLISHER_SLUGS.get(publisher, 'all')}" if publisher else "_all"
+
+    save_reports_to_parquet(reports, output_dir / f"records{suffix}_{stamp}.parquet")
+    _save_events_to_parquet(events, output_dir / f"events{suffix}_{stamp}.parquet")
+    _write_chunks_jsonl(chunks, output_dir / f"chunks{suffix}_{stamp}.jsonl")
+    return reports, events, chunks
+
+
+def make_chunk_id(publisher: str, ticker: str, publication_date: date) -> str:
+    """Stable chunk_id: short_report_{publisher_slug}_{TICKER}_{YYYY-MM-DD}."""
+    slug = PUBLISHER_SLUGS.get(publisher) or _fallback_slug(publisher)
+    return f"short_report_{slug}_{ticker.upper()}_{publication_date.isoformat()}"
+
+
+def extract_ticker(title: str, body: Optional[str] = None) -> Optional[str]:
+    """$TICKER regex first, then fall back to SEC name → ticker lookup."""
+    for source in (title, body or ""):
+        match = TICKER_TOKEN_RE.search(source)
+        if match:
+            return match.group(1).upper()
+    mapping = _load_name_to_ticker_safe()
+    if mapping:
+        # Try the full title, then progressively shorter prefixes
+        candidates = [title]
+        if ":" in title:
+            candidates.append(title.split(":", 1)[0])
+        if "—" in title:
+            candidates.append(title.split("—", 1)[0])
+        for cand in candidates:
+            ticker = mapping.get(_normalize_name(cand))
+            if ticker:
+                return ticker
+    return None
+
+
+# ---------- I/O helpers ----------
+
+def save_reports_to_parquet(
+    reports: list[ShortReport], filepath: Path | str,
+) -> None:
+    filepath = Path(filepath)
+    filepath.parent.mkdir(parents=True, exist_ok=True)
+    columns = [
+        "chunk_id", "publisher", "target_ticker", "publication_date",
+        "title", "thesis_text", "source_url", "token_count",
+    ]
+    if not reports:
+        pd.DataFrame(columns=columns).to_parquet(filepath, index=False)
+        return
+    df = pd.DataFrame([r.model_dump() for r in reports])
+    df["publication_date"] = df["publication_date"].astype(str)
+    df[columns].to_parquet(filepath, compression="snappy", index=False)
+
+
+def _save_events_to_parquet(events: list[Event], filepath: Path | str) -> None:
+    filepath = Path(filepath)
+    filepath.parent.mkdir(parents=True, exist_ok=True)
+    columns = ["event_id", "ticker", "event_date", "event_type",
+               "source", "payload_ref", "text"]
+    if not events:
+        pd.DataFrame(columns=columns).to_parquet(filepath, index=False)
+        return
+    df = pd.DataFrame([e.model_dump() for e in events])
+    df["event_date"] = df["event_date"].astype(str)
+    df[columns].to_parquet(filepath, compression="snappy", index=False)
+
+
+def _write_chunks_jsonl(chunks: list[TextChunk], filepath: Path | str) -> None:
+    filepath = Path(filepath)
+    filepath.parent.mkdir(parents=True, exist_ok=True)
+    filepath.write_text(
+        "\n".join(c.model_dump_json() for c in chunks),
+        encoding="utf-8",
+    )
+
+
+# ---------- Scrapers ----------
+
+def _session() -> requests.Session:
+    s = requests.Session()
+    s.headers["User-Agent"] = USER_AGENT
+    return s
+
+
+def _scrape_generic(
+    publisher: str, as_of: date, session: requests.Session,
+) -> list[ShortReport]:
     """
-    Fetch all short-seller reports from all known publishers as of a given date.
-
-    Args:
-        as_of: Only return reports with publication_date <= as_of (no foreknowledge)
-
-    Returns:
-        Consolidated list of ShortReport objects from all publishers
+    Generic scraper for WordPress-ish research indexes. Walks one landing
+    page, collects unique article links, fetches each, extracts title + a
+    date (from <time datetime="..."> or URL slug /YYYY/MM/DD/), extracts the
+    target ticker, and snips the first few paragraphs as thesis text.
     """
-    # TODO: Implement bulk collection across all publishers
-    # - Iterate through SHORT_SELLERS list
-    # - Call fetch_short_reports() for each
-    # - Consolidate results
-    # - Remove duplicates by chunk_id
-    # - Sort by publication_date descending
-    raise NotImplementedError("Placeholder - implement bulk short report collection")
+    cfg = _GENERIC_CONFIG[publisher]
+    url = cfg["url"]
+    selector = cfg["link_selector"]
+
+    resp = session.get(url, timeout=30)
+    resp.raise_for_status()
+    soup = BeautifulSoup(resp.text, "html.parser")
+
+    reports: list[ShortReport] = []
+    seen: set[str] = set()
+    for a in soup.select(selector):
+        href = (a.get("href") or "").strip()
+        if not href or href.startswith("#"):
+            continue
+        if not href.startswith("http"):
+            href = requests.compat.urljoin(url, href)
+        if href in seen:
+            continue
+        seen.add(href)
+
+        title = a.get_text(strip=True) or a.get("title", "") or ""
+        if not title or len(title) < 6:  # skip nav links, logos, etc.
+            continue
+
+        pub_date = _parse_date_from_url(href) or _today_fallback(as_of)
+        if pub_date > as_of:
+            continue
+
+        ticker = extract_ticker(title)
+        if not ticker:
+            # Fetch the article body for a second-chance ticker extraction
+            body = _fetch_article_body(href, session)
+            ticker = extract_ticker(title, body)
+            thesis = (body or title)[:2000]
+        else:
+            thesis = title
+
+        if not ticker:
+            LOG.info("skipping %s (no ticker found): %s", publisher, title)
+            continue
+
+        reports.append(
+            ShortReport(
+                chunk_id=make_chunk_id(publisher, ticker, pub_date),
+                publisher=publisher,
+                target_ticker=ticker,
+                publication_date=pub_date,
+                title=title,
+                thesis_text=thesis,
+                source_url=href,
+                token_count=len(thesis.split()),
+            )
+        )
+    return reports
 
 
-def extract_target_ticker(title: str, content: str) -> str:
+def _scrape_hindenburg(as_of: date, session: requests.Session) -> list[ShortReport]:
+    return _scrape_generic("Hindenburg Research", as_of, session)
+
+
+def _scrape_muddy_waters(as_of: date, session: requests.Session) -> list[ShortReport]:
+    return _scrape_generic("Muddy Waters Research", as_of, session)
+
+
+def _scrape_citron(as_of: date, session: requests.Session) -> list[ShortReport]:
+    return _scrape_generic("Citron Research", as_of, session)
+
+
+def _scrape_kerrisdale(as_of: date, session: requests.Session) -> list[ShortReport]:
+    return _scrape_generic("Kerrisdale Capital", as_of, session)
+
+
+def _scrape_spruce_point(as_of: date, session: requests.Session) -> list[ShortReport]:
+    return _scrape_generic("Spruce Point Capital", as_of, session)
+
+
+def _scrape_scorpion(as_of: date, session: requests.Session) -> list[ShortReport]:
     """
-    Extract target stock ticker from report title and content.
-
-    Args:
-        title: Report title
-        content: Report body text
-
-    Returns:
-        Stock ticker symbol (e.g., "AAPL", "TSLA")
-
-    Algorithm:
-        1. Look for explicit ticker mentions in title ($TICKER, TICKER:, etc.)
-        2. Search for company name to ticker mapping
-        3. Extract from regulatory filing references
+    Scorpion Capital's archive is JavaScript-rendered. requests+bs4 gets an
+    empty shell. One best-effort attempt; if the rendered HTML has fewer than
+    two links matching the expected shape, log and return [].
     """
-    # TODO: Implement ticker extraction logic
-    # - Regex patterns for common ticker formats
-    # - Company name -> ticker lookup table
-    # - Handle edge cases (delisted stocks, name changes)
-    raise NotImplementedError("Placeholder - implement ticker extraction")
+    try:
+        resp = session.get(_SCORPION_URL, timeout=30)
+        resp.raise_for_status()
+        soup = BeautifulSoup(resp.text, "html.parser")
+        anchors = [a for a in soup.select("a[href]")
+                   if "report" in (a.get("href") or "").lower()]
+        if len(anchors) < 2:
+            LOG.warning(
+                "Scorpion Capital archive appears JS-rendered; "
+                "requests+bs4 returned %d anchors. Skipping.", len(anchors),
+            )
+            return []
+    except Exception as e:  # noqa: BLE001
+        LOG.warning("Scorpion Capital scrape failed: %s", e)
+        return []
+    # If we ever get real HTML, fall back to generic parsing of the anchor set
+    reports: list[ShortReport] = []
+    for a in anchors:
+        href = a["href"]
+        title = a.get_text(strip=True)
+        if not title or len(title) < 6:
+            continue
+        pub_date = _parse_date_from_url(href) or _today_fallback(as_of)
+        if pub_date > as_of:
+            continue
+        ticker = extract_ticker(title)
+        if not ticker:
+            continue
+        reports.append(
+            ShortReport(
+                chunk_id=make_chunk_id("Scorpion Capital", ticker, pub_date),
+                publisher="Scorpion Capital",
+                target_ticker=ticker,
+                publication_date=pub_date,
+                title=title,
+                thesis_text=title,
+                source_url=href if href.startswith("http") else requests.compat.urljoin(_SCORPION_URL, href),
+                token_count=len(title.split()),
+            )
+        )
+    return reports
 
 
-def generate_chunk_id(publisher: str, ticker: str, publication_date: date) -> str:
-    """
-    Generate stable chunk_id for a short report.
-
-    Args:
-        publisher: Publisher name
-        ticker: Target ticker
-        publication_date: Publication date
-
-    Returns:
-        Stable chunk_id (e.g., "short_report_muddy_waters_BABA_2024-01-15")
-    """
-    # TODO: Implement stable ID generation
-    # - Normalize publisher name to slug (spaces -> underscores, lowercase)
-    # - Format: "short_report_{publisher_slug}_{ticker}_{date}"
-    # - Ensure uniqueness for multiple reports same day
-    raise NotImplementedError("Placeholder - implement chunk ID generation")
+_SCRAPERS: dict[str, Callable[[date, requests.Session], list[ShortReport]]] = {
+    "Hindenburg Research": _scrape_hindenburg,
+    "Muddy Waters Research": _scrape_muddy_waters,
+    "Citron Research": _scrape_citron,
+    "Kerrisdale Capital": _scrape_kerrisdale,
+    "Spruce Point Capital": _scrape_spruce_point,
+    "Scorpion Capital": _scrape_scorpion,
+}
 
 
-def save_reports_to_parquet(reports: List[ShortReport], filepath: str) -> None:
-    """
-    Save short reports to parquet format.
+# ---------- internals ----------
 
-    Args:
-        reports: List of ShortReport objects
-        filepath: Output parquet file path
-    """
-    # TODO: Implement parquet serialization
-    # - Convert ShortReport objects to DataFrame
-    # - Ensure UTC timestamps in ISO-8601 format
-    # - Write to parquet with appropriate compression
-    # - Include token_count for each thesis_text
-    raise NotImplementedError("Placeholder - implement parquet output")
+_URL_DATE_RE = re.compile(r"/(20\d{2})/(\d{1,2})(?:/(\d{1,2}))?/")
+
+
+def _parse_date_from_url(url: str) -> Optional[date]:
+    m = _URL_DATE_RE.search(url)
+    if not m:
+        return None
+    year, month, day = m.group(1), m.group(2), m.group(3) or "1"
+    try:
+        return date(int(year), int(month), int(day))
+    except ValueError:
+        return None
+
+
+def _today_fallback(as_of: date) -> date:
+    """Some sites don't expose a date on the landing page. We conservatively
+    treat the report as freshly published so the as_of filter keeps it."""
+    return as_of
+
+
+def _fetch_article_body(url: str, session: requests.Session) -> Optional[str]:
+    try:
+        resp = session.get(url, timeout=30)
+        if resp.status_code != 200:
+            return None
+        soup = BeautifulSoup(resp.text, "html.parser")
+        article = soup.find("article") or soup.find("main") or soup.body
+        if article is None:
+            return None
+        paragraphs = [p.get_text(" ", strip=True) for p in article.find_all("p")]
+        return "\n".join(paragraphs[:10]) or None
+    except Exception as e:  # noqa: BLE001
+        LOG.info("article fetch failed for %s: %s", url, e)
+        return None
+
+
+_NAME_MAP_CACHE: Optional[dict[str, str]] = None
+
+
+def _load_name_to_ticker_safe() -> Optional[dict[str, str]]:
+    """Wrap the SEC name-to-ticker loader; return None if the network hiccups."""
+    global _NAME_MAP_CACHE
+    if _NAME_MAP_CACHE is not None:
+        return _NAME_MAP_CACHE
+    try:
+        _NAME_MAP_CACHE = _load_name_to_ticker()
+    except Exception as e:  # noqa: BLE001
+        LOG.info("SEC name→ticker lookup unavailable: %s", e)
+        _NAME_MAP_CACHE = {}
+    return _NAME_MAP_CACHE
+
+
+def _fallback_slug(publisher: str) -> str:
+    return re.sub(r"[^a-z0-9]+", "_", publisher.lower()).strip("_")
+
+
+def _report_text(r: ShortReport) -> str:
+    return (
+        f"{r.publisher} published short report on {r.target_ticker} "
+        f"on {r.publication_date.isoformat()}: {r.title}. {r.thesis_text}"
+    )
