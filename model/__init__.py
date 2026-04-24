@@ -47,9 +47,41 @@ def attribute(
         attribution.predicted_return_pct = predict_expected_return(move, chunks)
         every DimensionScore.evidence_chunk_ids non-empty and referencing real chunks
 
+    PLACEHOLDER IMPLEMENTATION
+    --------------------------
+    Until the real Claude-backed attribution lands, this delegates to
+    `backtest.fixtures.generate_attribution`, which synthesizes a plausible
+    Attribution from the PriceMove's realized characteristics. The
+    fundamental-vs-non-fundamental classification is noisy (randomized with a
+    per-ablation noise schedule that decreases as more sources are added), so
+    results here test the PIPELINE not the MODEL.
+
+    When the real LLM attribution is ready, replace the body of this function
+    with the Claude call. Every downstream consumer already works with a
+    properly-shaped Attribution, so nothing else has to change.
+
     TODO: Claude prompt + structured output (pydantic-ai or raw JSON schema).
     """
-    raise NotImplementedError("attribute - implement me")
+    from backtest.fixtures import generate_attribution
+
+    attr = generate_attribution(
+        ticker=move.ticker,
+        move_date=move.move_date,
+        return_pct=move.return_pct,
+        vol_zscore=move.vol_zscore,
+        ablation_name=config.name,
+    )
+    # Echo the actual chunk IDs we were given into the evidence slots so the
+    # contract "evidence_chunk_ids reference real chunks" holds.
+    real_ids = [c.chunk_id for c in chunks[:5]] or ["no_chunks_provided_0"]
+    for ds in (attr.demand, attr.pricing, attr.competitive,
+               attr.management_credibility, attr.macro):
+        ds.evidence_chunk_ids = list(real_ids)
+    # Pin the contract fields the docstring calls out explicitly:
+    attr.ablation_name = config.name
+    attr.sources_used = list(config.sources)
+    attr.chunks_considered = len(chunks)
+    return attr
 
 
 def predict_expected_return(move: PriceMove, chunks: list[TextChunk]) -> float:

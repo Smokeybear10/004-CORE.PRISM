@@ -110,11 +110,12 @@ def fade_or_follow(
     Emit lean / fade / neutral based on move_character and, when available,
     the predicted-vs-realized magnitude relationship.
 
-    With no ``predicted_return_pct`` this is the simple character rule
-    (``structural -> lean``, ``transient -> fade``); with one, transient
-    moves need the realized magnitude to exceed 1.5x predicted to fade,
-    and structural moves need matching signs to lean. Mentor asked for
-    the simple rule — this adds one magnitude check on top, nothing more.
+    With no ``predicted_return_pct`` this delegates to the named strategy
+    in ``backtest.signal`` (structural -> lean, transient -> fade); with
+    one, transient moves need the realized magnitude to exceed 1.5x
+    predicted to fade, and structural moves need matching signs to lean.
+    Mentor asked for the simple rule — this adds one magnitude check on
+    top, nothing more.
     """
     if attribution.predicted_return_pct is None:
         return strategy_fundamental_vs_nonfundamental(attribution)
@@ -149,31 +150,27 @@ def run_ablation(
     For each AblationConfig, filter chunks to ``config.sources`` and produce an
     Attribution per PriceMove.
 
-    Until the real model module is wired, this delegates to the stub classifier
-    in ``backtest.fixtures.generate_attribution``. When ``model.attribute()``
-    lands, swap the call below — the rest of this function stays the same.
+    Delegates to `model.attribute` — which currently ships as a placeholder
+    wrapper around `backtest.fixtures.generate_attribution`. Swap the model
+    implementation later without touching this function.
 
-    ``chunks_by_source`` is accepted (and filtered to ``config.sources``) for
-    API-shape stability. The stub classifier does not read the chunks; the real
-    one will.
+    Enforces the no-foreknowledge rule: only chunks with
+    ``publication_date <= move.move_date`` are passed to the model.
     """
+    # Import here to avoid a circular import at module load
+    from model import attribute
+
     out: dict[str, list[Attribution]] = {}
     for cfg in configs:
         allowed = set(cfg.sources)
-        # Filter even though the stub ignores it; lets downstream code assume
-        # the contract holds when the real model lands.
-        _ = {st: chunks for st, chunks in chunks_by_source.items() if st in allowed}
-        attrs: list[Attribution] = []
-        for move in moves:
-            attrs.append(generate_attribution(
-                ticker=move.ticker,
-                move_date=move.move_date,
-                return_pct=move.return_pct,
-                vol_zscore=move.vol_zscore,
-                ablation_name=cfg.name,
-                sources_used=cfg.sources,
-            ))
-        out[cfg.name] = attrs
+        chunks_for_cfg: list[TextChunk] = []
+        for src in allowed:
+            chunks_for_cfg.extend(chunks_by_source.get(src, []))
+        per_move: list[Attribution] = []
+        for mv in moves:
+            visible = [c for c in chunks_for_cfg if c.publication_date <= mv.move_date]
+            per_move.append(attribute(mv, visible, cfg))
+        out[cfg.name] = per_move
     return out
 
 
