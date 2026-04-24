@@ -163,10 +163,11 @@ def test_fetch_sends_lte_comparetype_and_uppercased_ticker(monkeypatch):
     assert filters_by_field["symbolCode"]["compareType"] == "EQUAL"
 
 
-def test_fetch_paginates_until_short_page(monkeypatch):
-    # Build >5000 rows for one ticker to force two pages
+def test_fetch_paginates_until_empty_response(monkeypatch):
+    # Two full pages + an empty page. Each ticker/settlement pair is unique
+    # so dedup doesn't collapse them.
     rows = [
-        {"symbolCode": "BIG", "settlementDate": "2024-01-01",
+        {"symbolCode": f"T{i:04d}", "settlementDate": "2024-01-01",
          "currentShortPositionQuantity": i, "averageDailyVolumeQuantity": 1,
          "daysToCoverQuantity": 1.0}
         for i in range(5000)
@@ -177,22 +178,41 @@ def test_fetch_paginates_until_short_page(monkeypatch):
     ]
     fake_post, calls = _fake_post_factory(rows)
     monkeypatch.setattr(si.requests, "post", fake_post)
-    recs = si.fetch_short_interest("BIG", as_of=date(2030, 1, 1))
+    recs = si.fetch_short_interest(None, as_of=date(2030, 1, 1))
     assert len(recs) == 5001
-    assert len(calls) == 2
+    # The new loop breaks on empty response, not on short page — so 3 calls:
+    # [0..5000), [5000..5001), then an empty page.
+    assert len(calls) == 3
     assert calls[0]["offset"] == 0
     assert calls[1]["offset"] == 5000
+    assert calls[2]["offset"] == 5001
+
+
+def test_fetch_dedups_revised_records_last_write_wins(monkeypatch):
+    """FINRA emits revisions for the same (ticker, settlement) — dedup on key."""
+    rows = [
+        {"symbolCode": "GME", "settlementDate": "2024-01-31",
+         "currentShortPositionQuantity": 50_000_000, "averageDailyVolumeQuantity": 100,
+         "daysToCoverQuantity": 1.0},
+        # A revised row for the same (GME, 2024-01-31). Last one wins.
+        {"symbolCode": "GME", "settlementDate": "2024-01-31",
+         "currentShortPositionQuantity": 59_673_027, "averageDailyVolumeQuantity": 100,
+         "daysToCoverQuantity": 1.0},
+    ]
+    fake_post, _ = _fake_post_factory(rows)
+    monkeypatch.setattr(si.requests, "post", fake_post)
+    recs = si.fetch_short_interest("GME", as_of=date(2030, 1, 1))
+    assert len(recs) == 1
+    assert recs[0].shares_short == 59_673_027
 
 
 # ---------- detect_short_interest_spikes ----------
 
 
 def test_spike_detector_fires_above_threshold_and_uses_publication_date():
-    records = _load_fixture()
-    events = si.detect_short_interest_spikes(records)
     # AMC rose from 24.1M → 28.6M shares short (+18.7%) → below 20% threshold
-    # GME barely changed — neither should fire a spike
-    # Induce a clear spike with a synthetic prior
+    # GME barely changed — neither should fire a spike.
+    # Induce a clear spike with a synthetic prior.
     synth = [
         ShortInterestRecord(
             ticker="SPIKY", settlement_date=date(2024, 1, 15),
