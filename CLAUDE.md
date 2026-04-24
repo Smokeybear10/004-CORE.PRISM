@@ -1,60 +1,60 @@
-# CLAUDE.md
+# Hackathon: Equity Price Action Tagger — Lean or Fade?
 
-## Project: Equity Price-Action Tagger
+## Project goal (read this first)
+Given a significant stock price move, extract a structured attribution from surrounding text
+(earnings transcripts, news, SEC filings) across five dimensions: demand, pricing,
+competitive dynamics, management credibility, macro exposure. Then test whether
+attribution category predicts whether the move persists (structural) or fades (transient).
 
-Goal: ingest multi-source financial data, feed it into a model, and produce
-natural-language attributions of historical equity moves — e.g.
-"AAPL fell 4% on 2026-02-14 because of [X]." A causal labeler for past price
-action, not a forecaster.
+**The deliverable is a backtest + a demo chart, not a product.** Scope accordingly.
 
-Built for the Bridgewater AI Hackathon.
+## Repo layout — respect module boundaries
+- `schema.py` — shared data contracts. Do NOT modify without team sign-off.
+- `ingestion/sec/` — SEC 10-K / 10-Q filings (owner: [YOU])
+- `ingestion/earnings_news/` — earnings transcripts + news articles (owner: Person 2)
+- `model/` — price move detection + LLM attribution (owner: Person 3)
+- `backtest/` — event study + signal evaluation (owner: Person 4)
+- `demo/` — final notebook and charts (owner: Person 4)
+- `tests/fixtures/` — sample data files all modules test against
 
-## Phase
+**Claude Code: when editing inside one module, do NOT touch files in other modules.**
+Use `/freeze` to lock scope to the current directory when debugging.
 
-**Ingestion.** Team is pulling raw data into the HF repo. Modeling and
-attribution come after coverage is acceptable.
+## Non-negotiable rules
+1. **No foreknowledge.** Any function that retrieves text for a given date MUST filter by
+   `publication_date <= as_of`. This is THE most common way hackathon projects accidentally
+   leak future information into backtests. Every retrieval function must take an `as_of` parameter.
+2. **Filing date != period end.** A 10-K for fiscal year ending Dec 31 might be filed in March.
+   The market reacts on the filing date, not the period end. Store both; use `filing_date`
+   for as-of queries.
+3. **Stable IDs.** Every text chunk has a stable `chunk_id` so the model can cite evidence.
+4. **Fixtures before code.** Before implementing a parser, write a fixture that matches the
+   schema. Downstream teammates can build against fixtures while you build the real thing.
+5. **One schema, enforced.** Use the Pydantic models in `schema.py`. No loose dicts crossing
+   module boundaries.
 
-## Data sources & ownership
+## The attribution dimensions (used by the model)
+- `demand` — unit volume, customer count, market share shifts
+- `pricing` — price changes, mix, discounting
+- `competitive` — new entrants, competitor moves, moats
+- `management_credibility` — guidance changes, execution, leadership comments
+- `macro` — rates, FX, commodities, geopolitics
 
-| Source                              | Owner    | Notes |
-|-------------------------------------|----------|-------|
-| Yahoo Finance — prices & earnings   | teammate | Structured_Data/SNE/yahoo-finance-data/*.parquet |
-| SEC filings (10-K/Q, 8-K, Form 4)   | teammate | Include Form 4 insider txns |
-| Dated news headlines                | teammate | Event timestamps are the join key for attribution |
-| FRED macro releases                 | teammate | CPI, NFP, GDP, etc. |
-| 13F hedge-fund holdings             | Henry    | SEC EDGAR; quarterly, 45-day lag. Consider 13f.info for clean parses |
-| Short-seller research               | Henry    | Scrape Scorpion, Hindenburg, Muddy Waters, Citron, Kerrisdale, Spruce Point (sites + X) |
-| FDA calendar + approvals/CRLs       | Henry    | Biotech mover attribution; FDA.gov calendars + Drugs@FDA |
-| FINRA short interest                | Henry    | Bi-monthly, free from FINRA; squeezes & short ramps |
-| Index rebalances                    | Henry    | S&P, Russell, MSCI add/delete announcements — mechanical flow |
-| FOMC speeches & minutes             | Henry    | Fed calendar + transcripts; rates-sensitive names |
-| Credit spreads / CDS                | Henry    | FRED for IG/HY OAS; Markit CDX if accessible. Equity-credit divergence flags stress |
+## Definitions to lock in hour 1
+- **Significant price move**: |1-day return| > 2x trailing 30-day realized vol, OR top 5%
+  absolute return in trailing 60 days. Pick ONE and stick with it.
+- **Fade window**: did the move reverse by >50% within 5 trading days?
+- **Persist**: no reversal, or extension of the move, over 5 trading days.
 
-## Repository layout
+## Workflow
+- Each person works on their own git branch: `person1-sec`, `person2-earnings`, etc.
+- Merge to `main` only after a teammate reviews the PR.
+- `python -m pytest tests/` must pass before any merge.
+- If you touch `schema.py`, post in team chat BEFORE merging.
 
-- `test.py` — scratch script for verifying HF data access
-- `.venv/` — local Python env (Windows)
-
-(Update as ingestion modules land.)
-
-## Data access
-
-- HF repo: `BridgewaterAIHackathon/BW-AI-Hackathon` (**private**)
-- Auth: run `huggingface-cli login` once, then pass `token=True` to `load_dataset`
-- Example: `data_files="Structured_Data/SNE/yahoo-finance-data/stock_split_events.parquet"`
-- Files sit directly under each source folder — **no `data/` subfolder** (unlike the public `defeatbeta/yahoo-finance-data` mirror)
-
-## Conventions
-
-- Ingestion writes parquet (not CSV) for anything non-trivial
-- Timestamps in UTC, ISO-8601
-- One script per source; keep ingestion decoupled from modeling
-- Don't commit HF tokens or raw bulk data — stage to the HF repo instead
-
-## Commands
-
-```bash
-python test.py                         # smoke-test HF access
-huggingface-cli login                  # one-time auth
-pip install datasets pandas torch numpy pyarrow
-```
+## Known traps
+- Yahoo Finance ticker data has survivorship bias — delisted companies disappear.
+  For a hackathon this is fine; note it in the demo.
+- SEC filings can be huge (200+ pages). Chunk aggressively, store only relevant sections.
+- The model will hallucinate attributions. Always require it to cite a `chunk_id`; drop
+  any attribution without a valid citation.

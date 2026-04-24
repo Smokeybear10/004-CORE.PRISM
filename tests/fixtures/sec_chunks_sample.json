@@ -1,0 +1,24 @@
+[
+  {
+    "chunk_id": "sec_10k_AAPL_2024-11-01_mda_001",
+    "ticker": "AAPL",
+    "source_type": "sec_10k",
+    "publication_date": "2024-11-01",
+    "period_end": "2024-09-28",
+    "source_url": "https://www.sec.gov/fake/example",
+    "section_name": "mda",
+    "text": "Fiscal 2024 net sales increased 2% compared to 2023, driven by higher Services revenue partially offset by lower iPhone revenue. Services growth reflected continued expansion of the installed base of active devices and higher customer engagement with our digital content offerings. iPhone revenue declined primarily due to a challenging macroeconomic environment in Greater China and a stronger U.S. dollar.",
+    "token_count": 68
+  },
+  {
+    "chunk_id": "sec_10q_NVDA_2025-02-26_mda_001",
+    "ticker": "NVDA",
+    "source_type": "sec_10q",
+    "publication_date": "2025-02-26",
+    "period_end": "2025-01-26",
+    "source_url": "https://www.sec.gov/fake/example2",
+    "section_name": "mda",
+    "text": "Data Center revenue for the fourth quarter was a record, up 93% from a year ago, driven by demand for Hopper and Blackwell architectures. We are ramping Blackwell at scale across cloud service providers and enterprises. Gross margin compressed modestly due to Blackwell mix and inventory provisions, and is expected to recover through fiscal 2026.",
+    "token_count": 64
+  }
+]

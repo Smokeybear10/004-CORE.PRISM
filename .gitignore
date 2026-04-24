@@ -1,0 +1,26 @@
+# Python
+venv/
+.venv/
+env/
+__pycache__/
+*.py[cod]
+*$py.class
+*.egg-info/
+.pytest_cache/
+.ipynb_checkpoints/
+
+# Environment / secrets
+.env
+.env.local
+*.pem
+
+# macOS
+.DS_Store
+
+# Claude Code local settings
+.claude/settings.local.json
+
+# Editors
+.vscode/
+.idea/
+*.swp
