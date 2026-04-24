@@ -12,15 +12,17 @@ import pandas as pd
 from pathlib import Path
 
 FOCAL_TICKERS = {
-    'NVDA':  'NVIDIA',
-    'GOOGL': 'Alphabet (Class A)',
-    'GOOG':  'Alphabet (Class C)',
-    'SNDK':  'SanDisk (2025 spin-off)',
-    'WDC':   'Western Digital (legacy SanDisk proxy 2016-2025)',
-    'IONS':  'Ionis Pharmaceuticals',
-    'VRTX':  'Vertex Pharmaceuticals',
+    'ABT':  'Abbott Laboratories',         # Healthcare
+    'ACU':  'Acme United Corporation',     # Consumer Defensive
+    'AIR':  'AAR Corp',                    # Industrials
+    'AMD':  'Advanced Micro Devices',      # Technology
+    'APD':  'Air Products and Chemicals',  # Basic Materials
 }
-FOCAL_SECTORS = {'Technology', 'Communication Services', 'Healthcare'}
+# Keep all 5 sectors so each focal ticker has sector peers for context
+FOCAL_SECTORS = {
+    'Healthcare', 'Consumer Defensive', 'Industrials',
+    'Technology', 'Basic Materials',
+}
 
 # Quality filters — drop junk adj_close rows that survived earlier steps.
 # Note: we do NOT filter by pre_event_price because that column is *adjusted*
