@@ -180,12 +180,12 @@ def test_fetch_paginates_until_empty_response(monkeypatch):
     monkeypatch.setattr(si.requests, "post", fake_post)
     recs = si.fetch_short_interest(None, as_of=date(2030, 1, 1))
     assert len(recs) == 5001
-    # The new loop breaks on empty response, not on short page — so 3 calls:
-    # [0..5000), [5000..5001), then an empty page.
-    assert len(calls) == 3
+    # FINRA returns 400 when offset exceeds the matching rowcount, so the
+    # loop breaks on a partial page (len < page_size). Two calls:
+    # [0..5000) full page, then [5000..5001) partial.
+    assert len(calls) == 2
     assert calls[0]["offset"] == 0
     assert calls[1]["offset"] == 5000
-    assert calls[2]["offset"] == 5001
 
 
 def test_fetch_dedups_revised_records_last_write_wins(monkeypatch):

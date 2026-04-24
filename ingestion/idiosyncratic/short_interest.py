@@ -92,8 +92,7 @@ def fetch_short_interest(
         resp.raise_for_status()
         rows = resp.json()
         if not rows:
-            break  # only break on empty response — a partial page mid-stream
-                   # could otherwise silently truncate results
+            break
         for row in rows:
             if not row.get("symbolCode"):
                 continue
@@ -102,6 +101,10 @@ def fetch_short_interest(
             # we want to override the original.
             by_key[(rec.ticker, rec.settlement_date)] = rec
         offset += len(rows)
+        # FINRA returns 400 when offset exceeds the matching rowcount rather
+        # than an empty page. A partial page means we've reached the end.
+        if len(rows) < page_size:
+            break
     else:
         LOG.warning("fetch_short_interest hit %d-page safety bound", max_iterations)
     return list(by_key.values())
