@@ -37,11 +37,11 @@ OUT = Path("events_focal.parquet")
 events = pd.read_parquet("events.parquet")
 print(f"Input: {len(events):,} events")
 
-# 1. Sector filter
-sector_mask = events['sector'].isin(FOCAL_SECTORS)
-print(f"  in focal sectors        : {sector_mask.sum():,}")
+# 1. Focal ticker filter — keep ONLY ABT/ACU/AIR/AMD/APD, no peers.
+ticker_mask = events['ticker'].isin(FOCAL_TICKERS)
+print(f"  matching focal tickers  : {ticker_mask.sum():,}")
 
-# 2. Quality filter
+# 2. Quality filter (catches the rare junk-adj_close rows)
 quality_mask = (
     (events['reaction_return'].abs() <= MAX_REACTION)
     & (events['pre_event_30d_vol'] >= MIN_VOL)
@@ -50,8 +50,8 @@ quality_mask = (
 )
 print(f"  passing quality filter  : {quality_mask.sum():,}")
 
-focal_events = events[sector_mask & quality_mask].copy()
-focal_events['is_focal'] = focal_events['ticker'].isin(FOCAL_TICKERS)
+focal_events = events[ticker_mask & quality_mask].copy()
+focal_events['is_focal'] = True  # by construction now
 focal_events['focal_company'] = focal_events['ticker'].map(FOCAL_TICKERS)
 print(f"  combined filter kept    : {len(focal_events):,}")
 
