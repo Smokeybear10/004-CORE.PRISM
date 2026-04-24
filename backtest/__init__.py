@@ -92,12 +92,36 @@ def fade_or_follow(
     realized_return_pct: float,
 ) -> FadeFollow:
     """
-    Given the model's attribution (with predicted_return_pct) and the actual
-    same-day realized return, emit lean / fade / neutral.
+    Emit lean / fade / neutral from an Attribution's move_character plus the
+    realized same-day return.
 
-    TODO: implement the simple rule above. Don't over-engineer.
+    Rule (matches the docstring above this function's original stub):
+        transient  + |realized| materially overshoots expected  → fade
+        structural + sign(predicted) == sign(realized)           → lean
+        otherwise                                                 → neutral
+
+    Simple and explicit — mentor was clear: don't over-engineer this.
     """
-    raise NotImplementedError("fade_or_follow - implement me")
+    mc = attribution.move_character
+    predicted = attribution.predicted_return_pct
+
+    if mc == "transient":
+        # No predicted? Fall back to: any transient big move is a fade candidate.
+        if predicted is None:
+            return "fade" if abs(realized_return_pct) > 0.02 else "neutral"
+        if abs(realized_return_pct) > abs(predicted) * 1.5:
+            return "fade"
+        return "neutral"
+
+    if mc == "structural":
+        if predicted is None:
+            return "lean" if realized_return_pct != 0 else "neutral"
+        if (predicted > 0 and realized_return_pct > 0) or (predicted < 0 and realized_return_pct < 0):
+            return "lean"
+        return "neutral"
+
+    # "mixed" or "unclear"
+    return "neutral"
 
 
 def run_ablation(
@@ -109,10 +133,26 @@ def run_ablation(
     For each AblationConfig, filter chunks to config.sources, attribute every
     move, and return a map from config name to the list of Attributions.
 
-    TODO: call model.attribute() per (move, config) pair. Cache outputs -
-    each call hits the Claude API. Mentor: cache everything, iterate is expensive.
+    Delegates to `model.attribute` — which currently ships as a placeholder
+    wrapper around `backtest.fixtures.generate_attribution`. Swap the model
+    implementation later without touching this function.
     """
-    raise NotImplementedError("run_ablation - implement me")
+    # Import here to avoid a circular import at module load
+    from model import attribute
+
+    out: dict[str, list[Attribution]] = {}
+    for cfg in configs:
+        allowed = set(cfg.sources)
+        chunks_for_cfg: list[TextChunk] = []
+        for src in allowed:
+            chunks_for_cfg.extend(chunks_by_source.get(src, []))
+        per_move: list[Attribution] = []
+        for mv in moves:
+            # No-foreknowledge filter: only chunks published on/before move_date
+            visible = [c for c in chunks_for_cfg if c.publication_date <= mv.move_date]
+            per_move.append(attribute(mv, visible, cfg))
+        out[cfg.name] = per_move
+    return out
 
 
 def evaluate(
@@ -120,7 +160,61 @@ def evaluate(
     realized_next5_returns: dict[str, float],  # key: f"{ticker}_{move_date}"
 ) -> BacktestResult:
     """
-    Per-ablation backtest result. Use `ablation_name` from the attributions as
-    the strategy_name so the demo chart can group bars.
+    Per-ablation backtest result. Uses `fade_or_follow` + realized forward
+    returns to produce a BacktestResult. `strategy_name` is derived from the
+    attributions' `ablation_name` so the demo chart can group bars.
     """
-    raise NotImplementedError("evaluate - implement me")
+    import math
+
+    if not attributions:
+        return BacktestResult(
+            strategy_name="evaluate:empty",
+            n_trades=0, sharpe=0.0, hit_rate=0.0,
+            avg_return=0.0, max_drawdown=0.0,
+            notes="no attributions provided",
+        )
+
+    ablation_name = attributions[0].ablation_name
+    strategy_name = f"fade_follow:{ablation_name or 'unlabeled'}"
+
+    pnls: list[float] = []
+    for a in attributions:
+        key = f"{a.ticker}_{a.move_date}"
+        if key not in realized_next5_returns:
+            continue
+        fwd = realized_next5_returns[key]
+        signal = fade_or_follow(a, a.return_pct)
+        sign = 1 if a.return_pct > 0 else (-1 if a.return_pct < 0 else 0)
+        direction = sign if signal == "lean" else (-sign if signal == "fade" else 0)
+        pnls.append(direction * fwd)
+
+    active = [p for p in pnls if p != 0]
+    n = len(active)
+    if n == 0:
+        return BacktestResult(
+            strategy_name=strategy_name, ablation_name=ablation_name,
+            n_trades=0, sharpe=0.0, hit_rate=0.0,
+            avg_return=0.0, max_drawdown=0.0,
+            notes="no active trades",
+        )
+
+    avg = sum(active) / n
+    var = sum((x - avg) ** 2 for x in active) / (n - 1) if n > 1 else 0.0
+    std = math.sqrt(var) if var > 0 else 0.0
+    # Annualize coarsely: horizon 5d → ~50 trades/yr per series
+    sharpe = (avg / std * math.sqrt(252 / 5)) if std > 0 else 0.0
+    hit = sum(1 for x in active if x > 0) / n
+
+    # Max drawdown on cumulative P&L (order = attribution list order)
+    cum = 0.0; peak = 0.0; max_dd = 0.0
+    for x in active:
+        cum += x
+        peak = max(peak, cum)
+        max_dd = min(max_dd, cum - peak)
+
+    return BacktestResult(
+        strategy_name=strategy_name, ablation_name=ablation_name,
+        n_trades=n, sharpe=sharpe, hit_rate=hit,
+        avg_return=avg, max_drawdown=max_dd,
+        notes="evaluate(): horizon=5d, SPY-neutralization not applied here — see backtest.pnl for that",
+    )
