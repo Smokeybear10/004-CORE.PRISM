@@ -37,20 +37,6 @@ def test_chunk_id_is_stable():
     assert a == "sec_10k_AAPL_2024-11-01_mda_001"
 
 
-def test_frozen_test_case_exists_and_is_valid():
-    """
-    The AAPL March 2020 test case is the canonical prompt-iteration target.
-    This test just guards against someone accidentally deleting or breaking it.
-    """
-    path = FIXTURES_DIR / "aapl_march2020_expected.json"
-    assert path.exists(), "Frozen test case fixture missing - see CLAUDE.md"
-    with open(path) as f:
-        data = json.load(f)
-    assert data["input"]["ticker"] == "AAPL"
-    assert data["input"]["move_date"] == "2020-03-16"
-    assert "dominant_dimension" in data["expected_attribution"]
-
-
 def test_default_ablations_are_monotonically_additive():
     """
     Each successive AblationConfig in DEFAULT_ABLATIONS must be a superset of

@@ -7,11 +7,11 @@ Public API:
     - check_coherence(attribution) -> CoherenceCheck              (Step 5 gate)
 
 Prompt-iteration rule (mentor, explicit):
-    Iterate prompts using the FROZEN test case:
-        tests/fixtures/aapl_march2020_expected.json
-    Don't swap the test input and the prompt at the same time - you lose the
-    ability to isolate what changed. Write down the expected output BEFORE
-    running so a regression is obvious.
+    Iterate prompts using a FROZEN test case: pick one (ticker, date) pair with
+    a known cause, store expected outputs in tests/fixtures/, and don't change
+    it while tweaking prompts. Don't swap the test input and the prompt at the
+    same time - you lose the ability to isolate what changed. Write down the
+    expected output BEFORE running so a regression is obvious. See CLAUDE.md.
 
 Foreknowledge defense:
     When constructing the LLM prompt, include a system instruction along the
