@@ -1,46 +1,57 @@
 [
   {
-    "change_id": "sp500_add_TSLA_2020-12-14",
+    "change_id": "sp500_add_SWKS_2015-03-12",
     "index_name": "S&P 500",
     "action": "add",
-    "ticker": "TSLA",
-    "company_name": "Tesla Inc",
-    "announcement_date": "2020-12-01",
-    "effective_date": "2020-12-21",
-    "replacing_ticker": null,
-    "source_url": "https://www.spglobal.com/spdji/en/documents/indexnews/announcements/20201201-1325283/1325283_4tslaadds&p5002020120111345.pdf"
+    "ticker": "SWKS",
+    "company_name": "Skyworks",
+    "announcement_date": "2015-03-07",
+    "effective_date": "2015-03-12",
+    "replacing_ticker": "PETM",
+    "source_url": "https://en.wikipedia.org/wiki/List_of_S%26P_500_companies"
   },
   {
-    "change_id": "sp500_delete_AIV_2020-12-14",
+    "change_id": "sp500_add_HCA_2015-01-27",
+    "index_name": "S&P 500",
+    "action": "add",
+    "ticker": "HCA",
+    "company_name": "HCA Holdings",
+    "announcement_date": "2015-01-22",
+    "effective_date": "2015-01-27",
+    "replacing_ticker": "SWY",
+    "source_url": "https://en.wikipedia.org/wiki/List_of_S%26P_500_companies"
+  },
+  {
+    "change_id": "sp500_add_ENDP_2015-01-27",
+    "index_name": "S&P 500",
+    "action": "add",
+    "ticker": "ENDP",
+    "company_name": "Endo International",
+    "announcement_date": "2015-01-22",
+    "effective_date": "2015-01-27",
+    "replacing_ticker": "COV",
+    "source_url": "https://en.wikipedia.org/wiki/List_of_S%26P_500_companies"
+  },
+  {
+    "change_id": "sp500_del_SWY_2015-01-27",
     "index_name": "S&P 500",
     "action": "delete",
-    "ticker": "AIV",
-    "company_name": "Apartment Investment and Management Co",
-    "announcement_date": "2020-12-01",
-    "effective_date": "2020-12-21",
-    "replacing_ticker": "TSLA",
-    "source_url": "https://www.spglobal.com/spdji/en/documents/indexnews/announcements/20201201-1325283/1325283_4tslaadds&p5002020120111345.pdf"
+    "ticker": "SWY",
+    "company_name": "Safeway",
+    "announcement_date": "2015-01-22",
+    "effective_date": "2015-01-27",
+    "replacing_ticker": "HCA",
+    "source_url": "https://en.wikipedia.org/wiki/List_of_S%26P_500_companies"
   },
   {
-    "change_id": "russell2000_add_RIVN_2022-06-24",
-    "index_name": "Russell 2000",
-    "action": "add",
-    "ticker": "RIVN",
-    "company_name": "Rivian Automotive Inc",
-    "announcement_date": "2022-06-03",
-    "effective_date": "2022-06-24",
-    "replacing_ticker": null,
-    "source_url": "https://www.ftserussell.com/resources/russell-reconstitution"
-  },
-  {
-    "change_id": "msci_acwi_add_SNOW_2021-09-02",
-    "index_name": "MSCI ACWI",
-    "action": "add",
-    "ticker": "SNOW",
-    "company_name": "Snowflake Inc",
-    "announcement_date": "2021-08-12",
-    "effective_date": "2021-09-02",
-    "replacing_ticker": null,
-    "source_url": "https://www.msci.com/documents/10199/a67b0d43-3639-4996-9717-b8909b1e3fe4"
+    "change_id": "sp500_del_COV_2015-01-27",
+    "index_name": "S&P 500",
+    "action": "delete",
+    "ticker": "COV",
+    "company_name": "Covidien",
+    "announcement_date": "2015-01-22",
+    "effective_date": "2015-01-27",
+    "replacing_ticker": "ENDP",
+    "source_url": "https://en.wikipedia.org/wiki/List_of_S%26P_500_companies"
   }
 ]

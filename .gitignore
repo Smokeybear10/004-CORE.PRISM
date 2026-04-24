@@ -19,9 +19,11 @@ __pycache__/
 
 # Claude Code local settings
 .claude/settings.local.json
-CLAUDE.md
 
 # Editors
 .vscode/
 .idea/
 *.swp
+
+# Local data / caches (HF pulls, parquet caches, etc. — never commit raw bulk data)
+data/

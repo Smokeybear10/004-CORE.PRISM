@@ -22,6 +22,11 @@ class SourceType(str, Enum):
     SEC_8K = "sec_8k"
     EARNINGS_TRANSCRIPT = "earnings_transcript"
     NEWS = "news"
+    # Idiosyncratic-event parallel chunks (text generated from structured records
+    # so the attribution model can cite them via DimensionScore.evidence_chunk_ids)
+    SHORT_INTEREST = "short_interest"
+    THIRTEEN_F = "thirteen_f"
+    INDEX_CHANGE = "index_change"
 
 
 # ---------- Text chunks (what ingestion produces) ----------
@@ -101,6 +106,22 @@ class BacktestResult(BaseModel):
     avg_return: float
     max_drawdown: float
     notes: Optional[str] = None
+
+
+# ---------- Unified Event envelope ----------
+
+class Event(BaseModel):
+    """
+    Unified envelope for all events that drive price moves.
+    Links events across data sources for temporal analysis.
+    """
+    event_id: str  # stable, unique identifier
+    ticker: str
+    event_date: date
+    event_type: str  # e.g. "short_interest_spike", "13f_delta", "index_add", etc.
+    source: str  # data source (e.g. "FINRA", "SEC EDGAR", "S&P Global")
+    payload_ref: str  # reference to detailed record (e.g. chunk_id, record_id)
+    text: Optional[str] = None  # human-readable event description
 
 
 # ---------- Idiosyncratic data types ----------
