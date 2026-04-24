@@ -17,20 +17,34 @@ Pipeline per configuration:
 from __future__ import annotations
 
 import argparse
+import sys
 from pathlib import Path
 from typing import List, Optional
 
 import pandas as pd
 
 from schema import BacktestResult
-from backtest.fixtures import ABLATION_BUNDLES, generate_attributions_for_events
+from backtest.fixtures import (
+    ABLATION_BUNDLES,
+    generate_attributions_for_events,
+    make_synthetic_events_df,
+)
 from backtest.signal import attribution_to_trade
 from backtest.pnl import compute_pnl, summarize
 from backtest.baselines import BASELINES
 
 
-def _load_events(path: str, universe: str) -> pd.DataFrame:
-    df = pd.read_parquet(path)
+def _load_events(path: str, universe: str, seed: int = 0) -> pd.DataFrame:
+    if not Path(path).exists():
+        print(
+            f"WARNING: {path} not found — falling back to synthetic events "
+            f"(make_synthetic_events_df). This is fine for smoke tests and "
+            f"demo rehearsals but NOT for real backtests.",
+            file=sys.stderr,
+        )
+        df = make_synthetic_events_df(n=50, seed=seed)
+    else:
+        df = pd.read_parquet(path)
     df["earnings_date"] = pd.to_datetime(df["earnings_date"])
     df["reaction_end"]  = pd.to_datetime(df["reaction_end"])
 
@@ -114,7 +128,7 @@ def main(argv: Optional[list[str]] = None):
     p.add_argument("--seed",      type=int, default=0)
     args = p.parse_args(argv)
 
-    events_df = _load_events(args.events, args.universe)
+    events_df = _load_events(args.events, args.universe, seed=args.seed)
     print(f"Universe: {args.universe}  |  events: {len(events_df):,}  |  horizon: {args.horizon}d"
           f"  |  returns: {'raw' if args.raw else 'SPY-excess'}")
 

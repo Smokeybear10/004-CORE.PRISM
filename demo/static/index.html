@@ -1,0 +1,144 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Price Action Tagger</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <script src="https://cdn.plot.ly/plotly-2.35.2.min.js"></script>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+
+<header class="topbar">
+  <div class="topbar-inner">
+    <div class="brand">
+      <span class="brand-mark">◤</span>
+      <div>
+        <h1>Price Action Tagger</h1>
+        <p class="tagline">Lean or fade — attribution-driven.</p>
+      </div>
+    </div>
+    <nav class="ticker-pills" id="ticker-pills" role="tablist"></nav>
+  </div>
+</header>
+
+<main class="container">
+
+  <section class="overview">
+    <div class="overview-meta">
+      <h2 id="ticker-title">—</h2>
+      <p id="ticker-sub" class="muted">—</p>
+    </div>
+    <div class="overview-stats">
+      <div class="stat">
+        <span class="stat-label">Trading days</span>
+        <span class="stat-value" id="stat-days">—</span>
+      </div>
+      <div class="stat">
+        <span class="stat-label">Flagged moves</span>
+        <span class="stat-value" id="stat-moves">—</span>
+      </div>
+      <div class="stat">
+        <span class="stat-label">Down / Up</span>
+        <span class="stat-value" id="stat-split">—</span>
+      </div>
+    </div>
+  </section>
+
+  <section class="chart-card">
+    <header class="card-header">
+      <h3>Price with flagged moves</h3>
+      <p class="muted">Click any dot to inspect the attribution.</p>
+    </header>
+    <div id="chart"></div>
+  </section>
+
+  <section class="sources-card" id="sources-card">
+    <header class="card-header">
+      <div>
+        <h3>Sources feeding the model</h3>
+        <p class="muted">Toggle on/off and watch the attribution re-compute.
+          Realized return is historical — it never moves.</p>
+      </div>
+      <button type="button" class="reset-btn" id="reset-toggles">Reset to full stack</button>
+    </header>
+    <div class="toggle-row" id="toggle-row"></div>
+    <p class="muted small toggle-caption" id="toggle-caption">—</p>
+  </section>
+
+  <section class="attribution-card" id="attribution-card">
+    <header class="card-header attribution-header">
+      <div>
+        <h3 id="attr-title">Attribution</h3>
+        <p class="muted" id="attr-sub">Pick a flagged move to begin.</p>
+      </div>
+      <div class="char-pill" id="char-pill" hidden></div>
+    </header>
+
+    <div class="kpis" id="kpis" hidden>
+      <div class="kpi">
+        <span class="kpi-label">Realized <span class="tag tag-locked">history</span></span>
+        <span class="kpi-value" id="kpi-realized">—</span>
+      </div>
+      <div class="kpi">
+        <span class="kpi-label">Predicted</span>
+        <span class="kpi-value" id="kpi-predicted">—</span>
+        <span class="kpi-delta muted" id="kpi-gap"></span>
+      </div>
+      <div class="kpi">
+        <span class="kpi-label">Character</span>
+        <span class="kpi-value" id="kpi-character">—</span>
+      </div>
+      <div class="kpi">
+        <span class="kpi-label">Confidence</span>
+        <span class="kpi-value" id="kpi-confidence">—</span>
+      </div>
+    </div>
+
+    <div class="fullstack-ref" id="fullstack-ref" hidden>
+      <span class="muted small">vs full stack →</span>
+      <span id="fs-predicted">—</span>
+      <span class="sep">·</span>
+      <span id="fs-character">—</span>
+      <span class="sep">·</span>
+      <span id="fs-confidence">—</span>
+    </div>
+
+    <div class="zero-warning" id="zero-warning" hidden>
+      <strong>No sources enabled.</strong>
+      Toggle at least one checkbox above to generate an attribution —
+      <code>model.attribute()</code> can't cite evidence that isn't there.
+    </div>
+
+    <div class="dims-section" id="dims-section" hidden>
+      <h4>Dimension weights</h4>
+      <div class="dim-bars" id="dim-bars"></div>
+    </div>
+
+    <div class="evidence-section" id="evidence-section" hidden>
+      <h4>Rationale + evidence</h4>
+      <p class="muted small">Every dimension cites at least one chunk_id (CLAUDE.md rule #6).</p>
+      <div id="evidence-list"></div>
+    </div>
+
+    <div class="mock-banner" id="mock-banner" hidden></div>
+  </section>
+
+</main>
+
+<footer class="footbar">
+  <div class="footbar-inner">
+    <span class="muted small">
+      Prices + flagged moves → <code>ingestion.prices</code> (live pipeline).
+      Attribution text → <code>demo.mock_data</code> (swap for
+      <code>model.attribute()</code> when Step 3 lands).
+    </span>
+  </div>
+</footer>
+
+<script src="app.js"></script>
+</body>
+</html>

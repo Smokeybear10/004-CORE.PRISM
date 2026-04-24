@@ -1,0 +1,13 @@
+{
+  "ticker": "AMD",
+  "move_date": "2025-10-06",
+  "known_cause": "FUNDAMENTAL (up): AMD and OpenAI announced a multi-year strategic partnership; OpenAI committed to deploying AMD Instinct MI450 GPUs. Fundamental — AMD landed OpenAI as a committed customer for its next-gen AI GPU, which directly implies future data center revenue that wasn't in analyst models the day before.",
+  "expected": {
+    "dominant_dimension": ["demand", "competitive"],
+    "direction": "positive",
+    "move_character": "structural",
+    "fade_or_lean": "lean",
+    "must_cite_source_type": ["news"],
+    "must_not_be_dominant": ["macro", "management_credibility"]
+  }
+}

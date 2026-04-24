@@ -1,10 +1,9 @@
 """
 Step 5b: Focal-universe filter.
 
-Keeps the three sectors relevant to the target companies (Technology,
-Communication Services, Healthcare), drops junk-data rows, and flags
-the explicit focal tickers. All non-focal tickers in the same sectors
-are preserved as peers — the backtest needs sector context.
+Keeps ONLY the 5 focal tickers (ABT/ACU/AIR/AMD/APD), drops junk-data
+rows. Peers were dropped when the universe shrank from 7→5 — sector
+context is now sourced from the per-ticker peer-news stream instead.
 
 Output: events_focal.parquet
 """
@@ -37,11 +36,11 @@ OUT = Path("events_focal.parquet")
 events = pd.read_parquet("events.parquet")
 print(f"Input: {len(events):,} events")
 
-# 1. Sector filter
-sector_mask = events['sector'].isin(FOCAL_SECTORS)
-print(f"  in focal sectors        : {sector_mask.sum():,}")
+# 1. Focal ticker filter — keep ONLY ABT/ACU/AIR/AMD/APD, no peers.
+ticker_mask = events['ticker'].isin(FOCAL_TICKERS)
+print(f"  matching focal tickers  : {ticker_mask.sum():,}")
 
-# 2. Quality filter
+# 2. Quality filter (catches the rare junk-adj_close rows)
 quality_mask = (
     (events['reaction_return'].abs() <= MAX_REACTION)
     & (events['pre_event_30d_vol'] >= MIN_VOL)
@@ -50,8 +49,8 @@ quality_mask = (
 )
 print(f"  passing quality filter  : {quality_mask.sum():,}")
 
-focal_events = events[sector_mask & quality_mask].copy()
-focal_events['is_focal'] = focal_events['ticker'].isin(FOCAL_TICKERS)
+focal_events = events[ticker_mask & quality_mask].copy()
+focal_events['is_focal'] = True  # by construction now
 focal_events['focal_company'] = focal_events['ticker'].map(FOCAL_TICKERS)
 print(f"  combined filter kept    : {len(focal_events):,}")
 
@@ -78,9 +77,9 @@ for t, name in FOCAL_TICKERS.items():
 sig_focal = focal_events[focal_events['is_focal'] & focal_events['is_significant']]
 sig_all   = focal_events[focal_events['is_significant']]
 print(f"\nSignificant events across all peers in focal sectors : {len(sig_all):,}")
-print(f"Significant events limited to the 7 focal tickers    : {len(sig_focal):,}")
+print(f"Significant events limited to the 5 focal tickers    : {len(sig_focal):,}")
 
-print("\nSignificant events at the 7 focal tickers (most recent 10):")
+print("\nSignificant events at the 5 focal tickers (most recent 10):")
 print(sig_focal[['event_id', 'ticker', 'earnings_date', 'bmo_or_amc',
                  'reaction_return', 'reaction_return_zscore', 'fwd_5d_excess']]
       .sort_values('earnings_date', ascending=False)

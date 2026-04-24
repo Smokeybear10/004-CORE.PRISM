@@ -1,0 +1,13 @@
+{
+  "ticker": "AMD",
+  "move_date": "2022-10-07",
+  "known_cause": "FUNDAMENTAL (down): AMD issued a preliminary Q3 warning, cutting revenue guidance from ~$6.7B to ~$5.6B (a $1.1B miss), citing a weaker-than-expected PC market and significant inventory correction actions across the PC supply chain. Fundamental — the CEO directly disclosed that real PC demand was weaker than expected, materially lowering near-term revenue trajectory.",
+  "expected": {
+    "dominant_dimension": ["demand"],
+    "direction": "negative",
+    "move_character": "structural",
+    "fade_or_lean": "lean",
+    "must_cite_source_type": ["news"],
+    "must_not_be_dominant": ["macro", "pricing", "management_credibility"]
+  }
+}
