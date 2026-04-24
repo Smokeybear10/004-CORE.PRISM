@@ -1,0 +1,13 @@
+{
+  "ticker": "AMD",
+  "move_date": "2023-05-25",
+  "known_cause": "NON-FUNDAMENTAL: AMD rallied ~11% on no company-specific news. Nvidia reported blowout Q1 earnings the night before and AMD rose in sympathy as a perceived AI-chip beneficiary. Non-fundamental — nothing changed about AMD's business; the move was pure sector sympathy driven by Nvidia's earnings beat.",
+  "expected": {
+    "dominant_dimension": ["macro"],
+    "direction": "positive",
+    "move_character": "transient",
+    "fade_or_lean": "fade",
+    "must_cite_source_type": ["peer_news"],
+    "must_not_be_dominant": ["demand", "pricing", "management_credibility"]
+  }
+}
