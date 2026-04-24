@@ -8,8 +8,8 @@ Public API downstream modules rely on:
     - fetch_price_series(ticker, start, end) -> pd.DataFrame  (date-indexed, close + volume)
     - get_next_n_day_return(ticker, start_date, n=5) -> float  (for fade/follow evaluation)
 
-MVP scope: AAPL, last 2-5 years. Cache yfinance output to .cache/ so re-runs
-don't re-hit the API.
+MVP scope: ONE ticker first, last 2-5 years. Cache yfinance output to .cache/
+so re-runs don't re-hit the API.
 
 Flagging heuristic (mentor: pick ONE and stick with it - don't polish Step 1):
     A move is "significant" if ANY of:

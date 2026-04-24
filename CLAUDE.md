@@ -213,9 +213,9 @@ posting in team chat first.**
 ---
 
 ## MVP scope (hour 0 → next mentor check-in)
-- **Universe:** AAPL only. Expand to 5 tickers after end-to-end works. AAPL chosen
-  because the March 2020 COVID drop is a known event with obvious correct attribution —
-  we can spot-check the model on it.
+- **Universe:** ONE ticker first. Pick one where the team has personal intuition about
+  at least one past move — mentor's point is that spot-checking requires knowing what
+  the right attribution "feels like." Expand to ~5 after MVP works.
 - **History:** 2–5 years. Not 20. Long history burns compute without adding MVP value.
 - **Sources for MVP:** earnings transcripts + 10-Ks + (whatever news Thomas can land).
   Add 13F, macro, peer news, sector as ablations **after** MVP is end-to-end.
@@ -275,14 +275,19 @@ This is the feature-importance story inside the ablation story.
 
 ---
 
-## Frozen test case: AAPL March 2020 COVID drop
-- **Expected dominant dimension:** `macro` (negative).
-- **Expected `move_character`:** `transient` or `mixed` — market recovered by summer.
-- **Expected fade/lean call:** fade (the drop overshot).
-- Use this case for all prompt iteration. If a prompt change breaks AAPL-COVID
-  attribution, revert. **Don't swap the test case mid-iteration** — you lose the ability
-  to isolate what changed.
-- Ground truth lives in `tests/fixtures/aapl_march2020_expected.json` (TODO: create).
+## Frozen test case (pick once, don't swap)
+Once the team picks the MVP ticker, pick ONE (ticker, date) pair where the team knows
+what caused the move — e.g. a COVID-era drop for a consumer name, a rate-hike day for
+a bank. That pair becomes the prompt-iteration target.
+
+Rules (mentor, explicit):
+- **Freeze the inputs.** Don't swap the test case mid-iteration — you lose the ability
+  to isolate what a prompt change caused.
+- **Write the expected output BEFORE running the model** (dominant dimension, direction,
+  plausible `move_character`). A regression is only obvious if you can name it ahead
+  of time.
+- Store the expected-output contract as `tests/fixtures/<ticker>_<event>_expected.json`.
+  A test should assert it parses and contains the expected-attribution keys.
 
 ---
 
@@ -374,7 +379,7 @@ dimensions (not sentiment).
   filing sections matter).
 - Broaden scope past the target company: "Apple's family companies" (suppliers,
   partners, competitors). This is the `+peer_news` ablation.
-- Midpoint evaluation: is the model making sense? Is it realistic? Evaluate on AAPL-COVID.
+- Midpoint evaluation: is the model making sense? Is it realistic? Evaluate on the frozen test case.
 - Walk through: input (ticker) → Step 1 (significant moves) → Step 2 (news tagging) →
   connect tags to volatility → demo the matched intuition.
 - Strategy must stand up to defense. Address what works AND what doesn't — include a
