@@ -1,0 +1,32 @@
+[
+  {
+    "chunk_id": "short_report_muddy_waters_BABA_2024-01-15",
+    "publisher": "Muddy Waters Research",
+    "target_ticker": "BABA",
+    "publication_date": "2024-01-15",
+    "title": "Alibaba: The Party's Over",
+    "thesis_text": "We believe Alibaba has materially overstated its user metrics and revenue. Our analysis of mobile app usage data suggests active users are 30-40% lower than reported. Additionally, the company appears to be engaging in channel stuffing to inflate GMV figures during key shopping periods.",
+    "source_url": "https://muddywatersresearch.com/research/baba-the-partys-over/",
+    "token_count": 156
+  },
+  {
+    "chunk_id": "short_report_hindenburg_NKLA_2024-02-28",
+    "publisher": "Hindenburg Research",
+    "target_ticker": "NKLA",
+    "publication_date": "2024-02-28",
+    "title": "Nikola: Technology Mirage Continues",
+    "thesis_text": "Despite management promises, Nikola has failed to deliver on core hydrogen fuel cell technology. Our investigation reveals the company is still years away from commercially viable hydrogen trucks. Recent partnerships appear to be largely marketing exercises with minimal substance.",
+    "source_url": "https://hindenburgresearch.com/nikola-technology-mirage/",
+    "token_count": 142
+  },
+  {
+    "chunk_id": "short_report_citron_RIVN_2024-03-10",
+    "publisher": "Citron Research",
+    "target_ticker": "RIVN",
+    "publication_date": "2024-03-10",
+    "title": "Rivian: Production Hell 2.0",
+    "thesis_text": "Rivian faces insurmountable production challenges similar to Tesla's early struggles, but without Tesla's technological advantages. Supply chain issues, quality control problems, and cash burn rate suggest the company will need significant dilutive financing within 12 months.",
+    "source_url": "https://citronresearch.com/rivian-production-hell/",
+    "token_count": 134
+  }
+]

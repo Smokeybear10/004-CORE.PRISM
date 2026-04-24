@@ -1,0 +1,52 @@
+[
+  {
+    "fund_cik": "0001067983",
+    "fund_name": "BERKSHIRE HATHAWAY INC",
+    "ticker": "AAPL",
+    "filing_date": "2025-02-14",
+    "period_end": "2024-12-31",
+    "shares": 300000000,
+    "market_value": 75126000000,
+    "percent_of_portfolio": 28.119
+  },
+  {
+    "fund_cik": "0001067983",
+    "fund_name": "BERKSHIRE HATHAWAY INC",
+    "ticker": "AXP",
+    "filing_date": "2025-02-14",
+    "period_end": "2024-12-31",
+    "shares": 151610700,
+    "market_value": 44996539653,
+    "percent_of_portfolio": 16.842
+  },
+  {
+    "fund_cik": "0001067983",
+    "fund_name": "BERKSHIRE HATHAWAY INC",
+    "ticker": "060505104",
+    "filing_date": "2025-02-14",
+    "period_end": "2024-12-31",
+    "shares": 680233587,
+    "market_value": 29896266149,
+    "percent_of_portfolio": 11.19
+  },
+  {
+    "fund_cik": "0001067983",
+    "fund_name": "BERKSHIRE HATHAWAY INC",
+    "ticker": "KO",
+    "filing_date": "2025-02-14",
+    "period_end": "2024-12-31",
+    "shares": 400000000,
+    "market_value": 24904000000,
+    "percent_of_portfolio": 9.321
+  },
+  {
+    "fund_cik": "0001067983",
+    "fund_name": "BERKSHIRE HATHAWAY INC",
+    "ticker": "166764100",
+    "filing_date": "2025-02-14",
+    "period_end": "2024-12-31",
+    "shares": 118610534,
+    "market_value": 17179549745,
+    "percent_of_portfolio": 6.43
+  }
+]

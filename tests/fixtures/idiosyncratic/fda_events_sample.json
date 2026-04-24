@@ -1,0 +1,42 @@
+[
+  {
+    "event_id": "fda_pdufa_BIIB_ADUHELM_2024-06-07",
+    "event_type": "pdufa",
+    "event_date": "2024-06-07",
+    "sponsor_ticker": "BIIB",
+    "drug_name": "Aduhelm",
+    "indication": "Alzheimer's Disease",
+    "description": "PDUFA goal date for supplemental BLA for Aduhelm dosing regimen modification",
+    "source_url": "https://www.fda.gov/drugs/news-events-human-drugs/pdufa-dates"
+  },
+  {
+    "event_id": "fda_adcomm_MRNA_VACCINE_2024-05-15",
+    "event_type": "adcomm",
+    "event_date": "2024-05-15",
+    "sponsor_ticker": "MRNA",
+    "drug_name": "mRNA-1273",
+    "indication": "COVID-19 Vaccine Booster",
+    "description": "Advisory Committee meeting to discuss updated COVID-19 vaccine formulation for 2024-2025 season",
+    "source_url": "https://www.fda.gov/advisory-committees/calendar"
+  },
+  {
+    "event_id": "fda_approval_GILD_VEKLURY_2024-04-22",
+    "event_type": "approval",
+    "event_date": "2024-04-22",
+    "sponsor_ticker": "GILD",
+    "drug_name": "Veklury",
+    "indication": "Pediatric COVID-19",
+    "description": "FDA approves Veklury (remdesivir) for treatment of COVID-19 in pediatric patients under 12 years",
+    "source_url": "https://www.fda.gov/drugs/drug-approvals-and-databases/fda-approves-veklury-covid-19"
+  },
+  {
+    "event_id": "fda_crl_BMRN_GENE_THERAPY_2024-03-30",
+    "event_type": "crl",
+    "event_date": "2024-03-30",
+    "sponsor_ticker": "BMRN",
+    "drug_name": "valoctocogene roxaparvovec",
+    "indication": "Hemophilia A",
+    "description": "FDA issues Complete Response Letter for gene therapy BLA, requesting additional manufacturing data",
+    "source_url": "https://www.fda.gov/drugs/news-events-human-drugs/complete-response-letters"
+  }
+]

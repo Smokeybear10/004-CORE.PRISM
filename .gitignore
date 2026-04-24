@@ -34,3 +34,8 @@ datasets/
 .vscode/
 .idea/
 *.swp
+
+# Local data / caches (HF pulls, parquet caches, etc. — never commit raw bulk data)
+data/
+# Generated backtest outputs
+out/

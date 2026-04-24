@@ -1,0 +1,57 @@
+[
+  {
+    "change_id": "sp500_add_SWKS_2015-03-12",
+    "index_name": "S&P 500",
+    "action": "add",
+    "ticker": "SWKS",
+    "company_name": "Skyworks",
+    "announcement_date": "2015-03-07",
+    "effective_date": "2015-03-12",
+    "replacing_ticker": "PETM",
+    "source_url": "https://en.wikipedia.org/wiki/List_of_S%26P_500_companies"
+  },
+  {
+    "change_id": "sp500_add_HCA_2015-01-27",
+    "index_name": "S&P 500",
+    "action": "add",
+    "ticker": "HCA",
+    "company_name": "HCA Holdings",
+    "announcement_date": "2015-01-22",
+    "effective_date": "2015-01-27",
+    "replacing_ticker": "SWY",
+    "source_url": "https://en.wikipedia.org/wiki/List_of_S%26P_500_companies"
+  },
+  {
+    "change_id": "sp500_add_ENDP_2015-01-27",
+    "index_name": "S&P 500",
+    "action": "add",
+    "ticker": "ENDP",
+    "company_name": "Endo International",
+    "announcement_date": "2015-01-22",
+    "effective_date": "2015-01-27",
+    "replacing_ticker": "COV",
+    "source_url": "https://en.wikipedia.org/wiki/List_of_S%26P_500_companies"
+  },
+  {
+    "change_id": "sp500_del_SWY_2015-01-27",
+    "index_name": "S&P 500",
+    "action": "delete",
+    "ticker": "SWY",
+    "company_name": "Safeway",
+    "announcement_date": "2015-01-22",
+    "effective_date": "2015-01-27",
+    "replacing_ticker": "HCA",
+    "source_url": "https://en.wikipedia.org/wiki/List_of_S%26P_500_companies"
+  },
+  {
+    "change_id": "sp500_del_COV_2015-01-27",
+    "index_name": "S&P 500",
+    "action": "delete",
+    "ticker": "COV",
+    "company_name": "Covidien",
+    "announcement_date": "2015-01-22",
+    "effective_date": "2015-01-27",
+    "replacing_ticker": "ENDP",
+    "source_url": "https://en.wikipedia.org/wiki/List_of_S%26P_500_companies"
+  }
+]

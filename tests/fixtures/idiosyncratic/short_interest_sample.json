@@ -1,0 +1,82 @@
+[
+  {
+    "ticker": "GME",
+    "settlement_date": "2024-01-31",
+    "shares_short": 59673027,
+    "avg_daily_volume": 2885946,
+    "days_to_cover": 20.68,
+    "float_short_percent": null
+  },
+  {
+    "ticker": "GME",
+    "settlement_date": "2024-01-12",
+    "shares_short": 60104977,
+    "avg_daily_volume": 3190257,
+    "days_to_cover": 18.84,
+    "float_short_percent": null
+  },
+  {
+    "ticker": "AMC",
+    "settlement_date": "2024-01-31",
+    "shares_short": 28620993,
+    "avg_daily_volume": 13121389,
+    "days_to_cover": 2.18,
+    "float_short_percent": null
+  },
+  {
+    "ticker": "AMC",
+    "settlement_date": "2024-01-12",
+    "shares_short": 24104314,
+    "avg_daily_volume": 17869237,
+    "days_to_cover": 1.35,
+    "float_short_percent": null
+  },
+  {
+    "ticker": "TSLA",
+    "settlement_date": "2024-01-31",
+    "shares_short": 90710966,
+    "avg_daily_volume": 117793907,
+    "days_to_cover": 1.0,
+    "float_short_percent": null
+  },
+  {
+    "ticker": "TSLA",
+    "settlement_date": "2024-01-12",
+    "shares_short": 80466304,
+    "avg_daily_volume": 102259321,
+    "days_to_cover": 1.0,
+    "float_short_percent": null
+  },
+  {
+    "ticker": "NVDA",
+    "settlement_date": "2024-01-31",
+    "shares_short": 27251889,
+    "avg_daily_volume": 44425602,
+    "days_to_cover": 1.0,
+    "float_short_percent": null
+  },
+  {
+    "ticker": "NVDA",
+    "settlement_date": "2024-01-12",
+    "shares_short": 27560860,
+    "avg_daily_volume": 48062002,
+    "days_to_cover": 1.0,
+    "float_short_percent": null
+  },
+  {
+    "ticker": "AAPL",
+    "settlement_date": "2024-01-31",
+    "shares_short": 99244672,
+    "avg_daily_volume": 55845648,
+    "days_to_cover": 1.78,
+    "float_short_percent": null
+  },
+  {
+    "ticker": "AAPL",
+    "settlement_date": "2024-01-12",
+    "shares_short": 101263039,
+    "avg_daily_volume": 56712342,
+    "days_to_cover": 1.79,
+    "float_short_percent": null
+  }
+]
