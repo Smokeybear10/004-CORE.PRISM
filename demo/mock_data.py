@@ -1,147 +1,39 @@
 """
-Schema-valid synthetic data for the demo app.
+Ticker-agnostic mock data for the demo frontend.
 
-The frontend reads from this module today because ingestion/prices,
-ingestion/earnings_news, model/, and backtest/ still raise NotImplementedError.
-When a real module lands, swap the corresponding factory call in demo/app.py for
-the live import — the schema contract stays the same.
+The app reads real prices + detects real significant moves off Srilekha's
+`ingestion.prices` pipeline. Attributions, however, still come from here
+because `model.attribute()` is still a stub. When Step 3 ships, swap
+`generate_attribution()` calls in `demo/app.py` for the live pipeline.
 
-The AAPL 2024-11-01 earnings reaction is the frozen-test-case narrative: news
-alone predicts a small negative, +sec adds structural weight (China + FX),
-+earnings confirms management framing, +peer widens the sector read, +macro
-closes the predicted-vs-realized gap. This is the demo story.
+Focal set matches PR #7: {ABT, ACU, AIR, AMD, APD}. AMD is the MVP pick —
+clearest team intuition and richest peer ecosystem.
 """
 
 from __future__ import annotations
 
-import json
+import hashlib
 from datetime import date
-from pathlib import Path
+from typing import Literal
 
 from schema import (
     AblationConfig,
     Attribution,
     BacktestResult,
     DimensionScore,
-    PriceMove,
     SourceType,
     TextChunk,
 )
 
-FIXTURES_DIR = Path(__file__).resolve().parent.parent / "tests" / "fixtures"
-DEFAULT_TICKER = "AAPL"
+DEFAULT_TICKER = "AMD"
 
-
-# ---------- Chunks ----------
-
-def load_fixture_chunks() -> list[TextChunk]:
-    """Real fixture chunks shipped with the repo (SEC 10-K + 8-K)."""
-    chunks: list[TextChunk] = []
-    for name in ("sec_10k_sample.json", "sec_8k_sample.json"):
-        path = FIXTURES_DIR / name
-        if not path.exists():
-            continue
-        for row in json.loads(path.read_text()):
-            chunks.append(TextChunk(**row))
-    return chunks
-
-
-def synthetic_news_chunks() -> list[TextChunk]:
-    """Hand-fabricated news chunks until ingestion/earnings_news/ lands."""
-    return [
-        TextChunk(
-            chunk_id="news_AAPL_2024-10-31_preview_001",
-            ticker="AAPL",
-            source_type=SourceType.NEWS,
-            publication_date=date(2024, 10, 31),
-            source_url="https://example.com/aapl-q4-preview",
-            section_name="headline",
-            text=(
-                "Apple Q4 expected to show Services strength as iPhone unit sales stay flat. "
-                "Wall Street consensus: $94.3B revenue, $1.60 EPS. Analysts flag Greater China "
-                "as the swing factor; Huawei's Mate 60 lineup continues to weigh on AAPL share."
-            ),
-            token_count=48,
-        ),
-        TextChunk(
-            chunk_id="news_AAPL_2024-11-01_china_002",
-            ticker="AAPL",
-            source_type=SourceType.NEWS,
-            publication_date=date(2024, 11, 1),
-            source_url="https://example.com/aapl-china-miss",
-            section_name="headline",
-            text=(
-                "Apple Greater China revenue slipped modestly again, missing bull-case estimates. "
-                "Huawei and Xiaomi continue share gains in premium. Management framed the weakness "
-                "as macro-led, not structural."
-            ),
-            token_count=42,
-        ),
-        TextChunk(
-            chunk_id="peer_news_SMSN_2024-10-29_memory_003",
-            ticker="_PEER",
-            source_type=SourceType.PEER_NEWS,
-            publication_date=date(2024, 10, 29),
-            source_url="https://example.com/samsung-q3",
-            section_name="headline",
-            text=(
-                "Samsung flagged weaker-than-expected smartphone and memory demand in China, "
-                "citing the strong dollar and persistent consumer-electronics softness."
-            ),
-            token_count=32,
-        ),
-        TextChunk(
-            chunk_id="macro_DXY_2024-10-31_fx_004",
-            ticker="_MACRO",
-            source_type=SourceType.MACRO,
-            publication_date=date(2024, 10, 31),
-            source_url="https://example.com/dxy-update",
-            section_name="fx",
-            text=(
-                "Dollar index pushed to a three-month high into the Fed decision window, with "
-                "JPY and CNY both weaker. Multinationals with non-USD revenue face translation headwinds."
-            ),
-            token_count=34,
-        ),
-    ]
-
-
-def all_chunks() -> list[TextChunk]:
-    return load_fixture_chunks() + synthetic_news_chunks()
-
-
-# ---------- Moves ----------
-
-def sample_moves() -> list[PriceMove]:
-    return [
-        PriceMove(
-            ticker=DEFAULT_TICKER,
-            move_date=date(2024, 8, 15),
-            return_pct=-0.015,
-            vol_zscore=-1.1,
-            volume_zscore=0.8,
-            magnitude_rank=0.72,
-            is_significant=True,
-        ),
-        PriceMove(
-            ticker=DEFAULT_TICKER,
-            move_date=date(2024, 10, 17),
-            return_pct=0.028,
-            vol_zscore=2.3,
-            volume_zscore=1.5,
-            magnitude_rank=0.92,
-            is_significant=True,
-        ),
-        PriceMove(
-            ticker=DEFAULT_TICKER,
-            move_date=date(2024, 11, 1),
-            return_pct=-0.021,
-            vol_zscore=-2.1,
-            volume_zscore=2.4,
-            magnitude_rank=0.87,
-            is_significant=True,
-        ),
-    ]
+FOCAL_TICKERS: dict[str, dict] = {
+    "ABT": {"name": "Abbott Laboratories", "sector": "Healthcare"},
+    "ACU": {"name": "Acme United Corporation", "sector": "Consumer Defensive"},
+    "AIR": {"name": "AAR Corp", "sector": "Industrials"},
+    "AMD": {"name": "Advanced Micro Devices", "sector": "Technology"},
+    "APD": {"name": "Air Products and Chemicals", "sector": "Basic Materials"},
+}
 
 
 # ---------- Ablations ----------
@@ -159,7 +51,7 @@ ABLATIONS: list[AblationConfig] = [
     AblationConfig(name="+peer_news",
                    sources=[SourceType.NEWS, SourceType.SEC_10K, SourceType.SEC_8K,
                             SourceType.EARNINGS_TRANSCRIPT, SourceType.PEER_NEWS],
-                   description="Add peer-ticker news (Samsung, Qualcomm, TSMC)."),
+                   description="Add peer-ticker news."),
     AblationConfig(name="+macro",
                    sources=[SourceType.NEWS, SourceType.SEC_10K, SourceType.SEC_8K,
                             SourceType.EARNINGS_TRANSCRIPT, SourceType.PEER_NEWS,
@@ -167,205 +59,290 @@ ABLATIONS: list[AblationConfig] = [
                    description="Full stack: + Fed / FX / commodities."),
 ]
 
+ABLATION_BY_NAME = {a.name: a for a in ABLATIONS}
 
-# ---------- Attributions ----------
 
-def _ds(weight: float, direction: str, rationale: str, chunk_ids: list[str]) -> DimensionScore:
-    return DimensionScore(
-        weight=weight,
-        direction=direction,  # type: ignore[arg-type]
-        rationale=rationale,
-        evidence_chunk_ids=chunk_ids,
+# ---------- Per-ticker sector narratives ----------
+
+_SECTOR_NARRATIVES: dict[str, dict] = {
+    "Healthcare": {
+        "demand": "Prescription/volume trends in key franchises.",
+        "competitive": "Generic entry and payer-driven formulary shifts.",
+        "macro": "FX translation on international revenue; rate-sensitive M&A.",
+    },
+    "Consumer Defensive": {
+        "demand": "Unit volume vs. pricing in household staples.",
+        "competitive": "Private-label share gains at major retailers.",
+        "macro": "Input costs, shipping, and discretionary-spend spillover.",
+    },
+    "Industrials": {
+        "demand": "Backlog growth and defense/commercial mix.",
+        "competitive": "MRO market share and aftermarket pricing.",
+        "macro": "Fuel costs, freight demand, defense budget cycles.",
+    },
+    "Technology": {
+        "demand": "Data-center vs. client mix; AI accelerator demand.",
+        "competitive": "NVDA/INTC positioning; foundry capacity share.",
+        "macro": "Dollar strength on Asia revenue; rates on capex.",
+    },
+    "Basic Materials": {
+        "demand": "Industrial-gas volume to semis, electronics, healthcare.",
+        "competitive": "Long-term supply contracts + pricing power.",
+        "macro": "Energy costs, hydrogen strategy, EU industrial demand.",
+    },
+}
+
+
+# ---------- Synthetic chunk pool ----------
+
+def _pool_for(ticker: str, move_date: date) -> list[TextChunk]:
+    """Deterministic synthetic chunk pool tied to (ticker, move_date)."""
+    meta = FOCAL_TICKERS.get(ticker, {"name": ticker, "sector": "Unknown"})
+    name = meta["name"]
+    sector = meta["sector"]
+    narr = _SECTOR_NARRATIVES.get(sector, {
+        "demand": f"{name} demand commentary.",
+        "competitive": f"{name} competitive pressure.",
+        "macro": f"{name} macro exposure.",
+    })
+    d = move_date.isoformat()
+
+    chunks: list[TextChunk] = [
+        TextChunk(
+            chunk_id=f"news_{ticker}_{d}_headline_001",
+            ticker=ticker,
+            source_type=SourceType.NEWS,
+            publication_date=move_date,
+            source_url=f"https://example.com/{ticker.lower()}-news-{d}",
+            section_name="headline",
+            text=(
+                f"{name} reports a {sector.lower()}-sector-relevant update on {d}. "
+                f"{narr['demand']} Market reaction focuses on the near-term guide "
+                f"and comparable disclosures from peers."
+            ),
+            token_count=40,
+        ),
+        TextChunk(
+            chunk_id=f"sec_8k_{ticker}_{d}_item202_001",
+            ticker=ticker,
+            source_type=SourceType.SEC_8K,
+            publication_date=move_date,
+            source_url=f"https://www.sec.gov/mock/{ticker}/{d}",
+            section_name="2.02",
+            text=(
+                f"{name} furnishes results of operations for the quarter ended near {d}. "
+                f"Press release emphasizes segment revenue mix and gross-margin drivers; "
+                f"guidance language references prior range."
+            ),
+            token_count=38,
+        ),
+        TextChunk(
+            chunk_id=f"sec_10k_{ticker}_{d}_mda_001",
+            ticker=ticker,
+            source_type=SourceType.SEC_10K,
+            publication_date=move_date,
+            section_name="mda",
+            source_url=f"https://www.sec.gov/mock/{ticker}/10k-{d}",
+            text=(
+                f"MD&A discussion (mock): {narr['demand']} "
+                f"{narr['competitive']} Risk factors call out macro exposures."
+            ),
+            token_count=35,
+        ),
+        TextChunk(
+            chunk_id=f"earnings_{ticker}_{d}_qa_001",
+            ticker=ticker,
+            source_type=SourceType.EARNINGS_TRANSCRIPT,
+            publication_date=move_date,
+            source_url=f"https://example.com/{ticker.lower()}-transcript-{d}",
+            section_name="qa",
+            text=(
+                f"{name} Q&A (mock): management reiterates strategic priorities, "
+                f"addresses the analyst question on {narr['competitive'].lower().rstrip('.')}, "
+                f"and reaffirms the guidance framework."
+            ),
+            token_count=36,
+        ),
+        TextChunk(
+            chunk_id=f"peer_news_{ticker}_{d}_peer_001",
+            ticker="_PEER",
+            source_type=SourceType.PEER_NEWS,
+            publication_date=move_date,
+            source_url=f"https://example.com/peer-{sector.lower()}-{d}",
+            section_name="headline",
+            text=(
+                f"Sector peers in {sector} report directionally similar dynamics. "
+                f"{narr['competitive']}"
+            ),
+            token_count=28,
+        ),
+        TextChunk(
+            chunk_id=f"macro_{ticker}_{d}_fx_001",
+            ticker="_MACRO",
+            source_type=SourceType.MACRO,
+            publication_date=move_date,
+            source_url=f"https://example.com/macro-{d}",
+            section_name="fx",
+            text=f"Macro read near {d}: {narr['macro']}",
+            token_count=24,
+        ),
+    ]
+    return chunks
+
+
+def chunks_for(ticker: str, move_date: date) -> list[TextChunk]:
+    """Public: deterministic synthetic chunk pool for one (ticker, date)."""
+    return _pool_for(ticker, move_date)
+
+
+# ---------- Deterministic attribution factory ----------
+
+def _seeded_rand(ticker: str, move_date: date, ablation: str, key: str) -> float:
+    """Stable pseudo-random float in [0,1) keyed by (ticker, date, ablation, key)."""
+    h = hashlib.sha256(f"{ticker}|{move_date.isoformat()}|{ablation}|{key}".encode()).hexdigest()
+    return int(h[:12], 16) / 16**12
+
+
+def _pick_direction(r: float, return_pct: float) -> Literal["positive", "negative", "neutral"]:
+    if r < 0.15:
+        return "neutral"
+    return "negative" if return_pct < 0 else "positive"
+
+
+def generate_attribution(
+    ticker: str,
+    move_date: date,
+    return_pct: float,
+    ablation_name: str,
+) -> Attribution:
+    """
+    Deterministic mock `Attribution` for (ticker, move_date, ablation).
+
+    Every DimensionScore cites a real chunk_id from `chunks_for(ticker, date)`
+    so the UI's citation-resolution always succeeds (CLAUDE.md rule #6).
+    Confidence climbs as more sources are layered in — the ablation story.
+    """
+    ab = ABLATION_BY_NAME.get(ablation_name, ABLATIONS[0])
+    chunks = _pool_for(ticker, move_date)
+    chunks_by_type = {c.source_type: c for c in chunks}
+
+    # Chunks citable under this ablation = those whose source_type is in ab.sources.
+    allowed_types = set(ab.sources)
+
+    def _pick_chunk(preferred_types: list[SourceType]) -> list[str]:
+        """Pick a cited chunk_id from the first preferred type present in the ablation."""
+        for t in preferred_types:
+            if t in allowed_types and t in chunks_by_type:
+                return [chunks_by_type[t].chunk_id]
+        fallback = next((c for c in chunks if c.source_type in allowed_types), chunks[0])
+        return [fallback.chunk_id]
+
+    # Confidence ramps: base ~0.45 → +0.08 per additional source.
+    confidence_base = 0.42 + 0.08 * (len(ab.sources) - 1)
+
+    # Dimension weights — deterministic from (ticker, date, ablation).
+    raw = {
+        "demand": _seeded_rand(ticker, move_date, ablation_name, "demand") * 0.4 + 0.1,
+        "pricing": _seeded_rand(ticker, move_date, ablation_name, "pricing") * 0.15 + 0.03,
+        "competitive": _seeded_rand(ticker, move_date, ablation_name, "competitive") * 0.3 + 0.08,
+        "management_credibility": _seeded_rand(ticker, move_date, ablation_name, "mgmt") * 0.25 + 0.05,
+        "macro": _seeded_rand(ticker, move_date, ablation_name, "macro") * 0.3 + 0.1,
+    }
+    total = sum(raw.values())
+    weights = {k: v / total for k, v in raw.items()}
+
+    meta = FOCAL_TICKERS.get(ticker, {"name": ticker, "sector": "Unknown"})
+    sector = meta["sector"]
+    narr = _SECTOR_NARRATIVES.get(sector, {})
+
+    dims = {
+        "demand": DimensionScore(
+            weight=weights["demand"],
+            direction=_pick_direction(weights["demand"], return_pct),
+            rationale=narr.get("demand", f"{meta['name']} demand commentary in the window."),
+            evidence_chunk_ids=_pick_chunk([SourceType.SEC_8K, SourceType.SEC_10K, SourceType.NEWS]),
+        ),
+        "pricing": DimensionScore(
+            weight=weights["pricing"],
+            direction=_pick_direction(weights["pricing"], return_pct),
+            rationale="No dominant pricing narrative in this window.",
+            evidence_chunk_ids=_pick_chunk([SourceType.EARNINGS_TRANSCRIPT, SourceType.NEWS]),
+        ),
+        "competitive": DimensionScore(
+            weight=weights["competitive"],
+            direction=_pick_direction(weights["competitive"], return_pct),
+            rationale=narr.get("competitive", "Competitive dynamics per sector norms."),
+            evidence_chunk_ids=_pick_chunk([SourceType.PEER_NEWS, SourceType.SEC_10K, SourceType.NEWS]),
+        ),
+        "management_credibility": DimensionScore(
+            weight=weights["management_credibility"],
+            direction=_pick_direction(weights["management_credibility"], return_pct),
+            rationale="Guidance language held within prior range; no credibility shock.",
+            evidence_chunk_ids=_pick_chunk([SourceType.EARNINGS_TRANSCRIPT, SourceType.SEC_8K, SourceType.NEWS]),
+        ),
+        "macro": DimensionScore(
+            weight=weights["macro"],
+            direction=_pick_direction(weights["macro"], return_pct),
+            rationale=narr.get("macro", "Macro read driven by FX + rates."),
+            evidence_chunk_ids=_pick_chunk([SourceType.MACRO, SourceType.SEC_10K, SourceType.NEWS]),
+        ),
+    }
+
+    # Predicted converges to realized as ablation grows.
+    shrinkage = max(0.1, 1.0 - 0.15 * (len(ab.sources) - 1))
+    predicted = return_pct * (1.0 - shrinkage) + (_seeded_rand(ticker, move_date, ablation_name, "pred") - 0.5) * 0.01
+    move_character = (
+        "structural" if abs(weights["demand"] + weights["competitive"] + weights["macro"]) >= 0.6
+        else "transient"
     )
-
-
-def _earnings_day_attribution(ablation: AblationConfig) -> Attribution:
-    """The Nov 1, 2024 AAPL earnings-day reaction across ablations."""
-    name = ablation.name
-
-    news_chunk = "news_AAPL_2024-11-01_china_002"
-    preview_chunk = "news_AAPL_2024-10-31_preview_001"
-    mda_chunk = "sec_10k_AAPL_2024-11-01_mda_000"
-    risk_chunk = "sec_10k_AAPL_2024-11-01_risk_factors_000"
-    earnings_chunk = "sec_8k_AAPL_2024-11-01_item202+901_001"
-    guidance_chunk = "sec_8k_AAPL_2024-10-17_item701_001"
-    peer_chunk = "peer_news_SMSN_2024-10-29_memory_003"
-    macro_chunk = "macro_DXY_2024-10-31_fx_004"
-
-    # Dimension citations escalate as more sources are added.
-    if name == "base_news":
-        demand = _ds(0.30, "negative", "Preview flagged China as the swing factor.", [preview_chunk])
-        pricing = _ds(0.10, "neutral", "No price-point shift cited in the headlines.", [preview_chunk])
-        competitive = _ds(0.25, "negative", "Huawei/Xiaomi share gains called out.", [news_chunk])
-        mgmt = _ds(0.15, "neutral", "Headlines didn't touch guidance credibility.", [news_chunk])
-        macro = _ds(0.20, "negative", "Strong-dollar hints in the preview.", [preview_chunk])
-        predicted = -0.005
-        confidence = 0.45
-        notes = "News only: hints at China softness, small negative predicted."
-    elif name == "+sec":
-        demand = _ds(0.32, "negative", "MD&A attributes iPhone decline to Greater China.", [mda_chunk, news_chunk])
-        pricing = _ds(0.08, "neutral", "No pricing narrative in 10-K MD&A.", [mda_chunk])
-        competitive = _ds(0.20, "negative", "Competitive risk language persists.", [risk_chunk, news_chunk])
-        mgmt = _ds(0.15, "neutral", "Prior 7.01 guidance stayed intra-range.", [guidance_chunk])
-        macro = _ds(0.25, "negative", "10-K risk factors: FX + inflation exposure.", [risk_chunk])
-        predicted = -0.018
-        confidence = 0.68
-        notes = "10-K language supplies structural grounding for China + FX."
-    elif name == "+earnings":
-        demand = _ds(0.33, "negative", "Earnings release confirms China softness.", [earnings_chunk, mda_chunk])
-        pricing = _ds(0.07, "neutral", "No pricing shift in transcript.", [earnings_chunk])
-        competitive = _ds(0.20, "negative", "Peer pressure persists.", [news_chunk, risk_chunk])
-        mgmt = _ds(0.15, "neutral", "Mgmt framed China as macro-led, guidance stable.", [earnings_chunk, guidance_chunk])
-        macro = _ds(0.25, "negative", "FX headwind reiterated on the call.", [risk_chunk, earnings_chunk])
-        predicted = -0.023
-        confidence = 0.75
-        notes = "Transcript Q&A reinforces management framing; confidence lifts."
-    elif name == "+peer_news":
-        demand = _ds(0.30, "negative", "China weakness echoed at Samsung.", [earnings_chunk, peer_chunk])
-        pricing = _ds(0.05, "neutral", "No pricing shift.", [earnings_chunk])
-        competitive = _ds(0.25, "negative", "Broader peer weakness, not AAPL-specific.", [peer_chunk, news_chunk])
-        mgmt = _ds(0.12, "neutral", "Guidance unchanged; credibility intact.", [guidance_chunk])
-        macro = _ds(0.28, "negative", "Strong dollar cited across peers.", [risk_chunk, peer_chunk])
-        predicted = -0.025
-        confidence = 0.82
-        notes = "Peer read: sector-wide pattern, not idiosyncratic AAPL risk."
-    else:  # "+macro"
-        demand = _ds(0.28, "negative", "China demand weak across peer + AAPL MD&A.", [mda_chunk, peer_chunk])
-        pricing = _ds(0.05, "neutral", "No pricing shift.", [earnings_chunk])
-        competitive = _ds(0.22, "negative", "Peer share gains continue.", [peer_chunk, news_chunk])
-        mgmt = _ds(0.10, "neutral", "Guidance credibility preserved.", [guidance_chunk])
-        macro = _ds(0.35, "negative", "DXY three-month high + FX risk factor.", [macro_chunk, risk_chunk])
-        predicted = -0.022
-        confidence = 0.85
-        notes = "Macro closes the predicted-vs-realized gap."
 
     return Attribution(
-        ticker=DEFAULT_TICKER,
-        move_date=date(2024, 11, 1),
-        return_pct=-0.021,
-        predicted_return_pct=predicted,
-        demand=demand,
-        pricing=pricing,
-        competitive=competitive,
-        management_credibility=mgmt,
-        macro=macro,
-        move_character="structural",
-        confidence=confidence,
-        ablation_name=name,
-        sources_used=ablation.sources,
-        chunks_considered={"base_news": 2, "+sec": 5, "+earnings": 7, "+peer_news": 10, "+macro": 12}[name],
-        model_notes=notes,
+        ticker=ticker,
+        move_date=move_date,
+        return_pct=return_pct,
+        predicted_return_pct=float(predicted),
+        demand=dims["demand"],
+        pricing=dims["pricing"],
+        competitive=dims["competitive"],
+        management_credibility=dims["management_credibility"],
+        macro=dims["macro"],
+        move_character=move_character,
+        confidence=min(0.95, confidence_base + _seeded_rand(ticker, move_date, ablation_name, "conf") * 0.05),
+        ablation_name=ablation_name,
+        sources_used=ab.sources,
+        chunks_considered=len([c for c in chunks if c.source_type in allowed_types]),
+        model_notes=(
+            f"[MOCK — model.attribute() is still a stub] "
+            f"Ablation `{ablation_name}` would consume "
+            f"{len([c for c in chunks if c.source_type in allowed_types])} chunk(s). "
+            f"Real attribution ships when Step 3 lands."
+        ),
     )
 
 
-def _guidance_day_attribution(ablation: AblationConfig) -> Attribution:
-    """Oct 17, 2024 — Apple files a 7.01 FD with guidance; market reacts positively."""
-    name = ablation.name
-    guidance_chunk = "sec_8k_AAPL_2024-10-17_item701_001"
-    preview_chunk = "news_AAPL_2024-10-31_preview_001"
-
-    if name == "base_news":
-        confidence, predicted, notes = 0.40, 0.005, "News flow sparse pre-filing; mostly guesses."
-        demand_src = [preview_chunk]
-    else:
-        confidence = {"+sec": 0.72, "+earnings": 0.74, "+peer_news": 0.76, "+macro": 0.77}[name]
-        predicted = 0.022
-        notes = "7.01 FD disclosure of Q1 guidance lifts expectations; Services double-digit."
-        demand_src = [guidance_chunk]
-
-    return Attribution(
-        ticker=DEFAULT_TICKER,
-        move_date=date(2024, 10, 17),
-        return_pct=0.028,
-        predicted_return_pct=predicted,
-        demand=_ds(0.40, "positive", "Services guided double-digit growth.", demand_src),
-        pricing=_ds(0.10, "positive", "GM guide 46-47%, at the top of recent range.",
-                    [guidance_chunk] if name != "base_news" else [preview_chunk]),
-        competitive=_ds(0.15, "neutral", "Guidance language didn't touch competitors.",
-                        [guidance_chunk] if name != "base_news" else [preview_chunk]),
-        management_credibility=_ds(0.25, "positive",
-                                   "Rare pre-earnings Reg-FD: signals management confidence.",
-                                   [guidance_chunk] if name != "base_news" else [preview_chunk]),
-        macro=_ds(0.10, "neutral", "No macro commentary in the 8-K.",
-                  [guidance_chunk] if name != "base_news" else [preview_chunk]),
-        move_character="structural",
-        confidence=confidence,
-        ablation_name=name,
-        sources_used=ablation.sources,
-        chunks_considered={"base_news": 1, "+sec": 3, "+earnings": 4, "+peer_news": 5, "+macro": 6}[name],
-        model_notes=notes,
-    )
-
-
-def _cfo_transition_attribution(ablation: AblationConfig) -> Attribution:
-    """Aug 15, 2024 — CFO transition announced; muted but real reaction."""
-    name = ablation.name
-    cfo_chunk = "sec_8k_AAPL_2024-08-15_item502_001"
-    preview_chunk = "news_AAPL_2024-10-31_preview_001"  # placeholder news chunk
-
-    if name == "base_news":
-        confidence, predicted, notes = 0.35, -0.005, "Headlines dominate; no structural read."
-        src = [preview_chunk]
-    else:
-        confidence = {"+sec": 0.62, "+earnings": 0.64, "+peer_news": 0.65, "+macro": 0.66}[name]
-        predicted = -0.010
-        notes = "Orderly CFO succession: modestly negative but not credibility-breaking."
-        src = [cfo_chunk]
-
-    return Attribution(
-        ticker=DEFAULT_TICKER,
-        move_date=date(2024, 8, 15),
-        return_pct=-0.015,
-        predicted_return_pct=predicted,
-        demand=_ds(0.10, "neutral", "No demand implications.", src),
-        pricing=_ds(0.05, "neutral", "Not pricing-related.", src),
-        competitive=_ds(0.10, "neutral", "Not a competitive event.", src),
-        management_credibility=_ds(0.60, "negative",
-                                   "CFO transition: Maestri steps down, Parekh steps in Jan 2025.",
-                                   src),
-        macro=_ds(0.15, "neutral", "No macro tie.", src),
-        move_character="transient",
-        confidence=confidence,
-        ablation_name=name,
-        sources_used=ablation.sources,
-        chunks_considered={"base_news": 1, "+sec": 2, "+earnings": 2, "+peer_news": 3, "+macro": 3}[name],
-        model_notes=notes,
-    )
-
-
-def sample_attributions() -> list[Attribution]:
-    """One Attribution per (move, ablation) pair. This is the grid the UI walks."""
-    out: list[Attribution] = []
-    for ab in ABLATIONS:
-        out.append(_cfo_transition_attribution(ab))
-        out.append(_guidance_day_attribution(ab))
-        out.append(_earnings_day_attribution(ab))
-    return out
-
-
-# ---------- Backtests ----------
+# ---------- Backtest (drives the ablation comparison chart) ----------
 
 def sample_backtest_results() -> list[BacktestResult]:
-    """Synthetic ablation-level results to drive the comparison chart."""
+    """Synthetic ablation-level results. Directional only — not from a real backtest."""
     return [
         BacktestResult(strategy_name="base_news", ablation_name="base_news",
-                       n_trades=18, sharpe=0.31, hit_rate=0.44, avg_return=0.0018,
+                       n_trades=68, sharpe=0.28, hit_rate=0.43, avg_return=0.0018,
                        max_drawdown=-0.082,
-                       notes="Misses macro-driven moves; over-trusts headlines."),
+                       notes="Misses macro- and peer-driven moves; over-trusts headlines."),
         BacktestResult(strategy_name="+sec", ablation_name="+sec",
-                       n_trades=18, sharpe=0.78, hit_rate=0.56, avg_return=0.0051,
-                       max_drawdown=-0.061,
-                       notes="10-K language unlocks structural attribution."),
+                       n_trades=68, sharpe=0.71, hit_rate=0.55, avg_return=0.0049,
+                       max_drawdown=-0.063,
+                       notes="10-K / 8-K language unlocks structural attribution."),
         BacktestResult(strategy_name="+earnings", ablation_name="+earnings",
-                       n_trades=18, sharpe=1.02, hit_rate=0.64, avg_return=0.0073,
-                       max_drawdown=-0.053,
+                       n_trades=68, sharpe=0.98, hit_rate=0.61, avg_return=0.0070,
+                       max_drawdown=-0.054,
                        notes="Transcript Q&A adds management-credibility signal."),
         BacktestResult(strategy_name="+peer_news", ablation_name="+peer_news",
-                       n_trades=18, sharpe=1.21, hit_rate=0.71, avg_return=0.0094,
-                       max_drawdown=-0.041,
-                       notes="Peer news distinguishes idiosyncratic from sector moves."),
+                       n_trades=68, sharpe=1.18, hit_rate=0.69, avg_return=0.0091,
+                       max_drawdown=-0.042,
+                       notes="Cross-sector peer read distinguishes idiosyncratic moves."),
         BacktestResult(strategy_name="+macro", ablation_name="+macro",
-                       n_trades=18, sharpe=1.18, hit_rate=0.71, avg_return=0.0096,
+                       n_trades=68, sharpe=1.16, hit_rate=0.70, avg_return=0.0094,
                        max_drawdown=-0.040,
-                       notes="Macro closes predicted-vs-realized gap."),
+                       notes="Macro closes predicted-vs-realized gap on rate/FX days."),
     ]
