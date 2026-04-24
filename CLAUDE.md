@@ -395,3 +395,29 @@ dimensions (not sentiment).
 - How many tickers × how much history? — MVP: 1 ticker × 2–5 years. Post-MVP: 5 tickers.
 - What to cut if time-constrained? — Sophia's 10-Ks are most compressible; Thomas's
   news pivots to 8-Ks; Henry's 13Fs pivot to analyst consensus.
+
+---
+
+## Data access (private HF dataset)
+
+In addition to `defeatbeta/yahoo-finance-data` (public) and `yfinance`, we have
+access to a private HF dataset with curated pre-packaged parquets:
+
+- **Repo:** `BridgewaterAIHackathon/BW-AI-Hackathon` (private)
+- **Auth:** `huggingface-cli login` once, then pass `token=True` to `load_dataset`
+  (or use `HfFileSystem`, which picks up the cached token automatically)
+- **Layout:** files sit directly under each source folder — e.g.
+  `Structured_Data/SNE/yahoo-finance-data/*.parquet`. **No `data/` subfolder**
+  (unlike the public `defeatbeta` mirror).
+- **Full schema reference:** see [`docs/hf_schemas.md`](docs/hf_schemas.md).
+  Includes column types, row counts, and global gotchas (`symbol` vs `ticker`,
+  `decimal128` casting, `report_date` parsing, no `adj_close`, etc.).
+- **Efficient schema probe** (reads only the parquet footer, not the data):
+  ```python
+  from huggingface_hub import HfFileSystem
+  import pyarrow.parquet as pq
+  with HfFileSystem().open("datasets/<repo>/<path>.parquet", "rb") as f:
+      print(pq.read_metadata(f).schema.to_arrow_schema())
+  ```
+  Do not use `load_dataset` or `df.head()` just to inspect columns — those
+  download the full file (435 MB for `stock_prices`).

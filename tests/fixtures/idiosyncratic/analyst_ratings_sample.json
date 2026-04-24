@@ -1,0 +1,46 @@
+[
+  {
+    "rating_id": "rating_JPM_AAPL_2024-01-15_upgrade",
+    "ticker": "AAPL",
+    "analyst_firm": "JPMorgan Chase & Co",
+    "analyst_name": "Samik Chatterjee",
+    "action": "upgrade",
+    "new_rating": "Overweight",
+    "prior_rating": "Neutral",
+    "action_date": "2024-01-15",
+    "source_url": "https://research.jpmorgan.com/aapl-upgrade-jan2024"
+  },
+  {
+    "rating_id": "rating_GS_NVDA_2024-02-28_reiterate",
+    "ticker": "NVDA",
+    "analyst_firm": "Goldman Sachs Group Inc",
+    "analyst_name": "Toshiya Hari",
+    "action": "reiterate",
+    "new_rating": "Buy",
+    "prior_rating": "Buy",
+    "action_date": "2024-02-28",
+    "source_url": "https://research.gs.com/nvda-reiterate-feb2024"
+  },
+  {
+    "rating_id": "rating_MS_TSLA_2024-03-10_downgrade",
+    "ticker": "TSLA",
+    "analyst_firm": "Morgan Stanley",
+    "analyst_name": "Adam Jonas",
+    "action": "downgrade",
+    "new_rating": "Underweight",
+    "prior_rating": "Equal Weight",
+    "action_date": "2024-03-10",
+    "source_url": "https://research.morganstanley.com/tsla-downgrade-mar2024"
+  },
+  {
+    "rating_id": "rating_BAML_AMZN_2024-04-05_initiate",
+    "ticker": "AMZN",
+    "analyst_firm": "Bank of America Merrill Lynch",
+    "analyst_name": "Justin Post",
+    "action": "initiate",
+    "new_rating": "Buy",
+    "prior_rating": null,
+    "action_date": "2024-04-05",
+    "source_url": "https://research.bankofamerica.com/amzn-initiate-apr2024"
+  }
+]

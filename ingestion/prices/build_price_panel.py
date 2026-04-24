@@ -7,12 +7,23 @@ import pandas as pd
 from huggingface_hub import hf_hub_download
 from pathlib import Path
 
-REPO = "defeatbeta/yahoo-finance-data"
+BW_REPO = "BridgewaterAIHackathon/BW-AI-Hackathon"
+BW_PREFIX = "Structured_Data/SNE/yahoo-finance-data"
+PUBLIC_REPO = "defeatbeta/yahoo-finance-data"
+PUBLIC_PREFIX = "data"
 OUT  = Path("prices.parquet")
 
 # ── 1. Load raw tables ────────────────────────────────────────────────────────
 def load(fname):
-    path = hf_hub_download(REPO, fname, repo_type="dataset")
+    """Try the private BW HF repo first, fall back to the public mirror.
+
+    The BW repo layout has files directly under BW_PREFIX (no `data/`
+    subfolder), while the public mirror nests them under `data/`.
+    """
+    try:
+        path = hf_hub_download(BW_REPO, f"{BW_PREFIX}/{fname}", repo_type="dataset")
+    except Exception:
+        path = hf_hub_download(PUBLIC_REPO, f"{PUBLIC_PREFIX}/{fname}", repo_type="dataset")
     return pd.read_parquet(path)
 
 print("Loading prices …")
