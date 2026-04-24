@@ -1,0 +1,35 @@
+[
+  {
+    "chunk_id": "sec_10k_AAPL_2024-11-01_business_000",
+    "ticker": "AAPL",
+    "source_type": "sec_10k",
+    "publication_date": "2024-11-01",
+    "period_end": "2024-09-28",
+    "source_url": "https://www.sec.gov/Archives/edgar/data/320193/000032019324000123/aapl-20240928.htm",
+    "section_name": "business",
+    "text": "The Company designs, manufactures and markets smartphones, personal computers, tablets, wearables and accessories, and sells a variety of related services. The Company's fiscal year is the 52- or 53-week period that ends on the last Saturday of September. The Company's products and services include iPhone, Mac, iPad, wearables, home and accessories, advertising, AppleCare, cloud services, digital content and payment services.",
+    "token_count": 86
+  },
+  {
+    "chunk_id": "sec_10k_AAPL_2024-11-01_risk_factors_000",
+    "ticker": "AAPL",
+    "source_type": "sec_10k",
+    "publication_date": "2024-11-01",
+    "period_end": "2024-09-28",
+    "source_url": "https://www.sec.gov/Archives/edgar/data/320193/000032019324000123/aapl-20240928.htm",
+    "section_name": "risk_factors",
+    "text": "The Company's business, financial condition and operating results can be affected by a number of factors, whether currently known or unknown, including those described below. Global and regional economic conditions, including inflation, interest rates, currency fluctuations and consumer spending, could materially adversely affect the Company. The Company's operations and performance depend significantly on global and regional economic conditions and adverse economic conditions can materially adversely affect its business.",
+    "token_count": 83
+  },
+  {
+    "chunk_id": "sec_10k_AAPL_2024-11-01_mda_000",
+    "ticker": "AAPL",
+    "source_type": "sec_10k",
+    "publication_date": "2024-11-01",
+    "period_end": "2024-09-28",
+    "source_url": "https://www.sec.gov/Archives/edgar/data/320193/000032019324000123/aapl-20240928.htm",
+    "section_name": "mda",
+    "text": "Fiscal 2024 net sales increased 2% or $6.0 billion compared to 2023, driven by higher Services net sales partially offset by lower iPhone and Wearables, Home and Accessories net sales. Services growth reflected higher net sales from advertising, the App Store and cloud services. iPhone net sales decreased primarily due to a challenging macroeconomic environment in Greater China and the strengthening U.S. dollar against most foreign currencies.",
+    "token_count": 81
+  }
+]
