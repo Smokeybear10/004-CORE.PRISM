@@ -253,18 +253,28 @@ def _publication_date(settlement_date: date) -> date:
 
 
 def _row_to_record(row: dict) -> ShortInterestRecord:
-    days_to_cover = row.get("daysToCoverQuantity")
-    # FINRA uses 999.99 as a sentinel for "no volume data"
-    if days_to_cover is not None and days_to_cover >= 999:
-        days_to_cover = None
+    raw_dtc = row.get("daysToCoverQuantity")
+    # FINRA returns daysToCoverQuantity as a string in CSV and as a number in
+    # JSON. Cast to float FIRST, then compare against the 999.99 "no volume
+    # data" sentinel — otherwise a string ">=" comparison silently drops data.
+    if raw_dtc is None or raw_dtc == "":
+        days_to_cover: Optional[float] = None
+    else:
+        try:
+            days_to_cover = float(raw_dtc)
+        except (TypeError, ValueError):
+            days_to_cover = None
+        if days_to_cover is not None and days_to_cover >= 999:
+            days_to_cover = None
+
     avg_vol = row.get("averageDailyVolumeQuantity")
-    if avg_vol is not None:
-        avg_vol = int(avg_vol) or None
+    # Preserve 0 as a real observed value ("stock didn't trade"), not missing.
+    avg_vol = int(avg_vol) if avg_vol is not None else None
     return ShortInterestRecord(
         ticker=row["symbolCode"].upper(),
         settlement_date=date.fromisoformat(row["settlementDate"]),
         shares_short=int(row.get("currentShortPositionQuantity") or 0),
         avg_daily_volume=avg_vol,
-        days_to_cover=float(days_to_cover) if days_to_cover is not None else None,
+        days_to_cover=days_to_cover,
         float_short_percent=None,  # FINRA API doesn't expose float-normalized SI
     )
