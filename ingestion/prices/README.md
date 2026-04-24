@@ -36,7 +36,7 @@ locally by running the pipeline.
 | `build_earnings_events.py` | Anchor on transcripts (228k events back to 2006). Match each event to an SEC 8-K on the same day; derive BMO/AMC from `acceptance_date_time` (UTC → ET). Backfill missing tags via per-ticker consensus. Filter to events with ≥60 trading days before and ≥20 after. |
 | `build_earnings_reactions.py` | For each event compute reaction return (BMO: `close[T]/close[T-1]-1`, AMC: `close[T+1]/close[T]-1`), forward 1/5/20d returns, SPY-neutralized excess, synthetic-EW sector-neutralized excess, and 30d/60d baseline realized vol. |
 | `build_events_table.py` | Add `event_id`, `reaction_start`/`reaction_end` dates, `pre_event_price`, `reaction_return_excess` (vs SPY), `reaction_return_zscore`, and the `is_significant` flag. Renames columns to the canonical hackathon schema. |
-| `build_focal_universe.py` | Filter to the 3 sectors relevant to the focal companies (Technology, Communication Services, Healthcare), drop junk-adj_close rows (`|reaction| > 50%` or zero vol), and add an `is_focal` flag for the 7 target tickers (NVDA, GOOGL, GOOG, SNDK, WDC, IONS, VRTX). |
+| `build_focal_universe.py` | Filter to the sectors relevant to the focal companies (currently Healthcare, Consumer Defensive, Industrials, Technology, Basic Materials), drop junk-adj_close rows (`|reaction| > 50%` or zero vol), and add an `is_focal` flag for the target tickers (ABT, ACU, AIR, AMD, APD). |
 | `sanity_checks.py` | Spot-check 5 famous events (META Q4'21 ≈ −26%, NVDA Q1'24 ≈ +24%, etc.), verify reaction-distribution symmetry, confirm forward returns are ≈ zero-mean (no leakage), and count extreme reactions. |
 | `audit_pitfalls.py` | Deep audit against the 4 classic pitfalls: timezone, split/dividend adjustment, release-vs-call date alignment, and ticker changes / dual-class double counting. |
 
@@ -66,7 +66,7 @@ the 3 focal sectors.
 | `pre_event_30d_vol` | float | Std of daily log returns in the 30 trading days ending before the event |
 | `reaction_return_zscore` | float | `reaction_return / pre_event_30d_vol` |
 | `is_significant` | bool | `|zscore| > 2.5 AND |reaction_return| > 0.05` |
-| `is_focal` | bool | `ticker in {NVDA, GOOGL, GOOG, SNDK, WDC, IONS, VRTX}` |
+| `is_focal` | bool | `ticker in {ABT, ACU, AIR, AMD, APD}` |
 | `focal_company` | str | Human-readable company name (null for peers) |
 | `transcript_id` | int | Foreign key to the transcripts table |
 
@@ -87,27 +87,26 @@ add if the model needs them.
 
 ## Focal universe
 
-7 target companies (flagged `is_focal=True`):
+5 target companies (flagged `is_focal=True`) spanning 5 sectors:
 
-| Ticker | Company | Events | Significant |
-|---|---|---|---|
-| NVDA | NVIDIA | 80 | 24 |
-| GOOGL | Alphabet A (voting) | 82 | 12 |
-| GOOG | Alphabet C (non-voting) | 82 | 12 |
-| SNDK | SanDisk (2025 spin-off) | 2 | 0 |
-| WDC | Western Digital (legacy SanDisk proxy 2016-2025) | 78 | 24 |
-| IONS | Ionis Pharmaceuticals | 35 | 9 |
-| VRTX | Vertex Pharmaceuticals | 74 | 9 |
+| Ticker | Company | Sector | Events | Significant |
+|---|---|---|---|---|
+| ABT | Abbott Laboratories | Healthcare | 74 | 7 |
+| ACU | Acme United Corporation | Consumer Defensive | 13 | 0 |
+| AIR | AAR Corp | Industrials | 53 | 29 |
+| AMD | Advanced Micro Devices | Technology | 76 | 16 |
+| APD | Air Products and Chemicals | Basic Materials | 74 | 16 |
 
-**90 significant events** across the focal tickers — a workable hackathon
-size. Peers in the same 3 sectors contribute another ~13,000 significant
+**68 significant events** across the focal tickers — a workable hackathon
+size. Peers in the same 5 sectors contribute another ~19,500 significant
 events available for sector-relative baselines.
 
-### Note on GOOG vs GOOGL
+### Note on dual-class tickers in the peer set
 
-Both share classes are kept as separate events. For aggregate statistics
-drop one (median `|GOOG - GOOGL|` reaction diff is 0.08%, effectively the
-same signal). Same caveat for `FOX/FOXA` and `NWS/NWSA` in the peer set.
+`GOOG/GOOGL`, `FOX/FOXA`, and `NWS/NWSA` appear in the Technology /
+Communication Services peer set as separate events for the same underlying
+earnings. For aggregate statistics, drop the non-voting class (median
+`|GOOG - GOOGL|` reaction diff is ~0.08%, effectively the same signal).
 
 ## Data-quality notes (verified in `audit_pitfalls.py`)
 

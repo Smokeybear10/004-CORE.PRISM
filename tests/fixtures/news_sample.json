@@ -1,0 +1,35 @@
+[
+  {
+    "chunk_id": "news_AAPL_2024-11-01_article_001",
+    "ticker": "AAPL",
+    "source_type": "news",
+    "publication_date": "2024-11-01",
+    "period_end": null,
+    "source_url": "https://finance.yahoo.com/news/apple-q4-2024-earnings",
+    "section_name": "Yahoo Finance",
+    "text": "Apple Q4 2024 Earnings Beat. Apple reported fourth-quarter revenue of $94.9 billion, topping analyst estimates. Services revenue hit a record high while iPhone unit sales came in slightly below expectations. Management guided to low-to-mid single-digit revenue growth for Q1.",
+    "token_count": 52
+  },
+  {
+    "chunk_id": "news_AAPL_2024-08-15_article_001",
+    "ticker": "AAPL",
+    "source_type": "news",
+    "publication_date": "2024-08-15",
+    "period_end": null,
+    "source_url": "https://finance.yahoo.com/news/apple-cfo-transition",
+    "section_name": "MT Newswires",
+    "text": "Apple CFO Luca Maestri announced plans to step down at fiscal year end. Kevan Parekh will assume the CFO role on January 1. Maestri will remain at Apple leading the Corporate Services team. Shares were unchanged in after-hours trading.",
+    "token_count": 44
+  },
+  {
+    "chunk_id": "peer_news_MSFT_2024-10-30_article_001",
+    "ticker": "MSFT",
+    "source_type": "peer_news",
+    "publication_date": "2024-10-30",
+    "period_end": null,
+    "source_url": "https://finance.yahoo.com/news/microsoft-ai-capex",
+    "section_name": "Reuters",
+    "text": "Microsoft raised its capital expenditure guidance for fiscal 2025 to support AI infrastructure demand. The company cited strong Azure growth driven by OpenAI workloads. Analysts noted the implications for Nvidia and broader AI capex beneficiaries.",
+    "token_count": 40
+  }
+]
