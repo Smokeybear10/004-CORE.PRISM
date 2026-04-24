@@ -19,8 +19,16 @@ from datetime import date
 from pathlib import Path
 from typing import Any
 
+# Load ANTHROPIC_API_KEY from .env at project root (best-effort).
+try:
+    from dotenv import load_dotenv
+    load_dotenv(Path(__file__).resolve().parent.parent / ".env")
+except ImportError:
+    pass
+
 import pandas as pd
 
+from demo.prep_ticker import prep_ticker
 from ingestion.events import build_events_parquet, join_evidence
 from ingestion.prices import detect_significant_moves, load_prices
 from model.attribution import (
@@ -60,6 +68,13 @@ def analyze_ticker(
     """
     ticker = ticker.upper()
     out_path = Path(out_path) if out_path is not None else DEFAULT_ANALYSIS_DIR / f"{ticker}.json"
+
+    _log(f"prepping source data for {ticker} as_of={as_of.isoformat()}")
+    try:
+        prep_summary = prep_ticker(ticker, as_of)
+        _log(f"prep summary: {prep_summary}")
+    except Exception as e:
+        _log(f"prep_ticker failed (continuing with whatever's on disk): {e}")
 
     _log(f"loading prices for {ticker} as_of={as_of.isoformat()}")
     prices = load_prices([ticker], as_of)

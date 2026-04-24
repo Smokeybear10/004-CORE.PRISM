@@ -21,6 +21,7 @@ numpy>=1.24
 
 # Model (anthropic for attribution)
 anthropic>=0.30
+python-dotenv>=1.0     # load ANTHROPIC_API_KEY from .env for streamlit + CLI
 
 # Backtest & demo
 matplotlib>=3.7

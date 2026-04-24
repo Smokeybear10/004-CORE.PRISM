@@ -28,6 +28,13 @@ _ROOT = Path(__file__).resolve().parent.parent
 if str(_ROOT) not in sys.path:
     sys.path.insert(0, str(_ROOT))
 
+# Load ANTHROPIC_API_KEY (and any other secrets) from .env at project root.
+try:
+    from dotenv import load_dotenv
+    load_dotenv(_ROOT / ".env")
+except ImportError:
+    pass  # python-dotenv not installed — fall back to shell env
+
 import pandas as pd
 import plotly.graph_objects as go
 import streamlit as st
@@ -38,6 +45,7 @@ from demo.mock_data import (
     DEFAULT_TICKER,
     FOCAL_TICKERS,
 )
+from demo.prep_ticker import prep_ticker
 from ingestion.events import build_events_parquet
 from ingestion.prices import detect_significant_moves, load_prices
 from schema import PriceMove
@@ -48,6 +56,18 @@ st.set_page_config(page_title="Price Action Tagger", layout="wide")
 
 
 # ---------- Data loaders (streamlit-cached) ----------
+
+@st.cache_data(show_spinner="Fetching source data (short interest, index changes, 13F)…")
+def _prep_source_data(ticker: str, as_of_iso: str) -> dict:
+    """One-time-per-(ticker, as_of) network prep. Pulls idiosyncratic source
+    parquets so the events aggregator has something to chew on. Failures are
+    logged but non-fatal — the UI still works off whatever's on disk."""
+    try:
+        return prep_ticker(ticker, date.fromisoformat(as_of_iso))
+    except Exception as e:  # pragma: no cover — defensive UI path
+        logger.warning("prep_ticker failed (continuing with on-disk data): %s", e)
+        return {"error": str(e)}
+
 
 @st.cache_data(show_spinner="Loading price panel…")
 def _load_prices(ticker: str, as_of: date) -> pd.DataFrame:
@@ -230,6 +250,9 @@ st.sidebar.caption(
 
 
 # ---------- Load data ----------
+
+# Warm up source parquets for this ticker (idempotent; cached after first run).
+_prep_source_data(ticker, end_date.isoformat())
 
 prices = _load_prices(ticker, end_date)
 prices = prices[(prices["date"] >= start_date) & (prices["date"] <= end_date)].reset_index(drop=True)
