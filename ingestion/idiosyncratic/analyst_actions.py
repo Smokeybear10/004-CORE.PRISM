@@ -1,213 +1,500 @@
 """
-Analyst rating and price target change ingestion.
+Analyst rating + price-target change ingestion.
 
-Fetches analyst rating changes (upgrades/downgrades) and price target modifications
-for same-day price move attribution.
+Source: yfinance's `Ticker(t).upgrades_downgrades` DataFrame. Columns:
+    Firm, ToGrade, FromGrade, Action, priceTargetAction,
+    currentPriceTarget, priorPriceTarget
+Indexed by GradeDate (datetime).
+
+Both `AnalystRating` and `PriceTargetChange` are derived from the same
+DataFrame so the underlying yfinance call happens once. When yfinance doesn't
+expose a price target (0.0 or missing), we emit the AnalystRating only.
+
+Pipeline shape mirrors short_interest.py / thirteen_f.py:
+
+    fetch_rating_changes(ticker, as_of)              -> list[AnalystRating]
+    fetch_price_target_changes(ticker, as_of)        -> list[PriceTargetChange]
+    fetch_all_analyst_actions(ticker, as_of)         -> (ratings, targets)
+    ratings_to_events(ratings)                       -> list[Event]
+    targets_to_events(targets)                       -> list[Event]
+    events_to_text_chunks(events)                    -> list[TextChunk]
+    run_analyst_actions_pipeline(ticker, as_of, ...) -> (ratings, targets, events, chunks)
+
+as_of rule: action_date <= as_of. Analyst actions are public same-day, so
+action_date IS publication date.
 """
+from __future__ import annotations
 
+import logging
+import re
 from datetime import date
-from typing import List, Optional
+from pathlib import Path
+from typing import Callable, Optional
 
-from schema import AnalystRating, PriceTargetChange, RatingAction
+import pandas as pd
+
+from schema import (
+    AnalystRating,
+    Event,
+    PriceTargetChange,
+    RatingAction,
+    SourceType,
+    TextChunk,
+)
+
+LOG = logging.getLogger(__name__)
+
+DATA_DIR = Path("data/analyst_actions")
 
 
-def fetch_rating_changes(ticker: Optional[str], as_of: date) -> List[AnalystRating]:
+# Raw-grade → normalized-bucket map. Keys are lowercased / stripped.
+RATING_MAP: dict[str, str] = {
+    # Buy bucket
+    "buy": "Buy",
+    "strong buy": "Buy",
+    "outperform": "Buy",
+    "overweight": "Buy",
+    "positive": "Buy",
+    "accumulate": "Buy",
+    "add": "Buy",
+    "conviction buy": "Buy",
+    "top pick": "Buy",
+    "sector outperform": "Buy",
+    # Hold bucket
+    "hold": "Hold",
+    "neutral": "Hold",
+    "market perform": "Hold",
+    "equal weight": "Hold",
+    "equal-weight": "Hold",
+    "peer perform": "Hold",
+    "sector perform": "Hold",
+    "in-line": "Hold",
+    "inline": "Hold",
+    "mixed": "Hold",
+    # Sell bucket
+    "sell": "Sell",
+    "strong sell": "Sell",
+    "underperform": "Sell",
+    "underweight": "Sell",
+    "negative": "Sell",
+    "reduce": "Sell",
+    "sector underperform": "Sell",
+}
+
+# yfinance's Action column → RatingAction hint.
+_YF_ACTION_HINTS: dict[str, RatingAction] = {
+    "up": RatingAction.UPGRADE,
+    "down": RatingAction.DOWNGRADE,
+    "init": RatingAction.INITIATE,
+    "reit": RatingAction.REITERATE,
+    "main": RatingAction.REITERATE,
+}
+
+
+# Injectable Ticker factory: defaults to the real yfinance import. Tests swap
+# this out via the `ticker_factory` kwarg on the public functions.
+def _default_ticker_factory(ticker: str):  # pragma: no cover — trivial
+    import yfinance as yf
+    return yf.Ticker(ticker)
+
+
+# ---------- Public API ----------
+
+def fetch_rating_changes(
+    ticker: str,
+    as_of: date,
+    *,
+    ticker_factory: Callable[[str], object] = _default_ticker_factory,
+) -> list[AnalystRating]:
+    """All AnalystRating rows for `ticker` with action_date <= as_of."""
+    ratings, _ = fetch_all_analyst_actions(ticker, as_of, ticker_factory=ticker_factory)
+    return ratings
+
+
+def fetch_price_target_changes(
+    ticker: str,
+    as_of: date,
+    *,
+    ticker_factory: Callable[[str], object] = _default_ticker_factory,
+) -> list[PriceTargetChange]:
+    """All PriceTargetChange rows for `ticker` with action_date <= as_of."""
+    _, targets = fetch_all_analyst_actions(ticker, as_of, ticker_factory=ticker_factory)
+    return targets
+
+
+def fetch_all_analyst_actions(
+    ticker: str,
+    as_of: date,
+    *,
+    ticker_factory: Callable[[str], object] = _default_ticker_factory,
+) -> tuple[list[AnalystRating], list[PriceTargetChange]]:
+    """One yfinance call, split into (ratings, targets)."""
+    df = _fetch_upgrades_downgrades(ticker, ticker_factory)
+    if df is None or df.empty:
+        return [], []
+
+    ratings: list[AnalystRating] = []
+    targets: list[PriceTargetChange] = []
+    for action_date, row in _iter_rows(df, as_of):
+        firm = _safe_str(row.get("Firm"))
+        if not firm:
+            continue
+        to_grade = _safe_str(row.get("ToGrade"))
+        from_grade = _safe_str(row.get("FromGrade")) or None
+        yf_action = _safe_str(row.get("Action")).lower() or None
+
+        rating_action = classify_action(from_grade, to_grade, yf_action)
+        rating_id = generate_rating_id(ticker, firm, action_date, rating_action)
+        ratings.append(
+            AnalystRating(
+                rating_id=rating_id,
+                ticker=ticker.upper(),
+                analyst_firm=firm,
+                analyst_name=None,  # yfinance doesn't expose it
+                action=rating_action,
+                new_rating=to_grade or None,
+                prior_rating=from_grade,
+                action_date=action_date,
+                source_url=None,
+            )
+        )
+
+        new_target = _safe_float(row.get("currentPriceTarget"))
+        prior_target = _safe_float(row.get("priorPriceTarget"))
+        if new_target is None:
+            continue  # no target → AnalystRating only, no PriceTargetChange
+
+        change_pct: Optional[float] = None
+        if prior_target is not None and prior_target > 0:
+            change_pct = (new_target - prior_target) / prior_target
+
+        targets.append(
+            PriceTargetChange(
+                target_id=generate_target_id(ticker, firm, action_date, new_target, prior_target),
+                ticker=ticker.upper(),
+                analyst_firm=firm,
+                analyst_name=None,
+                new_target=new_target,
+                prior_target=prior_target,
+                change_pct=change_pct,
+                action_date=action_date,
+                source_url=None,
+            )
+        )
+    return ratings, targets
+
+
+def ratings_to_events(ratings: list[AnalystRating]) -> list[Event]:
+    events: list[Event] = []
+    for r in ratings:
+        events.append(
+            Event(
+                event_id=r.rating_id,
+                ticker=r.ticker,
+                event_date=r.action_date,
+                event_type=f"analyst_{r.action.value}",
+                source=r.analyst_firm,
+                payload_ref=r.rating_id,
+                text=_rating_text(r),
+            )
+        )
+    return events
+
+
+def targets_to_events(targets: list[PriceTargetChange]) -> list[Event]:
+    events: list[Event] = []
+    for t in targets:
+        events.append(
+            Event(
+                event_id=t.target_id,
+                ticker=t.ticker,
+                event_date=t.action_date,
+                event_type="analyst_price_target",
+                source=t.analyst_firm,
+                payload_ref=t.target_id,
+                text=_target_text(t),
+            )
+        )
+    return events
+
+
+def events_to_text_chunks(events: list[Event]) -> list[TextChunk]:
     """
-    Fetch analyst rating changes for a specific ticker or all tickers.
+    Materialize Events as TextChunks.
 
-    Args:
-        ticker: Stock ticker symbol, or None for all tickers
-        as_of: Only return changes with action_date <= as_of (no foreknowledge)
-
-    Returns:
-        List of AnalystRating objects
-
-    Sources:
-        - Financial data providers (Bloomberg, Refinitiv, FactSet)
-        - Broker research portals
-        - SEC filings (when available)
-        - Financial news wires
+    SourceType has no ANALYST value; use NEWS as the closest fit (analyst
+    calls are publicly reported events). Flag in commit message — adding
+    SourceType.ANALYST requires team sign-off per CLAUDE.md rule #5.
     """
-    # TODO: Implement analyst rating ingestion
-    # - Integrate with financial data APIs (if available)
-    # - Parse broker research reports
-    # - Extract rating changes from financial news
-    # - Handle different rating scales (Buy/Hold/Sell, 1-5 scale, etc.)
-    # - Filter by action_date <= as_of
-    # - If ticker specified, filter by ticker symbol
-    raise NotImplementedError("Placeholder - implement analyst rating ingestion")
+    chunks: list[TextChunk] = []
+    for e in events:
+        if not e.text:
+            continue
+        chunks.append(
+            TextChunk(
+                chunk_id=e.event_id,
+                ticker=e.ticker,
+                source_type=SourceType.NEWS,  # SourceType.ANALYST not defined
+                publication_date=e.event_date,
+                source_url=None,
+                section_name=e.event_type,
+                text=e.text,
+                token_count=len(e.text.split()),
+            )
+        )
+    return chunks
 
 
-def fetch_price_target_changes(ticker: Optional[str], as_of: date) -> List[PriceTargetChange]:
+def run_analyst_actions_pipeline(
+    ticker: str,
+    as_of: date,
+    output_dir: Path | str = DATA_DIR,
+    *,
+    ticker_factory: Callable[[str], object] = _default_ticker_factory,
+) -> tuple[list[AnalystRating], list[PriceTargetChange], list[Event], list[TextChunk]]:
+    """End-to-end: yfinance → ratings + targets → events → chunks → parquet + JSONL."""
+    ratings, targets = fetch_all_analyst_actions(
+        ticker, as_of, ticker_factory=ticker_factory,
+    )
+    events = ratings_to_events(ratings) + targets_to_events(targets)
+    chunks = events_to_text_chunks(events)
+
+    output_dir = Path(output_dir)
+    output_dir.mkdir(parents=True, exist_ok=True)
+    stamp = as_of.isoformat()
+    suffix = f"_{ticker.upper()}"
+
+    save_ratings_to_parquet(ratings, output_dir / f"ratings{suffix}_{stamp}.parquet")
+    save_targets_to_parquet(targets, output_dir / f"targets{suffix}_{stamp}.parquet")
+    _save_events_to_parquet(events, output_dir / f"events{suffix}_{stamp}.parquet")
+    _write_chunks_jsonl(chunks, output_dir / f"chunks{suffix}_{stamp}.jsonl")
+    return ratings, targets, events, chunks
+
+
+# ---------- Rating normalization + action classification ----------
+
+def normalize_rating(rating: Optional[str]) -> Optional[str]:
     """
-    Fetch analyst price target changes for a specific ticker or all tickers.
+    Map a firm-specific rating string to a standard Buy / Hold / Sell bucket.
 
-    Args:
-        ticker: Stock ticker symbol, or None for all tickers
-        as_of: Only return changes with action_date <= as_of (no foreknowledge)
-
-    Returns:
-        List of PriceTargetChange objects
-
-    Sources:
-        - Financial data providers (Bloomberg, Refinitiv, FactSet)
-        - Broker research reports
-        - Financial news wires
+    Unknown ratings return the raw string (stripped) and log an info line so
+    we can curate RATING_MAP over time without exploding on new input.
     """
-    # TODO: Implement price target ingestion
-    # - Integrate with financial data APIs (if available)
-    # - Parse broker research reports for target prices
-    # - Extract target changes from financial news
-    # - Calculate percentage changes (new - prior) / prior
-    # - Filter by action_date <= as_of
-    # - If ticker specified, filter by ticker symbol
-    raise NotImplementedError("Placeholder - implement price target ingestion")
+    if not rating:
+        return None
+    key = rating.strip().lower()
+    if key in RATING_MAP:
+        return RATING_MAP[key]
+    LOG.info("unknown analyst rating %r — passing through", rating)
+    return rating.strip()
 
 
-def normalize_rating(rating: str, firm: str) -> str:
+def classify_action(
+    prior_rating: Optional[str],
+    new_rating: Optional[str],
+    yf_action_hint: Optional[str] = None,
+) -> RatingAction:
     """
-    Normalize analyst ratings to standard scale across firms.
+    Derive a RatingAction from prior/new rating buckets.
 
-    Args:
-        rating: Raw rating from analyst firm
-        firm: Analyst firm name
-
-    Returns:
-        Normalized rating (e.g., "Buy", "Hold", "Sell")
-
-    Normalization mappings:
-        - Buy: Buy, Strong Buy, Outperform, Overweight, Positive
-        - Hold: Hold, Neutral, Market Perform, Equal Weight
-        - Sell: Sell, Strong Sell, Underperform, Underweight, Negative
+    If prior_rating is missing → INITIATE.
+    If normalized buckets move Buy↔Hold/Sell (or Sell→Hold/Buy) → UP/DOWNGRADE.
+    If buckets match → REITERATE.
+    yf_action_hint ('up'/'down'/'init'/'reit'/'main') is used as a tiebreaker
+    when bucket inference is ambiguous (e.g. unknown raw ratings).
     """
-    # TODO: Implement rating normalization
-    # - Build comprehensive rating scale mappings per firm
-    # - Handle firm-specific scales (e.g., JPMorgan's Overweight/Neutral/Underweight)
-    # - Map to standard Buy/Hold/Sell scale
-    # - Handle edge cases and new rating formats
-    raise NotImplementedError("Placeholder - implement rating normalization")
+    if not prior_rating:
+        return RatingAction.INITIATE
+
+    prior_bucket = normalize_rating(prior_rating)
+    new_bucket = normalize_rating(new_rating) if new_rating else None
+
+    bucket_rank = {"Sell": 0, "Hold": 1, "Buy": 2}
+    if prior_bucket in bucket_rank and new_bucket in bucket_rank:
+        if bucket_rank[new_bucket] > bucket_rank[prior_bucket]:
+            return RatingAction.UPGRADE
+        if bucket_rank[new_bucket] < bucket_rank[prior_bucket]:
+            return RatingAction.DOWNGRADE
+        return RatingAction.REITERATE
+
+    # Bucket lookup failed → fall back to yfinance's Action hint
+    if yf_action_hint and yf_action_hint in _YF_ACTION_HINTS:
+        return _YF_ACTION_HINTS[yf_action_hint]
+
+    # No buckets, no hint: direction is genuinely ambiguous. If the raw
+    # strings match we call REITERATE; otherwise we log a WARNING so
+    # downstream knows the classification is low-confidence, and still
+    # return REITERATE rather than picking an arbitrary up/down.
+    prior_norm = (prior_rating or "").strip().lower()
+    new_norm = (new_rating or "").strip().lower()
+    if prior_norm == new_norm:
+        return RatingAction.REITERATE
+    LOG.warning(
+        "unclassifiable rating change %r -> %r (no bucket, no hint); "
+        "defaulting to REITERATE — review RATING_MAP", prior_rating, new_rating,
+    )
+    return RatingAction.REITERATE
 
 
-def classify_rating_action(prior_rating: Optional[str], new_rating: str) -> RatingAction:
-    """
-    Classify the type of rating change.
-
-    Args:
-        prior_rating: Previous rating (None for initiations)
-        new_rating: New rating
-
-    Returns:
-        RatingAction enum value
-
-    Classification logic:
-        - None -> X: INITIATE
-        - Buy -> Hold/Sell: DOWNGRADE
-        - Hold/Sell -> Buy: UPGRADE
-        - Same rating: REITERATE
-    """
-    # TODO: Implement rating action classification
-    # - Map rating changes to action types
-    # - Handle firm-specific rating scales
-    # - Consider rating discontinuations
-    # - Return appropriate RatingAction enum
-    raise NotImplementedError("Placeholder - implement rating action classification")
+def generate_rating_id(
+    ticker: str, firm: str, action_date: date, action: RatingAction,
+) -> str:
+    """Stable rating_id: rating_{firm_slug}_{TICKER}_{YYYY-MM-DD}_{action}."""
+    firm_slug = _slug(firm)
+    return (
+        f"rating_{firm_slug}_{ticker.upper()}_{action_date.isoformat()}_{action.value}"
+    )
 
 
-def identify_high_impact_changes(ratings: List[AnalystRating],
-                                targets: List[PriceTargetChange],
-                                min_target_change: float = 0.10) -> List[str]:
-    """
-    Identify analyst actions likely to cause significant price moves.
-
-    Args:
-        ratings: List of rating changes
-        targets: List of price target changes
-        min_target_change: Minimum target percentage change for significance
-
-    Returns:
-        List of ticker symbols with high-impact analyst actions
-
-    High-impact criteria:
-        - Rating upgrades/downgrades (especially Buy <-> Sell)
-        - Large price target changes (>10% moves)
-        - Multiple analysts acting on same day
-        - High-profile analyst firms (Goldman, Morgan Stanley, etc.)
-    """
-    # TODO: Implement impact analysis
-    # - Weight by analyst firm reputation and track record
-    # - Consider magnitude of rating/target changes
-    # - Identify clustered analyst actions (multiple firms same day)
-    # - Return high-probability movers for attribution focus
-    raise NotImplementedError("Placeholder - implement analyst impact analysis")
+def generate_target_id(
+    ticker: str, firm: str, action_date: date,
+    new_target: Optional[float], prior_target: Optional[float],
+) -> str:
+    """Stable target_id: target_{firm_slug}_{TICKER}_{YYYY-MM-DD}_{direction}."""
+    if prior_target and new_target and new_target > prior_target:
+        direction = "raise"
+    elif prior_target and new_target and new_target < prior_target:
+        direction = "lower"
+    elif not prior_target and new_target:
+        direction = "initiate"
+    else:
+        direction = "maintain"
+    firm_slug = _slug(firm)
+    return f"target_{firm_slug}_{ticker.upper()}_{action_date.isoformat()}_{direction}"
 
 
-def generate_rating_id(ticker: str, firm: str, action_date: date, action: RatingAction) -> str:
-    """
-    Generate stable rating_id for an analyst rating change.
+# ---------- I/O helpers ----------
 
-    Args:
-        ticker: Stock ticker
-        firm: Analyst firm
-        action_date: Date of action
-        action: Type of rating action
-
-    Returns:
-        Stable rating_id (e.g., "rating_JPM_AAPL_2024-01-15_upgrade")
-    """
-    # TODO: Implement stable ID generation
-    # - Normalize firm name to slug
-    # - Format: "rating_{firm_slug}_{ticker}_{date}_{action}"
-    # - Handle firm name variations and acquisitions
-    # - Ensure uniqueness for multiple actions same day
-    raise NotImplementedError("Placeholder - implement rating ID generation")
+def save_ratings_to_parquet(ratings: list[AnalystRating], filepath: Path | str) -> None:
+    filepath = Path(filepath)
+    filepath.parent.mkdir(parents=True, exist_ok=True)
+    columns = [
+        "rating_id", "ticker", "analyst_firm", "analyst_name",
+        "action", "new_rating", "prior_rating", "action_date", "source_url",
+    ]
+    if not ratings:
+        pd.DataFrame(columns=columns).to_parquet(filepath, index=False)
+        return
+    df = pd.DataFrame([r.model_dump() for r in ratings])
+    df["action"] = df["action"].astype(str)
+    df["action_date"] = df["action_date"].astype(str)
+    df[columns].to_parquet(filepath, compression="snappy", index=False)
 
 
-def generate_target_id(ticker: str, firm: str, action_date: date) -> str:
-    """
-    Generate stable target_id for a price target change.
-
-    Args:
-        ticker: Stock ticker
-        firm: Analyst firm
-        action_date: Date of action
-
-    Returns:
-        Stable target_id (e.g., "target_GS_NVDA_2024-02-28_raise")
-    """
-    # TODO: Implement stable ID generation
-    # - Normalize firm name to slug
-    # - Determine action type (raise/lower/initiate)
-    # - Format: "target_{firm_slug}_{ticker}_{date}_{action}"
-    # - Handle multiple targets from same firm same day
-    raise NotImplementedError("Placeholder - implement target ID generation")
+def save_targets_to_parquet(targets: list[PriceTargetChange], filepath: Path | str) -> None:
+    filepath = Path(filepath)
+    filepath.parent.mkdir(parents=True, exist_ok=True)
+    columns = [
+        "target_id", "ticker", "analyst_firm", "analyst_name",
+        "new_target", "prior_target", "change_pct", "action_date", "source_url",
+    ]
+    if not targets:
+        pd.DataFrame(columns=columns).to_parquet(filepath, index=False)
+        return
+    df = pd.DataFrame([t.model_dump() for t in targets])
+    df["action_date"] = df["action_date"].astype(str)
+    df[columns].to_parquet(filepath, compression="snappy", index=False)
 
 
-def save_ratings_to_parquet(ratings: List[AnalystRating], filepath: str) -> None:
-    """
-    Save analyst ratings to parquet format.
-
-    Args:
-        ratings: List of AnalystRating objects
-        filepath: Output parquet file path
-    """
-    # TODO: Implement parquet serialization
-    # - Convert AnalystRating objects to DataFrame
-    # - Ensure UTC timestamps in ISO-8601 format
-    # - Write to parquet with appropriate compression
-    raise NotImplementedError("Placeholder - implement parquet output")
+def _save_events_to_parquet(events: list[Event], filepath: Path | str) -> None:
+    filepath = Path(filepath)
+    filepath.parent.mkdir(parents=True, exist_ok=True)
+    columns = ["event_id", "ticker", "event_date", "event_type",
+               "source", "payload_ref", "text"]
+    if not events:
+        pd.DataFrame(columns=columns).to_parquet(filepath, index=False)
+        return
+    df = pd.DataFrame([e.model_dump() for e in events])
+    df["event_date"] = df["event_date"].astype(str)
+    df[columns].to_parquet(filepath, compression="snappy", index=False)
 
 
-def save_targets_to_parquet(targets: List[PriceTargetChange], filepath: str) -> None:
-    """
-    Save price targets to parquet format.
+def _write_chunks_jsonl(chunks: list[TextChunk], filepath: Path | str) -> None:
+    filepath = Path(filepath)
+    filepath.parent.mkdir(parents=True, exist_ok=True)
+    filepath.write_text(
+        "\n".join(c.model_dump_json() for c in chunks),
+        encoding="utf-8",
+    )
 
-    Args:
-        targets: List of PriceTargetChange objects
-        filepath: Output parquet file path
-    """
-    # TODO: Implement parquet serialization
-    # - Convert PriceTargetChange objects to DataFrame
-    # - Ensure UTC timestamps in ISO-8601 format
-    # - Write to parquet with appropriate compression
-    # - Include calculated change_pct field
-    raise NotImplementedError("Placeholder - implement parquet output")
+
+# ---------- internals ----------
+
+def _fetch_upgrades_downgrades(
+    ticker: str, factory: Callable[[str], object],
+) -> Optional[pd.DataFrame]:
+    try:
+        yft = factory(ticker)
+        df = getattr(yft, "upgrades_downgrades", None)
+    except Exception as e:  # noqa: BLE001
+        LOG.warning("yfinance fetch for %s failed: %s", ticker, e)
+        return None
+    if df is None:
+        return None
+    if not isinstance(df, pd.DataFrame) or df.empty:
+        return None
+    return df
+
+
+def _iter_rows(df: pd.DataFrame, as_of: date):
+    """Yield (action_date, row_dict) pairs with action_date <= as_of."""
+    for raw_idx, row in df.iterrows():
+        action_date = _to_date(raw_idx)
+        if action_date is None or action_date > as_of:
+            continue
+        yield action_date, row
+
+
+def _to_date(raw) -> Optional[date]:
+    if isinstance(raw, date) and not isinstance(raw, pd.Timestamp):
+        return raw
+    try:
+        return pd.Timestamp(raw).date()
+    except Exception:  # noqa: BLE001
+        return None
+
+
+def _safe_str(value) -> str:
+    if value is None:
+        return ""
+    if isinstance(value, float) and pd.isna(value):
+        return ""
+    return str(value).strip()
+
+
+def _safe_float(value) -> Optional[float]:
+    if value is None:
+        return None
+    try:
+        f = float(value)
+    except (TypeError, ValueError):
+        return None
+    if pd.isna(f):
+        return None
+    # yfinance uses 0.0 to mean "no prior target"; treat as missing.
+    if f <= 0.0:
+        return None
+    return f
+
+
+def _slug(text: str) -> str:
+    s = re.sub(r"[^A-Za-z0-9]+", "_", text.strip()).strip("_").lower()
+    return s or "unknown"
+
+
+def _rating_text(r: AnalystRating) -> str:
+    prior_part = f" (from {r.prior_rating})" if r.prior_rating else ""
+    return (
+        f"{r.analyst_firm} {r.action.value} {r.ticker} to "
+        f"{r.new_rating or 'n/a'}{prior_part} on {r.action_date.isoformat()}."
+    )
+
+
+def _target_text(t: PriceTargetChange) -> str:
+    pct = f" ({t.change_pct:+.1%})" if t.change_pct is not None else ""
+    prior_part = f" from ${t.prior_target:.2f}" if t.prior_target else ""
+    new_part = f"${t.new_target:.2f}" if t.new_target else "n/a"
+    return (
+        f"{t.analyst_firm} price target on {t.ticker}: "
+        f"{new_part}{prior_part}{pct} on {t.action_date.isoformat()}."
+    )

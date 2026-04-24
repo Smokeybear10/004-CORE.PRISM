@@ -4,9 +4,9 @@ Step 6: Fade-or-follow framework + ablation runner.
 Owner: shared. The ablation-comparison chart in demo/ lives here conceptually.
 
 Public API:
-    - fade_or_follow(attribution, realized_next5_return) -> FadeFollow
+    - fade_or_follow(attribution, realized_return_pct=None) -> FadeFollow
     - run_ablation(moves, chunks_by_source, configs) -> dict[str, list[Attribution]]
-    - evaluate(attributions, realized_returns) -> BacktestResult
+    - evaluate(attributions, realized_next5_returns) -> BacktestResult
 
 Framework (keep simple - mentor was explicit: don't over-invest here):
     expected = attribution.predicted_return_pct
@@ -25,6 +25,8 @@ coherence change as we add source types? Build that chart in demo/.
 
 from __future__ import annotations
 
+import pandas as pd
+
 from schema import (
     AblationConfig,
     Attribution,
@@ -34,6 +36,10 @@ from schema import (
     SourceType,
     TextChunk,
 )
+
+from backtest.fixtures import generate_attribution
+from backtest.pnl import compute_pnl, summarize
+from backtest.signal import attribution_to_trade, strategy_fundamental_vs_nonfundamental
 
 
 # ---------- The 6 canonical ablation configs (demo goldmine) ----------
@@ -66,7 +72,7 @@ DEFAULT_ABLATIONS: list[AblationConfig] = [
         description="Add news about peer tickers. Cheap additive lever.",
     ),
     AblationConfig(
-        name="+sector",
+        name="+sector_news",
         sources=[
             SourceType.NEWS, SourceType.SEC_10K, SourceType.SEC_10Q, SourceType.SEC_8K,
             SourceType.EARNINGS_TRANSCRIPT, SourceType.PEER_NEWS, SourceType.SECTOR_NEWS,
@@ -80,7 +86,16 @@ DEFAULT_ABLATIONS: list[AblationConfig] = [
             SourceType.EARNINGS_TRANSCRIPT, SourceType.PEER_NEWS, SourceType.SECTOR_NEWS,
             SourceType.MACRO,
         ],
-        description="Full pipeline: all sources including Fed / commodities / geopolitics.",
+        description="All sources including Fed / commodities / geopolitics.",
+    ),
+    AblationConfig(
+        name="+positioning",
+        sources=[
+            SourceType.NEWS, SourceType.SEC_10K, SourceType.SEC_10Q, SourceType.SEC_8K,
+            SourceType.EARNINGS_TRANSCRIPT, SourceType.PEER_NEWS, SourceType.SECTOR_NEWS,
+            SourceType.MACRO, SourceType.RESEARCH_13F,
+        ],
+        description="Full pipeline + 13F positioning / analyst consensus.",
     ),
 ]
 
@@ -89,38 +104,40 @@ DEFAULT_ABLATIONS: list[AblationConfig] = [
 
 def fade_or_follow(
     attribution: Attribution,
-    realized_return_pct: float,
+    realized_return_pct: float | None = None,
 ) -> FadeFollow:
     """
-    Emit lean / fade / neutral from an Attribution's move_character plus the
-    realized same-day return.
+    Emit lean / fade / neutral based on move_character and, when available,
+    the predicted-vs-realized magnitude relationship.
 
-    Rule (matches the docstring above this function's original stub):
-        transient  + |realized| materially overshoots expected  → fade
-        structural + sign(predicted) == sign(realized)           → lean
-        otherwise                                                 → neutral
-
-    Simple and explicit — mentor was clear: don't over-engineer this.
+    With no ``predicted_return_pct`` this delegates to the named strategy
+    in ``backtest.signal`` (structural -> lean, transient -> fade); with
+    one, transient moves need the realized magnitude to exceed 1.5x
+    predicted to fade, and structural moves need matching signs to lean.
+    Mentor asked for the simple rule — this adds one magnitude check on
+    top, nothing more.
     """
-    mc = attribution.move_character
-    predicted = attribution.predicted_return_pct
+    if attribution.predicted_return_pct is None:
+        return strategy_fundamental_vs_nonfundamental(attribution)
 
-    if mc == "transient":
-        # No predicted? Fall back to: any transient big move is a fade candidate.
-        if predicted is None:
-            return "fade" if abs(realized_return_pct) > 0.02 else "neutral"
-        if abs(realized_return_pct) > abs(predicted) * 1.5:
+    char = attribution.move_character
+    predicted = attribution.predicted_return_pct
+    realized = (
+        realized_return_pct
+        if realized_return_pct is not None
+        else attribution.return_pct
+    )
+
+    if char == "transient":
+        if abs(predicted) > 0 and abs(realized) > 1.5 * abs(predicted):
             return "fade"
         return "neutral"
 
-    if mc == "structural":
-        if predicted is None:
-            return "lean" if realized_return_pct != 0 else "neutral"
-        if (predicted > 0 and realized_return_pct > 0) or (predicted < 0 and realized_return_pct < 0):
+    if char == "structural":
+        if predicted * realized > 0:
             return "lean"
         return "neutral"
 
-    # "mixed" or "unclear"
     return "neutral"
 
 
@@ -130,12 +147,15 @@ def run_ablation(
     configs: list[AblationConfig] = DEFAULT_ABLATIONS,
 ) -> dict[str, list[Attribution]]:
     """
-    For each AblationConfig, filter chunks to config.sources, attribute every
-    move, and return a map from config name to the list of Attributions.
+    For each AblationConfig, filter chunks to ``config.sources`` and produce an
+    Attribution per PriceMove.
 
     Delegates to `model.attribute` — which currently ships as a placeholder
     wrapper around `backtest.fixtures.generate_attribution`. Swap the model
     implementation later without touching this function.
+
+    Enforces the no-foreknowledge rule: only chunks with
+    ``publication_date <= move.move_date`` are passed to the model.
     """
     # Import here to avoid a circular import at module load
     from model import attribute
@@ -148,7 +168,6 @@ def run_ablation(
             chunks_for_cfg.extend(chunks_by_source.get(src, []))
         per_move: list[Attribution] = []
         for mv in moves:
-            # No-foreknowledge filter: only chunks published on/before move_date
             visible = [c for c in chunks_for_cfg if c.publication_date <= mv.move_date]
             per_move.append(attribute(mv, visible, cfg))
         out[cfg.name] = per_move
@@ -157,64 +176,61 @@ def run_ablation(
 
 def evaluate(
     attributions: list[Attribution],
-    realized_next5_returns: dict[str, float],  # key: f"{ticker}_{move_date}"
+    realized_next5_returns: dict[str, float],
 ) -> BacktestResult:
     """
-    Per-ablation backtest result. Uses `fade_or_follow` + realized forward
-    returns to produce a BacktestResult. `strategy_name` is derived from the
-    attributions' `ablation_name` so the demo chart can group bars.
-    """
-    import math
+    Reduce one ablation's Attributions to a single BacktestResult.
 
+    ``realized_next5_returns`` maps ``f"{ticker}_{move_date:%Y%m%d}"`` to the
+    SPY-excess 5d forward return to realize the trade against. Attributions
+    are assumed to share an ``ablation_name`` (we take the first as the group
+    label). Trades are built via the same path as the full runner:
+    ``attribution_to_trade -> compute_pnl -> summarize``.
+    """
     if not attributions:
         return BacktestResult(
-            strategy_name="evaluate:empty",
-            n_trades=0, sharpe=0.0, hit_rate=0.0,
-            avg_return=0.0, max_drawdown=0.0,
-            notes="no attributions provided",
+            strategy_name="struct_fundamental_vs_nonfundamental",
+            ablation_name=None,
+            n_trades=0, sharpe=0.0, hit_rate=0.0, avg_return=0.0, max_drawdown=0.0,
+            notes="no attributions passed to evaluate()",
         )
 
     ablation_name = attributions[0].ablation_name
-    strategy_name = f"fade_follow:{ablation_name or 'unlabeled'}"
 
-    pnls: list[float] = []
-    for a in attributions:
-        key = f"{a.ticker}_{a.move_date}"
-        if key not in realized_next5_returns:
+    # Build a minimal events frame: compute_pnl only needs event_id +
+    # fwd_5d_excess (since use_excess=True by default). The trade's
+    # reaction_return comes from attribution.return_pct directly.
+    rows = []
+    trades = []
+    for attr in attributions:
+        event_id = f"{attr.ticker}_{attr.move_date.strftime('%Y%m%d')}"
+        if event_id not in realized_next5_returns:
             continue
-        fwd = realized_next5_returns[key]
-        signal = fade_or_follow(a, a.return_pct)
-        sign = 1 if a.return_pct > 0 else (-1 if a.return_pct < 0 else 0)
-        direction = sign if signal == "lean" else (-sign if signal == "fade" else 0)
-        pnls.append(direction * fwd)
+        rows.append({
+            "event_id": event_id,
+            "fwd_5d_excess": float(realized_next5_returns[event_id]),
+            "fwd_5d": float(realized_next5_returns[event_id]),  # compute_pnl handles either
+        })
+        trades.append(attribution_to_trade(
+            attr=attr,
+            event_id=event_id,
+            reaction_return=float(attr.return_pct),
+            exit_horizon_days=5,
+        ))
 
-    active = [p for p in pnls if p != 0]
-    n = len(active)
-    if n == 0:
+    if not rows:
         return BacktestResult(
-            strategy_name=strategy_name, ablation_name=ablation_name,
-            n_trades=0, sharpe=0.0, hit_rate=0.0,
-            avg_return=0.0, max_drawdown=0.0,
-            notes="no active trades",
+            strategy_name="struct_fundamental_vs_nonfundamental",
+            ablation_name=ablation_name,
+            n_trades=0, sharpe=0.0, hit_rate=0.0, avg_return=0.0, max_drawdown=0.0,
+            notes="no attributions matched realized_next5_returns keys",
         )
 
-    avg = sum(active) / n
-    var = sum((x - avg) ** 2 for x in active) / (n - 1) if n > 1 else 0.0
-    std = math.sqrt(var) if var > 0 else 0.0
-    # Annualize coarsely: horizon 5d → ~50 trades/yr per series
-    sharpe = (avg / std * math.sqrt(252 / 5)) if std > 0 else 0.0
-    hit = sum(1 for x in active if x > 0) / n
-
-    # Max drawdown on cumulative P&L (order = attribution list order)
-    cum = 0.0; peak = 0.0; max_dd = 0.0
-    for x in active:
-        cum += x
-        peak = max(peak, cum)
-        max_dd = min(max_dd, cum - peak)
-
-    return BacktestResult(
-        strategy_name=strategy_name, ablation_name=ablation_name,
-        n_trades=n, sharpe=sharpe, hit_rate=hit,
-        avg_return=avg, max_drawdown=max_dd,
-        notes="evaluate(): horizon=5d, SPY-neutralization not applied here — see backtest.pnl for that",
+    events_df = pd.DataFrame(rows)
+    pnl_df = compute_pnl(trades, events_df, horizon=5, use_excess=True)
+    return summarize(
+        pnl_df,
+        strategy_name="struct_fundamental_vs_nonfundamental",
+        ablation_name=ablation_name,
+        horizon_days=5,
     )

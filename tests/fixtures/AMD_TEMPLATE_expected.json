@@ -1,0 +1,26 @@
+{
+  "_comment_1": "Copy this file and rename to AMD_YYYY-MM-DD_expected.json. The _comment_* keys are ignored by the loader. Remove them before committing a real fixture (optional — ExpectedAttribution ignores unknown keys).",
+  "_comment_2": "Every `expected.*` key is OPTIONAL. Only add assertions you would defend to a teammate in one sentence. If you are not sure about move_character, leave it out — the scorer will skip it, not fail.",
+  "_comment_3": "Choose (ticker, date) pairs where the team knows the cause. Mentor rule: spot-checking requires knowing what the right answer feels like.",
+
+  "ticker": "AMD",
+  "move_date": "2022-10-06",
+  "known_cause": "One-sentence team-defensible explanation. Example: 'Preliminary Q3 revenue warning — PC demand collapsed. Classic demand shock, not a macro day.'",
+  "expected": {
+    "dominant_dimension": ["demand"],
+    "direction": "negative",
+    "move_character": "structural",
+    "fade_or_lean": "lean",
+    "must_cite_source_type": ["news"],
+    "must_not_be_dominant": ["macro", "management_credibility"]
+  },
+
+  "_field_help": {
+    "dominant_dimension": "List of dims that would be defensible top picks. One entry for unambiguous cases, 2+ when either is reasonable. Valid: demand, pricing, competitive, management_credibility, macro.",
+    "direction": "Sign of the dominant driver. positive, negative, or neutral.",
+    "move_character": "structural (persists), transient (reverses), mixed, unclear. Omit if genuinely ambiguous.",
+    "fade_or_lean": "What the model SHOULD recommend: lean, fade, neutral. Currently scored as a skipped assertion until backtest.fade_or_follow is implemented.",
+    "must_cite_source_type": "Source types the model MUST cite evidence from. Ablations that exclude these are auto-skipped (per ScorerConfig).",
+    "must_not_be_dominant": "Dims the model must NOT pick as top. Veto — if violated, dim_match flips to False."
+  }
+}

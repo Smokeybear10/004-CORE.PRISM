@@ -18,18 +18,21 @@ backtest. Not a trading product. The demo sells the research process: "here's wh
 model thinks with only news; now add 10-Ks; now add peer companies; now add macro —
 watch the attribution and the predicted return converge to what actually happened."
 
-## The six-step pipeline (mentor framework)
-Every module is a pure function with a typed input/output contract so we can parallelize
-and swap implementations against fixtures.
+## Current state (post-integration merge)
 
-| Step | Module | Input → Output |
+End-to-end pipeline is wired. Each step has a working implementation; remaining work
+is tuning, ablations, and the clickable demo.
+
+| Step | Module | Status |
 |---|---|---|
-| 1. Flag significant price moves | `ingestion/prices/` | ticker → `list[PriceMove]` |
-| 2. Ingest text (filings, transcripts, news) | `ingestion/sec/`, `ingestion/earnings_news/` | ticker + date range → `list[TextChunk]` |
-| 3. Attribute moves to text | `model/` | PriceMove + chunks → `Attribution` |
-| 4. Add macro / peer / sector drivers | `ingestion/macro/` + peer news | additive ablation inputs |
-| 5. Coherence check | `model/check_coherence` | `Attribution` → `CoherenceCheck` |
-| 6. Fade-or-follow framework | `backtest/` | Attribution + realized return → lean/fade trade, BacktestResult |
+| 1. Flag significant price moves | `ingestion/prices/` | **working** — 7-script pipeline builds `events_focal.parquet`; `detect_significant_moves` exposed |
+| 2. Ingest text | `ingestion/sec/` (10-K + 8-K), `ingestion/earnings_news/`, `ingestion/idiosyncratic/` (13F, short-interest, index changes, short reports, FDA, analyst actions) | **working** — fixtures + live fetchers per source |
+| 2b. Join per-move evidence | `ingestion/events/` | **working** — 8 adapters + aggregator + trading-day window joiner emitting `JoinedEvidence` |
+| 3. Attribute moves to text | `model/attribution/` (`run`, `prompt`, `validate`) | **working** — Anthropic `tool_use`-structured call with fake-client test path |
+| 4. Add macro / peer / sector drivers | ablation roadmap below | partial — macro / peer stubs present |
+| 5. Coherence check | `model/attribution/coherence` | **working** — `CoherenceCheck` with fake-client test path |
+| 6. Fade-or-follow + backtest | `backtest/` (`signal`, `pnl`, `runner`, `baselines`) | **working** — fade/lean signal + 4 baselines + ablation runner |
+| Demo | `demo/` (`app`, `analyze_ticker`, `ablation_chart`, `mock_data`) | **in progress** — orchestrator CLI and mock chart in place |
 
 ## Three strategic messages from Mentor Meeting #1
 1. **Sprint to a crappy end-to-end MVP before polishing anything.** Don't perfect Step 1
@@ -157,34 +160,50 @@ you attributable, timestamped material-event text without any ToS or scraping is
 
 ---
 
-## Cross-cutting ownership gaps — RESOLVE AT NEXT CHECK-IN
-The current split has everyone owning a data source. Nobody is explicitly owning:
+## Cross-cutting ownership gaps — RESOLVED
+What was open at Mentor Meeting #1 is now filled in:
 
-1. **Attribution LLM layer + schema design.** The prompt and pipeline that turn
-   TextChunks into `Attribution` output. Natural fit: **Thomas or Sophia**.
-2. **Backtest + signal construction.** Turns `Attribution` into lean/fade trades and
-   measures P&L. Natural fit: **Srilekha** (post–hour 8), paired with Henry.
-3. **Demo dashboard + narrative.** The ablation chart and story. Must start by hour 8
-   or it's rushed. Natural fit: **Henry** (post–13F landing) or whoever has most slack.
-
-**Data without a modeling/backtest/demo owner is just data.** This is the single biggest
-risk to the project. Name owners in the Friday check-in or cut scope.
+1. **Attribution LLM layer + schema design.** Landed in `model/attribution/`
+   (`run.py`, `prompt.py`, `validate.py`, `coherence.py`). Anthropic `tool_use`-
+   structured call with a fake-client test path so the suite runs without an API key.
+2. **Backtest + signal construction.** Landed in `backtest/` with `signal`,
+   `pnl`, `runner`, and four `baselines` (naive-lean, always-fade, random,
+   sentiment-only) per mentor ask.
+3. **Event-joining + evidence bundling.** Landed in `ingestion/events/` — 8
+   per-source adapters feed a single unified events parquet; `join_evidence`
+   pulls the trading-day window around a `PriceMove` into a `JoinedEvidence`
+   the attribution runner consumes.
+4. **Demo dashboard + orchestrator.** In progress in `demo/` — `analyze_ticker`
+   CLI wires prices → moves → events → attribution → JSON payload; `app.py`
+   and `ablation_chart.py` render the clickable demo.
 
 ---
 
 ## Repo layout & module boundaries
 
 ```
-ingestion/prices/         # Srilekha: price + event detection
-ingestion/earnings_news/  # Thomas (news) + Srilekha (transcripts)
-ingestion/sec/            # Sophia: 10-K / 10-Q / 8-K
-ingestion/macro/          # Henry: 13F + macro
-model/                    # Shared: attribution LLM + coherence check
-backtest/                 # Shared: fade/lean + P&L
-demo/                     # Shared: ablation notebook + charts
-schema.py                 # Shared contracts — DO NOT modify without team sign-off
-tests/fixtures/           # Sample data every module tests against
-tests/                    # pytest suite
+ingestion/prices/          Srilekha: 7-script pipeline → events_focal.parquet
+                           (build_price_panel, build_earnings_events,
+                           build_earnings_reactions, build_events_table,
+                           build_focal_universe, sanity_checks, audit_pitfalls)
+ingestion/sec/             Sophia: 10-K (tenk.py) + 8-K (eightk.py) ingestion
+ingestion/earnings_news/   Thomas: news scraping + transcripts
+ingestion/idiosyncratic/   Henry: 13F, FINRA short interest, index changes,
+                           short-seller reports, FDA events, analyst actions
+ingestion/events/          Henry: record → Event adapters (8 sources),
+                           aggregator that unions into data/cache/events.parquet,
+                           trading-day-window joiner emitting JoinedEvidence
+ingestion/macro/           macro stub (FOMC, VIX, commodities) — not live yet
+model/                     Shared
+model/attribution/         LLM attribution runner + validator + coherence check
+                           (run.py, prompt.py, validate.py, coherence.py)
+backtest/                  Shared: signal, pnl, runner, baselines, basket, fixtures
+demo/                      Shared: app, analyze_ticker CLI, ablation_chart,
+                           mock_data
+scripts/                   smoke_ingestion.py — end-to-end integration script
+schema.py                  Shared contracts — DO NOT modify without team sign-off
+tests/fixtures/            Sample data every module tests against
+tests/                     pytest suite (~380+ tests, green)
 ```
 
 **Claude Code: when editing inside one module, do NOT touch other modules.** Use
@@ -338,10 +357,14 @@ Rules (mentor, explicit):
 
 ## Workflow
 - Each person works on their own git branch:
-  - `person1-sec` — Sophia
-  - `person2-yahoo` — Srilekha
-  - `person3-research` — Henry
-  - `person4-news` — Thomas (branch: `thomas-test` currently; rename if needed)
+  - `person1-sec` / `sophia-eval-harness` — Sophia
+  - `srilekha-yahoofinance` — Srilekha
+  - `henry-idiosyncratic` — Henry
+  - `thomas-test` — Thomas
+  - `tagging` — shared integration branch for the event-joining layer + the
+    Steps-3-through-6 wiring. Per-person work that's review-ready merges into
+    `tagging` first so the integration surface has somewhere to live before
+    hitting `main`.
 - Build against `tests/fixtures/` while your real data source is in progress.
 - `pytest tests/` must pass before any merge.
 - Merge to `main` only after a teammate reviews the PR.

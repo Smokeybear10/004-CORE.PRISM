@@ -173,6 +173,27 @@ class Event(BaseModel):
     text: Optional[str] = None  # human-readable event description
 
 
+class JoinedEvidence(BaseModel):
+    """
+    Handoff type between the event joiner and the attribution runner.
+
+    The joiner produces one `JoinedEvidence` per `PriceMove` by pulling every
+    Event + TextChunk for the same ticker that falls inside a time window
+    around `move.move_date`. The attribution runner consumes it and produces
+    an `Attribution`.
+
+    The attribution LLM must only cite chunk_ids that appear in
+    `text_chunks`; the joiner is the ground truth for what evidence was
+    available.
+    """
+    move: PriceMove
+    window_start: date  # inclusive; trading days, not calendar
+    window_end: date    # inclusive
+    events: list[Event]
+    text_chunks: list[TextChunk]
+    earnings_day: bool = False  # True when move_date matches a scheduled earnings release
+
+
 # ---------- Idiosyncratic data types ----------
 
 class HoldingAction(str, Enum):

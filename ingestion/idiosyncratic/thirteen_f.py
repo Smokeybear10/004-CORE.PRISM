@@ -65,27 +65,43 @@ def compute_holding_deltas(
     """
     Compute quarter-over-quarter position changes for `fund_cik` between the
     13F-HR filings whose reportDate equals the two given quarter ends.
+
+    Dedup is keyed on CUSIP, not ticker. Two CUSIPs can resolve to the same
+    ticker string (e.g. Alphabet GOOG/GOOGL, Berkshire BRK-A/BRK-B, plus every
+    case where name-based ticker resolution falls back to the raw CUSIP).
+    Keying on ticker silently overwrote one of the two holdings — a data-loss
+    bug. Ticker remains as a display field on the emitted `HoldingDelta`.
     """
-    current = _load_quarter_holdings(fund_cik, current_quarter_end)
-    prior = _load_quarter_holdings(fund_cik, prior_quarter_end)
-    if not current:
+    current_by_cusip = _load_quarter_holdings_by_cusip(fund_cik, current_quarter_end)
+    prior_by_cusip = _load_quarter_holdings_by_cusip(fund_cik, prior_quarter_end)
+    if not current_by_cusip:
         return []
 
-    current_filing_date = current[0].filing_date
-    fund_name = current[0].fund_name
-    fund_cik_padded = current[0].fund_cik
+    any_current = next(iter(current_by_cusip.values()))
+    current_filing_date = any_current.filing_date
+    fund_name = any_current.fund_name
+    fund_cik_padded = any_current.fund_cik
 
-    cur_by_ticker = {h.ticker: h for h in current}
-    prior_by_ticker = {h.ticker: h for h in prior}
+    # Defensive: if any prior holding reports a different fund_cik we'd be
+    # ascribing the prior fund's positions to the current fund. Refuse.
+    if prior_by_cusip:
+        any_prior = next(iter(prior_by_cusip.values()))
+        if any_prior.fund_cik != fund_cik_padded:
+            raise ValueError(
+                f"fund_cik mismatch across quarters: current "
+                f"{fund_cik_padded!r} vs prior {any_prior.fund_cik!r}"
+            )
 
     deltas: list[HoldingDelta] = []
-    for ticker in set(cur_by_ticker) | set(prior_by_ticker):
-        cur = cur_by_ticker.get(ticker)
-        prr = prior_by_ticker.get(ticker)
+    for cusip in sorted(set(current_by_cusip) | set(prior_by_cusip)):
+        cur = current_by_cusip.get(cusip)
+        prr = prior_by_cusip.get(cusip)
         cur_shares = cur.shares if cur else 0
         prior_shares = prr.shares if prr else 0
         cur_value = cur.market_value if cur else 0
         prior_value = prr.market_value if prr else 0
+        # Display ticker comes from the current holding if present, else the prior.
+        ticker = (cur or prr).ticker
 
         if prr is None:
             action = HoldingAction.NEW
@@ -120,12 +136,28 @@ def compute_holding_deltas(
 
 
 def deltas_to_events(deltas: list[HoldingDelta]) -> list[Event]:
-    """Emit `13f_delta` Events. event_date = filing_date (CLAUDE.md rule #2)."""
+    """
+    Emit `13f_delta` Events. event_date = filing_date (CLAUDE.md rule #2).
+
+    If two deltas share (fund_cik, ticker, period_end) — which happens when
+    two CUSIPs resolve to the same ticker — a numeric ordinal is appended to
+    the event_id so IDs remain unique.
+
+    Order determinism: the suffix is assigned in input order. Since
+    `compute_holding_deltas` sorts by CUSIP, the end-to-end pipeline output
+    is deterministic. Callers that assemble deltas through other paths must
+    themselves pass them in a stable order to get stable event_ids for the
+    colliding pair.
+    """
     events: list[Event] = []
+    base_id_counts: dict[str, int] = {}
     for d in deltas:
-        event_id = (
+        base_id = (
             f"13f_delta_{d.fund_cik}_{d.ticker}_{d.current_period_end.isoformat()}"
         )
+        seen = base_id_counts.get(base_id, 0)
+        base_id_counts[base_id] = seen + 1
+        event_id = base_id if seen == 0 else f"{base_id}_{seen}"
         events.append(
             Event(
                 event_id=event_id,
@@ -196,6 +228,12 @@ def save_holdings_to_parquet(
     holdings: list[HoldingRecord],
     filepath: Path | str,
 ) -> None:
+    """
+    Write `holdings` to parquet as-is. The pipeline writes current + prior
+    concatenated, so the file holds two quarterly snapshots per fund; same
+    CUSIP can appear twice with different (filing_date, period_end). Join
+    on (fund_cik, ticker, period_end), NOT ticker alone.
+    """
     filepath = Path(filepath)
     filepath.parent.mkdir(parents=True, exist_ok=True)
     if not holdings:
@@ -308,12 +346,18 @@ def _find_13f_filings(fund_cik: str, as_of: date) -> list[dict]:
     return filings
 
 
-def _load_filing_holdings(filing: dict) -> list[HoldingRecord]:
+def _load_filing_holdings_by_cusip(filing: dict) -> dict[str, HoldingRecord]:
+    """
+    CUSIP-keyed map of HoldingRecords for a single 13F-HR filing.
+
+    13Fs have multiple rows per issuer (one per investment manager); aggregate
+    by CUSIP, summing shares and dollar value. Two CUSIPs can resolve to the
+    same ticker — callers that need unique records should use this map rather
+    than keying on ticker.
+    """
     xml_text = _fetch_information_table_xml(filing["fund_cik"], filing["accession"])
     raw_rows = _parse_information_table(xml_text)
 
-    # 13Fs often have multiple rows per issuer (one per investment manager).
-    # Aggregate by CUSIP, summing shares and dollar values.
     by_cusip: dict[str, dict] = {}
     for row in raw_rows:
         if not row["cusip"]:
@@ -332,32 +376,41 @@ def _load_filing_holdings(filing: dict) -> list[HoldingRecord]:
 
     total_value = sum(v["value"] for v in by_cusip.values()) or 1
     cik_padded = str(filing["fund_cik"]).zfill(10)
-    holdings: list[HoldingRecord] = []
-    for info in by_cusip.values():
+    out: dict[str, HoldingRecord] = {}
+    for cusip, info in by_cusip.items():
         ticker = _resolve_ticker(info["name_of_issuer"]) or info["cusip"]
-        holdings.append(
-            HoldingRecord(
-                fund_cik=cik_padded,
-                fund_name=filing["fund_name"],
-                ticker=ticker,
-                filing_date=filing["filing_date"],
-                period_end=filing["report_date"],
-                shares=info["shares"],
-                market_value=info["value"],
-                percent_of_portfolio=round(100.0 * info["value"] / total_value, 3),
-            )
+        out[cusip] = HoldingRecord(
+            fund_cik=cik_padded,
+            fund_name=filing["fund_name"],
+            ticker=ticker,
+            filing_date=filing["filing_date"],
+            period_end=filing["report_date"],
+            shares=info["shares"],
+            market_value=info["value"],
+            percent_of_portfolio=round(100.0 * info["value"] / total_value, 3),
         )
-    return holdings
+    return out
 
 
-def _load_quarter_holdings(fund_cik: str, quarter_end: date) -> list[HoldingRecord]:
-    """All holdings from the 13F-HR whose reportDate equals quarter_end."""
+def _load_filing_holdings(filing: dict) -> list[HoldingRecord]:
+    return list(_load_filing_holdings_by_cusip(filing).values())
+
+
+def _load_quarter_holdings_by_cusip(
+    fund_cik: str, quarter_end: date,
+) -> dict[str, HoldingRecord]:
+    """CUSIP-keyed map of the 13F-HR whose reportDate equals quarter_end."""
     as_of = quarter_end + timedelta(days=_FILING_WINDOW_DAYS)
     filings = _find_13f_filings(fund_cik, as_of)
     for f in filings:
         if f["report_date"] == quarter_end:
-            return _load_filing_holdings(f)
-    return []
+            return _load_filing_holdings_by_cusip(f)
+    return {}
+
+
+def _load_quarter_holdings(fund_cik: str, quarter_end: date) -> list[HoldingRecord]:
+    """All holdings from the 13F-HR whose reportDate equals quarter_end."""
+    return list(_load_quarter_holdings_by_cusip(fund_cik, quarter_end).values())
 
 
 def _fetch_information_table_xml(cik: int, accession: str) -> str:

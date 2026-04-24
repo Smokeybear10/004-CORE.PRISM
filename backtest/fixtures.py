@@ -21,8 +21,10 @@ reduces classification noise, simulating what we expect the real model to do.
 from __future__ import annotations
 
 import random
-from datetime import date
+from datetime import date, timedelta
 from typing import List, Optional
+
+import pandas as pd
 
 from schema import (
     Attribution,
@@ -96,6 +98,7 @@ def generate_attribution(
     vol_zscore: float,
     ablation_name: str = "base_news",
     seed: Optional[int] = None,
+    sources_used: Optional[list[SourceType]] = None,
 ) -> Attribution:
     """
     Synthesize an Attribution for a single event.
@@ -138,10 +141,63 @@ def generate_attribution(
         move_character=move_character,
         confidence=confidence,
         ablation_name=ablation_name,
-        sources_used=ABLATION_BUNDLES[ablation_name],
+        sources_used=(
+            sources_used if sources_used is not None
+            else ABLATION_BUNDLES.get(ablation_name, [])
+        ),
         chunks_considered=rng.randint(5, 50),
         model_notes="synthetic fixture — replace with real attribution when model module is ready",
     )
+
+
+_SYNTHETIC_TICKERS = ["AAPL", "NVDA", "AMD", "MSFT", "META", "GOOGL", "AMZN", "TSLA"]
+
+
+def make_synthetic_events_df(n: int = 20, seed: int = 0) -> pd.DataFrame:
+    """
+    Produce an in-memory DataFrame shaped like ``events_focal.parquet``.
+
+    Every column consumed by backtest code is present:
+    ``event_id, ticker, earnings_date, reaction_end, reaction_return,
+    reaction_return_zscore, is_significant, is_focal,
+    fwd_{1,5,20}d, fwd_{1,5,20}d_excess``.
+
+    Deterministic in ``seed``. Reaction returns are drawn wide enough to
+    exercise the fade threshold (``|reaction| >= 5%``) and produce a mix of
+    structural/transient/mixed labels out of the stub attribution classifier.
+    """
+    rng = random.Random(seed)
+    base = date(2024, 1, 2)
+    rows = []
+    for i in range(n):
+        ticker = _SYNTHETIC_TICKERS[i % len(_SYNTHETIC_TICKERS)]
+        earnings = base + timedelta(days=i * 11)
+        reaction_end = earnings + timedelta(days=1)
+        # Wide distribution so baselines and signal logic both see real variation.
+        reaction = rng.uniform(-0.12, 0.12)
+        zscore = reaction / 0.02  # implies ~2% baseline vol
+        fwd_5d = rng.uniform(-0.06, 0.06)
+        fwd_1d = fwd_5d * rng.uniform(0.1, 0.4)
+        fwd_20d = fwd_5d * rng.uniform(1.0, 2.5)
+        # SPY-excess: subtract a small market drift so excess != raw.
+        spy_drift = rng.uniform(-0.01, 0.01)
+        rows.append({
+            "event_id": f"{ticker}_{earnings.strftime('%Y%m%d')}",
+            "ticker": ticker,
+            "earnings_date": pd.Timestamp(earnings),
+            "reaction_end": pd.Timestamp(reaction_end),
+            "reaction_return": float(reaction),
+            "reaction_return_zscore": float(zscore),
+            "fwd_1d": float(fwd_1d),
+            "fwd_5d": float(fwd_5d),
+            "fwd_20d": float(fwd_20d),
+            "fwd_1d_excess": float(fwd_1d - spy_drift * 0.2),
+            "fwd_5d_excess": float(fwd_5d - spy_drift),
+            "fwd_20d_excess": float(fwd_20d - spy_drift * 4),
+            "is_significant": abs(zscore) > 2.0 and abs(reaction) > 0.02,
+            "is_focal": ticker in {"AAPL", "NVDA", "AMD"},
+        })
+    return pd.DataFrame(rows)
 
 
 def generate_attributions_for_events(
