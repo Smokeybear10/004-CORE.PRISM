@@ -1,7 +1,7 @@
 """
-Tests for `detect_moves` — the no-foreknowledge invariants are the load-
-bearing ones here (vol + rank windows end at move_date - 1), plus the
-multi-ticker / multi-trigger edge cases.
+Tests for `detect_significant_moves` — the no-foreknowledge invariants are
+the load-bearing ones here (vol + rank windows end at move_date - 1), plus
+the multi-ticker / multi-trigger edge cases.
 """
 from __future__ import annotations
 
@@ -11,7 +11,7 @@ import numpy as np
 import pandas as pd
 import pytest
 
-from prices.price_moves import detect_moves
+from ingestion.prices import detect_significant_moves as detect_moves
 from schema import PriceMove
 
 

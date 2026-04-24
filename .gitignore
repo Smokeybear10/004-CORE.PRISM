@@ -9,6 +9,12 @@ __pycache__/
 .pytest_cache/
 .ipynb_checkpoints/
 
+# Cached scraped / fetched data (yfinance, SEC, news, macro)
+.cache/
+**/.cache/
+*.parquet
+data/raw/
+
 # Environment / secrets
 .env
 .env.local
@@ -19,6 +25,10 @@ __pycache__/
 
 # Claude Code local settings
 .claude/settings.local.json
+.agents/
+
+# HuggingFace datasets library clone (not project data)
+datasets/
 
 # Editors
 .vscode/

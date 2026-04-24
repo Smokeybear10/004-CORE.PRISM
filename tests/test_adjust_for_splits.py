@@ -2,7 +2,7 @@
 Tests for `adjust_for_splits` — backward-adjustment arithmetic, compounding,
 idempotence guarantees, and isolation between tickers.
 
-Convention (see prices/yahoo_loader.adjust_for_splits):
+Convention (see ingestion/prices/hf_loader.adjust_for_splits):
     "a:b"  means a new shares per b old shares
     factor = b / a   applied to prices STRICTLY BEFORE ex-date
     on/after the ex-date: unchanged
@@ -14,7 +14,7 @@ from datetime import date, timedelta
 import pandas as pd
 import pytest
 
-from prices.yahoo_loader import adjust_for_splits
+from ingestion.prices.hf_loader import adjust_for_splits
 
 
 def _make_prices(ticker: str, start: date, n_days: int, base: float = 100.0) -> pd.DataFrame:

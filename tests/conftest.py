@@ -1,10 +1,10 @@
 """
 Shared pytest fixtures.
 
-The `patched_loader` fixture monkeypatches `prices.yahoo_loader` so tests
-never touch HuggingFace and never pollute the real data/cache directory.
-The fake `_read_hf_parquet` reads local fixture parquets while honoring
-pyarrow pushdown filters — same code path as production.
+The `patched_loader` fixture monkeypatches `ingestion.prices.hf_loader` so
+tests never touch HuggingFace and never pollute the real data/cache
+directory. The fake `_read_hf_parquet` reads local fixture parquets while
+honoring pyarrow pushdown filters — same code path as production.
 """
 from __future__ import annotations
 
@@ -13,7 +13,7 @@ from pathlib import Path
 import pyarrow.parquet as pq
 import pytest
 
-from prices import yahoo_loader
+from ingestion.prices import hf_loader as yahoo_loader
 
 FIXTURE_DIR = Path(__file__).parent / "fixtures"
 

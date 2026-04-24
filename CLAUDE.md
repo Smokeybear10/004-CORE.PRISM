@@ -1,193 +1,423 @@
-# CLAUDE.md
+# BW Hackathon: Equity Price Action Tagger — Lean or Fade?
 
-Shared project brief. Multiple Claude instances read and edit this file — keep
-it accurate and avoid stepping on each other. If a section describes code,
-skim the code first and fix the section if it's drifted.
+## Project goal (read this first)
+We're building a **financial historian**: given a significant stock price move, the system
+ingests the text around that move (earnings transcripts, SEC filings, news, institutional
+positioning, macro context) and produces a structured attribution across five dimensions
+— demand, pricing, competitive dynamics, management credibility, macro exposure — with
+evidence citations. Then we decide: does the market have this right (**lean**) or is it
+overreacting to transient signals (**fade**)?
 
-## Project: Equity Price-Action Tagger
+This is not sentiment analysis. We are decomposing qualitative language into measurable
+dimensions that evolve over time, and testing whether that decomposition predicts
+whether a move persists (structural) or reverts (transient).
 
-Given a significant historical stock move, extract a structured attribution
-from surrounding text (earnings transcripts, news, SEC filings, and a wide
-set of alternative sources) across five dimensions. Then test whether
-attribution category predicts whether the move persists (structural) or fades
-(transient).
+## The deliverable
+A **clickable demo of the pipeline's reasoning**, plus ablation results and a modest
+backtest. Not a trading product. The demo sells the research process: "here's what the
+model thinks with only news; now add 10-Ks; now add peer companies; now add macro —
+watch the attribution and the predicted return converge to what actually happened."
 
-This is a causal labeler for past price action, not a forecaster. The
-deliverable is a backtest + demo chart, not a product. Built for the
-Bridgewater AI Hackathon (Track 1).
+## The six-step pipeline (mentor framework)
+Every module is a pure function with a typed input/output contract so we can parallelize
+and swap implementations against fixtures.
 
-## Phase (as of 2026-04-24)
+| Step | Module | Input → Output |
+|---|---|---|
+| 1. Flag significant price moves | `ingestion/prices/` | ticker → `list[PriceMove]` |
+| 2. Ingest text (filings, transcripts, news) | `ingestion/sec/`, `ingestion/earnings_news/` | ticker + date range → `list[TextChunk]` |
+| 3. Attribute moves to text | `model/` | PriceMove + chunks → `Attribution` |
+| 4. Add macro / peer / sector drivers | `ingestion/macro/` + peer news | additive ablation inputs |
+| 5. Coherence check | `model/check_coherence` | `Attribution` → `CoherenceCheck` |
+| 6. Fade-or-follow framework | `backtest/` | Attribution + realized return → lean/fade trade, BacktestResult |
 
-**Ingestion + early backtest.** Sources are being scaffolded; most ingestion
-functions are stubs. The backtest harness has a first working function
-(`backtest.basket.backtest_basket`). Modeling layer (`model/`) is empty —
-starts once ingestion coverage is acceptable.
+## Three strategic messages from Mentor Meeting #1
+1. **Sprint to a crappy end-to-end MVP before polishing anything.** Don't perfect Step 1
+   for 5 hours. Get one ticker end-to-end first, then iterate.
+2. **Demo the thought process and ablations, not just the final result.** Each data
+   source we add is a talking point. Feature-importance across sources is the money shot.
+3. **Put energy into data-source additive testing + interpretability, not a sophisticated
+   trading strategy.** Lean/fade logic should be sensible, not clever. The tagging and
+   the evaluation framework are the product.
 
-## Data sources & ownership
+---
 
-| Source                              | Owner    | Module                              | Status |
-|-------------------------------------|----------|-------------------------------------|--------|
-| Yahoo Finance — prices, earnings    | teammate | (Yahoo used directly in backtest)   | prices working via yfinance |
-| SEC filings (10-K/Q, 8-K, Form 4)   | teammate | `ingestion/sec/`                    | stubs + fixtures |
-| Dated news headlines                | teammate | `ingestion/earnings_news/`          | empty |
-| Earnings transcripts                | teammate | `ingestion/earnings_news/`          | empty |
-| FRED macro releases                 | teammate | (not scaffolded yet)                | — |
-| 13F hedge-fund holdings             | Henry    | `ingestion/idiosyncratic/thirteen_f.py` | stub + fixture |
-| Short-seller research               | Henry    | `ingestion/idiosyncratic/short_reports.py` | stub + fixture |
-| FDA calendar + approvals/CRLs       | Henry    | `ingestion/idiosyncratic/fda.py`    | stub + fixture |
-| FINRA short interest                | Henry    | `ingestion/idiosyncratic/short_interest.py` | **partially implemented** |
-| Index rebalances                    | Henry    | `ingestion/idiosyncratic/index_changes.py` | stub + fixture |
-| Analyst ratings & price targets     | Henry    | `ingestion/idiosyncratic/analyst_actions.py` | stub + fixtures |
-| FOMC speeches & minutes             | Henry    | (not scaffolded yet)                | — |
-| Credit spreads / CDS                | Henry    | (not scaffolded yet)                | — |
+## Team ownership & playbooks
 
-## Repository layout
+Each person owns a data stream. Everyone must publish a typed artifact other modules
+can hang off of, and everyone must write at least one fixture so downstream teammates
+aren't blocked.
+
+### Srilekha — Yahoo Finance (the backbone everyone joins onto)
+**Dataset:** `defeatbeta/yahoo-finance-data`. Prices + earnings transcripts + fundamentals.
+
+**Core deliverable:**
+- `events.parquet` — one row per significant earnings event. Columns: `ticker`,
+  `earnings_date`, `bmo_amc_flag`, `reaction_return`, `fwd_return_1d`, `fwd_return_5d`,
+  `fwd_return_20d`, `market_neutralized_fwd_returns`, `pre_event_vol`, `is_significant`.
+- `transcripts.parquet` — earnings transcripts keyed by `(ticker, earnings_date)`.
+
+**Handoff:** these two tables are the anchor everyone else joins onto. Target: usable
+event table by **hour 6**. Everyone else is blocked without it.
+
+**Key risk:** BMO (before-market-open) vs. AMC (after-market-close) flag. This single
+column decides whether the reaction window is day T or day T+1 for every event. Get it
+wrong and every downstream result is silently corrupted. **Spot-check 5–10 famous events
+(Meta Feb 2022, Nvidia May 2023, AAPL March 2020) against known outcomes** before calling
+the table clean.
+
+**Slack to pick up:** after hour 8 Srilekha is the natural backtest owner — the price
+data is already in her head and the backtest is a price-math problem.
+
+### Sophia — SEC filings (structural priors + change detection)
+**Dataset:** `JanosAudran/financial-reports-sec` (pre-parsed, preferred) with `PatronusAI/financebench` as eval sanity check. Raw EDGAR via `edgartools` as fallback.
+
+**Core deliverable:** a per-ticker **structural profile** extracted from the most recent
+10-K before each earnings event, covering: stated competitive dynamics, risk factors,
+guidance language, segment breakdown, macro exposures (FX, commodities, rates). Output:
+`filing_profiles.parquet`, joined to events by `(ticker, most_recent_10k_before_event)`.
+
+**Sections to extract, ignore the rest:** Item 1 (Business), Item 1A (Risk Factors),
+Item 7 (MD&A). Skip financial statements — those are numeric and Srilekha has them.
+
+**Stretch (the differentiator):** change detection. Compare current earnings-call language
+to the most recent 10-K profile. Has the competitive narrative shifted? Has risk language
+intensified? The *delta* is the signal no one else in the hackathon will have.
+
+**Key risk:** getting lost in 10-K parsing. A single 10-K is 100+ pages of boilerplate.
+**Timebox section extraction to 2 hours**; move on with whatever you have. Use header
+regex, not LLM parsing, to find section boundaries.
+
+**Slack to pick up:** Sophia is the natural owner of the **attribution schema** — her
+filing profiles and the earnings-call tags must share vocabulary for comparison to work.
+
+**Fallback if underwater:** drop to 8-Ks only, or skip filings entirely. A version of
+the project with transcripts + news and no 10-Ks is still credible.
+
+### Henry — 13F statements + open research (smart-money positioning)
+**Datasets:** SEC 13F directly, WhaleWisdom if accessible, or pre-aggregated HF dataset
+if available. Plus a curated bibliography of prior work on PEAD / event studies.
+
+**Core deliverable:** a per-event **institutional positioning snapshot** — total
+institutional ownership %, change in ownership over the last quarter, concentration
+(Herfindahl index or top-5-holder share), and holder-type mix (long-only mutual funds
+vs. hedge funds vs. passives). Output: `positioning.parquet`, joined to events by
+`(ticker, last_13f_date_before_event)`.
+
+**Framing (non-negotiable):** 13Fs are a **pre-event positioning signal**, not live
+attribution. High institutional ownership + beat → squeeze potential (lean harder).
+Concentrated institutional ownership + miss → forced-selling risk (fade harder). This
+gives 13F a real role in the lean/fade logic rather than "context only."
+
+**Research brief deliverable:** 3–5 papers/posts on PEAD, narrative-driven attribution,
+and event-study methodology. Shared in team doc. Grounds our framing so we don't
+reinvent wheels.
+
+**Key risk:** 13F ingestion is the most failure-prone workstream. 13Fs are publicly filed
+but messy to aggregate. **If hour 4 and no clean 13F data, pivot to analyst consensus**
+(EPS estimates, price targets, ratings distribution from Yahoo). Better one working
+positioning signal than two half-broken ones.
+
+**Slack to pick up:** integration + backtest partner with Srilekha after hour 8. Also
+natural **demo owner** — research bibliography primes him to own the narrative framing.
+
+### Thomas — News (immediate narrative) [me]
+**Core deliverable:** per-event bundle of news articles with source, timestamp, and text,
+joined to events via ticker + timestamp match. For each event, the LLM produces a
+news-based attribution tag bundle. Output: `news_chunks.parquet` and news-attribution runs.
+
+**The data-access problem (active blocker):** WSJ / CNBC / Bloomberg are paywalled and
+not scrape-friendly for this hackathon. Prioritized options:
+1. **Yahoo's news feed via yfinance / `defeatbeta/yahoo-finance-data`** — coordinate
+   with Srilekha, she may already have this. Zero cost.
+2. **Finnhub free tier** — company news endpoint, major outlets, rate-limited but
+   usable for a hackathon.
+3. **Polygon.io Stocks Starter at $29/mo** — WSJ/CNBC/Bloomberg headlines + snippets,
+   ticker-tagged, 5y history. Best paid option.
+4. **SEC 8-K filings as near-news** — ticker-tagged, timestamped to the minute, legally
+   required to be material, free via `edgartools`. Great proxy for non-earnings
+   material events. Use 8-K Item codes (2.02 earnings, 5.02 exec changes, 7.01 Reg FD,
+   8.01 other material) to filter.
+5. **Abandon news as a standalone workstream** — pivot to reinforce 8-Ks (crosses over
+   with Sophia) or the attribution LLM layer.
+
+**If hour 2 and no workable source is chosen, pivot. Don't burn a day scraping.**
+
+**Foreknowledge discipline (strictest for news):** for an AMC earnings release on day T,
+only articles published T-1 through T at 4:00 PM ET are fair game. No "why XYZ fell 10%
+after hours" articles from T+1. No articles whose text references the move itself.
+Filter aggressively at ingestion.
+
+**Slack to pick up:** Thomas is the natural owner of the **attribution LLM layer** —
+news is its primary input, and pairing news with Sophia's structural profile is the
+cross-source reconciliation the demo needs.
+
+**Fallback if entirely stuck on news:** go all-in on 8-Ks via `edgartools`. They give
+you attributable, timestamped material-event text without any ToS or scraping issues.
+
+---
+
+## Cross-cutting ownership gaps — RESOLVE AT NEXT CHECK-IN
+The current split has everyone owning a data source. Nobody is explicitly owning:
+
+1. **Attribution LLM layer + schema design.** The prompt and pipeline that turn
+   TextChunks into `Attribution` output. Natural fit: **Thomas or Sophia**.
+2. **Backtest + signal construction.** Turns `Attribution` into lean/fade trades and
+   measures P&L. Natural fit: **Srilekha** (post–hour 8), paired with Henry.
+3. **Demo dashboard + narrative.** The ablation chart and story. Must start by hour 8
+   or it's rushed. Natural fit: **Henry** (post–13F landing) or whoever has most slack.
+
+**Data without a modeling/backtest/demo owner is just data.** This is the single biggest
+risk to the project. Name owners in the Friday check-in or cut scope.
+
+---
+
+## Repo layout & module boundaries
 
 ```
-schema.py                     Shared Pydantic contracts — see below
-backtest/
-  basket.py                   Equal-weight long/short basket; PnL + Sharpe + drawdown
-  __init__.py                 (empty)
-ingestion/
-  sec/__init__.py             fetch_filings, get_filings_as_of, chunk_text (stubs)
-                              make_chunk_id (done)
-  earnings_news/__init__.py   (empty)
-  idiosyncratic/              Henry's alt-data sources
-    __init__.py
-    thirteen_f.py             13F holdings + quarter-over-quarter deltas
-    short_reports.py          short-seller publisher scrapers
-    fda.py                    PDUFA / AdComm / approvals / CRLs
-    short_interest.py         FINRA bi-monthly short interest (partial impl)
-    index_changes.py          S&P / Russell / MSCI add/delete
-    analyst_actions.py        rating changes + price-target changes
-model/__init__.py             (empty — price-move detection + LLM attribution goes here)
-tests/
-  test_schema.py              Fixture + chunk_id tests (pytest)
-  fixtures/
-    sec_chunks_sample.json
-    idiosyncratic/            sample JSONs for all 8 idiosyncratic record types
+ingestion/prices/         # Srilekha: price + event detection
+ingestion/earnings_news/  # Thomas (news) + Srilekha (transcripts)
+ingestion/sec/            # Sophia: 10-K / 10-Q / 8-K
+ingestion/macro/          # Henry: 13F + macro
+model/                    # Shared: attribution LLM + coherence check
+backtest/                 # Shared: fade/lean + P&L
+demo/                     # Shared: ablation notebook + charts
+schema.py                 # Shared contracts — DO NOT modify without team sign-off
+tests/fixtures/           # Sample data every module tests against
+tests/                    # pytest suite
 ```
 
-## Schema contracts (`schema.py`)
+**Claude Code: when editing inside one module, do NOT touch other modules.** Use
+`/freeze` to lock scope to the current directory when debugging.
 
-Every module's inputs/outputs conform to the Pydantic models here. **Post in
-team chat before modifying `schema.py`** — downstream modules depend on field
-names and types being stable.
+---
 
-Types currently defined:
+## Attribution schema
 
-- **Text**: `TextChunk` (atomic unit for model citations), `SourceType` enum
-- **Price**: `PriceMove`
-- **Attribution**: `DimensionScore`, `Attribution`, with `move_character` ∈
-  {structural, transient, mixed, unclear}
-- **Backtest**: `BacktestResult` (strategy_name, n_trades, sharpe, hit_rate,
-  avg_return, max_drawdown, notes)
-- **Unified event envelope**: `Event` — common shape for anything that can
-  drive a move (used by idiosyncratic sources)
-- **Idiosyncratic**: `HoldingRecord`, `HoldingDelta` + `HoldingAction`;
-  `ShortReport`; `FDAEvent` + `FDAEventType`; `ShortInterestRecord`;
-  `IndexChange` + `IndexChangeAction`; `AnalystRating` + `RatingAction`;
-  `PriceTargetChange`
-
-## Non-negotiable rules
-
-1. **No foreknowledge.** Any function that retrieves data for a given date
-   MUST filter by `publication_date <= as_of` (or equivalent: `filing_date`,
-   `settlement_date`, `event_date`, `announcement_date`). Every retrieval
-   function takes an `as_of` parameter. This is THE most common way
-   hackathon projects accidentally leak future information into backtests.
-2. **Filing date != period end.** A 10-K for fiscal year ending Dec 31 might
-   be filed in March. Markets react on the filing date. Store both; use the
-   filing/publication date for as-of queries.
-3. **Stable IDs.** Every text chunk, event, rating, etc. has a stable,
-   deterministic ID so the model can cite evidence. Format lives in the
-   corresponding ingestion module (e.g. `make_chunk_id` in `ingestion/sec`).
-4. **Fixtures before code.** Before implementing a parser, write a fixture
-   under `tests/fixtures/` that matches the schema. Downstream teammates can
-   build against fixtures while the real fetcher is in progress.
-5. **One schema, enforced.** Use the Pydantic models in `schema.py`. No loose
-   dicts crossing module boundaries.
-6. **Evidence required.** The attribution model will hallucinate. Every
-   `DimensionScore` must include non-empty `evidence_chunk_ids` that resolve
-   to real chunks — drop attributions without valid citations.
-
-## Module boundaries
-
-When editing inside one module, do NOT touch files in other modules. If a
-cross-module change is needed, raise it explicitly before making it. This
-matters more than usual because multiple people + Claude instances work in
-parallel.
-
-## The 5 attribution dimensions
-
+Five fixed dimensions (scored per move, evidence-cited):
 - `demand` — unit volume, customer count, market share shifts
 - `pricing` — price changes, mix, discounting
 - `competitive` — new entrants, competitor moves, moats
 - `management_credibility` — guidance changes, execution, leadership comments
 - `macro` — rates, FX, commodities, geopolitics
 
-## Definitions (locked)
+Every `DimensionScore` MUST cite at least one `evidence_chunk_id`. Drop any score without
+a valid citation — this is the anti-hallucination guardrail.
 
-- **Significant price move**: `|1-day return| > 2x trailing 30-day realized
-  vol`, OR top 5% absolute return in trailing 60 days. Pick ONE and stick
-  with it across the whole pipeline.
-- **Fade window**: did the move reverse by >50% within 5 trading days?
+`move_character` is the single bit that drives the trade: `structural` → lean,
+`transient` → fade, `mixed`/`unclear` → neutral.
+
+See `schema.py` for the full Pydantic contracts. **Don't modify `schema.py` without
+posting in team chat first.**
+
+---
+
+## MVP scope (hour 0 → next mentor check-in)
+- **Universe:** ONE ticker first. Pick one where the team has personal intuition about
+  at least one past move — mentor's point is that spot-checking requires knowing what
+  the right attribution "feels like." Expand to ~5 after MVP works.
+- **History:** 2–5 years. Not 20. Long history burns compute without adding MVP value.
+- **Sources for MVP:** earnings transcripts + 10-Ks + (whatever news Thomas can land).
+  Add 13F, macro, peer news, sector as ablations **after** MVP is end-to-end.
+- **Cache everything to disk** (`*/.cache/`, gitignored). Mentor was explicit:
+  **"make loops as fast as possible, store locally so we all can access it easily,
+  make sure it's fast to run."** Re-running the pipeline must not re-hit APIs.
+
+---
+
+## Ablation roadmap (the demo goldmine)
+Each run is a bar on the demo chart showing hit-rate / plausibility / Sharpe as we add
+sources. This is the additive-testing story mentor called "demo gold."
+
+1. `base_news` — company-specific news only.
+2. `+sec` — add 10-K / 10-Q language.
+3. `+earnings` — add earnings-call transcripts.
+4. `+peer_news` — add news about peer / "family" tickers (Apple → Samsung, TSMC, Qualcomm).
+5. `+sector_news` — sector-wide stories.
+6. `+macro` — Fed decisions, VIX, commodities, geopolitics.
+7. `+positioning` — Henry's 13F / consensus features.
+
+The demo one-liner we're engineering toward: *"10-K language is the biggest attribution
+driver; peer news adds 15% more signal; WSJ sentiment was basically noise; adding
+institutional positioning flips the sign on crowded misses."*
+
+---
+
+## Evaluation framework (mentor emphasis)
+
+**Core question per event:** what *actually* happened vs. what we *expected* to happen?
+
+The `Attribution` object carries both `return_pct` (realized) and `predicted_return_pct`
+(what the model expected given the evidence). The gap between them is the signal:
+- Small gap, coherent evidence → model understands this move → trust it.
+- Big gap, coherent evidence → market mispriced the structural content → potentially
+  trade-worthy.
+- Big gap, incoherent evidence → model is confused → reject via coherence check.
+
+**Build a fast evaluation harness.** Mentor: *"have a tool that helps you evaluate
+different frameworks fast — would help us stand out."* Concretely:
+- One command runs attribution + signal + backtest on the full event table.
+- One command regenerates the ablation chart.
+- Each module re-runs in seconds against cached data (never re-fetch from disk-cached runs).
+- Every attribution row is clickable in the demo to show which chunks it cited.
+
+**Benchmarks / baselines we MUST report** (mentor: "find proxy for benchmark"):
+1. **Naive "change in price = news" baseline** — always lean with the move.
+2. **Always fade big moves** — pure mean reversion.
+3. **Random attribution** — same signal logic on shuffled attribution vectors.
+4. **Sentiment-only** — single scalar (positive/negative) classifier on the same text.
+
+Our structured-attribution signal must beat all four to claim it's doing real work.
+
+**Feature importance across data sources.** Within the news bracket, test additivity of
+each source: what if we drop WSJ-equivalent headlines? What if we only use press releases?
+This is the feature-importance story inside the ablation story.
+
+---
+
+## Frozen test case (pick once, don't swap)
+Once the team picks the MVP ticker, pick ONE (ticker, date) pair where the team knows
+what caused the move — e.g. a COVID-era drop for a consumer name, a rate-hike day for
+a bank. That pair becomes the prompt-iteration target.
+
+Rules (mentor, explicit):
+- **Freeze the inputs.** Don't swap the test case mid-iteration — you lose the ability
+  to isolate what a prompt change caused.
+- **Write the expected output BEFORE running the model** (dominant dimension, direction,
+  plausible `move_character`). A regression is only obvious if you can name it ahead
+  of time.
+- Store the expected-output contract as `tests/fixtures/<ticker>_<event>_expected.json`.
+  A test should assert it parses and contains the expected-attribution keys.
+
+---
+
+## Definitions to lock at hour 1 (pick ONE and stick with it)
+- **Significant price move**: `|1-day return| > 2x trailing 30-day realized vol`,
+  OR top 5% absolute return in trailing 60 days. Pick one.
+- **Fade window**: move reversed by >50% within 5 trading days.
 - **Persist**: no reversal, or extension of the move, over 5 trading days.
+- **As-of date**: `publication_date <= as_of` for every retrieval function.
 
-## Data access (HuggingFace)
+---
 
-- Private HF repo: `BridgewaterAIHackathon/BW-AI-Hackathon`
-- Auth: `huggingface-cli login` once, then pass `token=True` to `load_dataset`
-- Files sit directly under each source folder (e.g.
-  `Structured_Data/SNE/yahoo-finance-data/*.parquet`) — **no `data/`
-  subfolder** (unlike the public `defeatbeta/yahoo-finance-data` mirror)
+## Non-negotiable rules
 
-## Conventions
+1. **No foreknowledge leak.** Every retrieval function takes an `as_of` parameter and
+   MUST filter by `publication_date <= as_of`. This is THE most common way hackathon
+   projects silently corrupt their backtest. Mentor also flagged **model foreknowledge**
+   (LLM trained on post-event journalism about Meta Feb 2022, NVDA May 2023). We can't
+   fully eliminate it; we can state it as a limitation and not rabbit-hole on it.
+2. **Filing date != period end.** A 10-K for fiscal year ending Dec 31 might be filed
+   in March. The market reacts on filing date. Store both; as-of queries use
+   `publication_date`.
+3. **Stable chunk IDs.** Format locked: `{source_type}_{ticker}_{YYYY-MM-DD}_{section}_{NNN}`.
+   Citations reference these.
+4. **Fixtures before code.** Write a fixture matching the schema before implementing a
+   fetcher. Downstream modules build against fixtures — nobody blocks on live data.
+5. **One schema, enforced.** Use the Pydantic models in `schema.py`. No loose dicts
+   crossing module boundaries. **Post in team chat BEFORE editing `schema.py`.**
+6. **Every DimensionScore cites at least one real chunk_id.** No citation → drop the score.
+7. **Cache everything to disk.** No re-fetching across runs.
 
-- Ingestion writes **parquet** (not CSV) for anything non-trivial
-- Timestamps in **UTC, ISO-8601**
-- One script per source; keep ingestion decoupled from modeling
-- Do NOT commit HF tokens or raw bulk data — stage to the HF repo instead
-- SEC filings can be huge (200+ pages). Chunk aggressively (~800 tokens with
-  ~100 token overlap), store only relevant sections (MD&A, Risk Factors)
-
-## Workflow
-
-- Feature branches, e.g. `henry-idiosyncratic`, `person1-sec`, etc.
-- Merge to `main` only after a teammate reviews the PR
-- `python -m pytest tests/` must pass before any merge
-- If you touch `schema.py`, post in team chat BEFORE merging
-
-## Commands
-
-```bash
-# Setup (once)
-python -m venv .venv
-.venv/Scripts/activate          # Windows
-pip install -r requirements.txt
-huggingface-cli login           # for HF access
-
-# Tests
-.venv/Scripts/python.exe -m pytest tests/
-
-# Smoke-test basket backtest
-.venv/Scripts/python.exe -c "
-from backtest.basket import backtest_basket
-r, p = backtest_basket(longs=['NVDA'], start_date='2026-02-24', end_date='2026-04-24')
-print(r.model_dump_json(indent=2))"
-```
+---
 
 ## Known traps
+- **Yahoo Finance survivorship bias** — delisted companies disappear. Note in demo.
+- **SEC filings are huge** — chunk aggressively, keep MD&A + Risk Factors only.
+- **LLM will hallucinate attributions** — enforce evidence_chunk_ids, drop uncited scores.
+- **Paywalled news** (WSJ, CNBC, Bloomberg) — see Thomas's playbook. Don't scrape.
+- **BMO vs. AMC flag errors** — see Srilekha's playbook. Single wrong flag corrupts
+  everything downstream.
+- **13F lag + quarterly cadence** — can't drive real-time attribution. Use as pre-event
+  positioning signal only.
+- **Re-fetching APIs on every run** — will eat the day. Cache.
+- **Schema drift between modules** — people editing `schema.py` without sign-off.
+- **Demo ready only at hour 23** — start building the dashboard at hour 8, not hour 20.
 
-- **Yahoo Finance has survivorship bias** — delisted tickers silently
-  disappear. Fine for a hackathon; note it in the demo.
-- **yfinance `end_date` is exclusive.** Pass the day after to include it.
-- **13F has a 45-day lag** after quarter-end — filings land ~Feb 14, May 15,
-  Aug 14, Nov 14. Don't join on quarter-end; join on filing date.
-- **FINRA short interest is bi-monthly**, settled ~mid-month and ~end-of-month,
-  published ~8 business days later. Use publication date for as-of, not
-  settlement date.
-- **FDA sponsor → ticker mapping is messy** — handle subsidiaries, M&A, and
-  private sponsors (which yield no ticker).
-- **Multiple Claude instances are active.** Before editing schema.py or
-  CLAUDE.md, pull latest. Expect to occasionally see files you didn't create.
+---
+
+## Workflow
+- Each person works on their own git branch:
+  - `person1-sec` — Sophia
+  - `person2-yahoo` — Srilekha
+  - `person3-research` — Henry
+  - `person4-news` — Thomas (branch: `thomas-test` currently; rename if needed)
+- Build against `tests/fixtures/` while your real data source is in progress.
+- `pytest tests/` must pass before any merge.
+- Merge to `main` only after a teammate reviews the PR.
+- **If you touch `schema.py`, post in team chat BEFORE merging.**
+
+---
+
+## Claude Code house rules
+- When editing inside one module, **do NOT touch other modules**. If cross-module
+  changes are needed, flag them and let the owning person do it.
+- Use `/freeze` to lock scope to the current directory when debugging.
+- Respect the "one company, short history" MVP scope — don't quietly broaden it.
+- **Don't refetch cached data.** If the cache dir has it, read from there.
+- **Every attribution must cite a real chunk_id.** Reject uncited output silently.
+
+---
+
+## Mentor Meeting #1 — key takeaways (reference)
+
+**How we selected the project:** independent ranking → top 3 → discussed MVP feasibility,
+iteration speed, ease of parallel work, post-MVP expansion. Winner: Track 1.
+
+**Our framing:** "financial historian" — ingest equities + macro, output structured
+reasoning + evidence for why a move happened. Decompose language into measurable
+dimensions (not sentiment).
+
+**Mentor's concrete advice:**
+- Find a proxy benchmark; report baselines (naive, random, sentiment-only).
+- Tech sector is a reasonable starting universe; consider niche if data coverage is thin.
+- Make iteration loops as fast as possible; cache locally.
+- Build a fast evaluation tool — "would help us stand out lowkey."
+- Frame each run as a story: "here's news only → here's +SEC → here's +peer" — show
+  additivity explicitly. Each added factor is a demo bar.
+- Feature importance matters *within* sources too (which news outlets matter, which
+  filing sections matter).
+- Broaden scope past the target company: "Apple's family companies" (suppliers,
+  partners, competitors). This is the `+peer_news` ablation.
+- Midpoint evaluation: is the model making sense? Is it realistic? Evaluate on the frozen test case.
+- Walk through: input (ticker) → Step 1 (significant moves) → Step 2 (news tagging) →
+  connect tags to volatility → demo the matched intuition.
+- Strategy must stand up to defense. Address what works AND what doesn't — include a
+  failure case in the demo.
+
+**Our open questions to revisit next check-in:**
+- How structured should the attribution output be (fixed schema vs. flexible)? — decided:
+  fixed 5-dim schema.
+- Is the contribution the tagging system or the trading signal? — both, but tagging
+  is the research result; signal is the stress test.
+- Subtle foreknowledge leaks? — model pretraining on financial journalism. Acknowledge,
+  don't rabbit-hole.
+- How many tickers × how much history? — MVP: 1 ticker × 2–5 years. Post-MVP: 5 tickers.
+- What to cut if time-constrained? — Sophia's 10-Ks are most compressible; Thomas's
+  news pivots to 8-Ks; Henry's 13Fs pivot to analyst consensus.
+
+---
+
+## Data access (private HF dataset)
+
+In addition to `defeatbeta/yahoo-finance-data` (public) and `yfinance`, we have
+access to a private HF dataset with curated pre-packaged parquets:
+
+- **Repo:** `BridgewaterAIHackathon/BW-AI-Hackathon` (private)
+- **Auth:** `huggingface-cli login` once, then pass `token=True` to `load_dataset`
+  (or use `HfFileSystem`, which picks up the cached token automatically)
+- **Layout:** files sit directly under each source folder — e.g.
+  `Structured_Data/SNE/yahoo-finance-data/*.parquet`. **No `data/` subfolder**
+  (unlike the public `defeatbeta` mirror).
+- **Full schema reference:** see [`docs/hf_schemas.md`](docs/hf_schemas.md).
+  Includes column types, row counts, and global gotchas (`symbol` vs `ticker`,
+  `decimal128` casting, `report_date` parsing, no `adj_close`, etc.).
+- **Efficient schema probe** (reads only the parquet footer, not the data):
+  ```python
+  from huggingface_hub import HfFileSystem
+  import pyarrow.parquet as pq
+  with HfFileSystem().open("datasets/<repo>/<path>.parquet", "rb") as f:
+      print(pq.read_metadata(f).schema.to_arrow_schema())
+  ```
+  Do not use `load_dataset` or `df.head()` just to inspect columns — those
+  download the full file (435 MB for `stock_prices`).

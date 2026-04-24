@@ -1,9 +1,14 @@
 """
-Loaders for HF Yahoo-Finance parquet files. Every function enforces the
-no-foreknowledge rule (CLAUDE.md rule 1): data is filtered by
-`report_date <= as_of` before it leaves this module.
+Loaders for the Yahoo-Finance parquet tables on Hugging Face.
 
-See docs/hf_schemas.md for the upstream schemas.
+Source-of-truth priority:
+  1. Private repo `BridgewaterAIHackathon/BW-AI-Hackathon` (preferred; curated
+     and versioned for this project — see docs/hf_schemas.md).
+  2. Public mirror `defeatbeta/yahoo-finance-data` (fallback when the private
+     repo is unreachable or the caller isn't authenticated).
+
+Every public function enforces the no-foreknowledge rule (CLAUDE.md rule 1):
+data is filtered by `report_date <= as_of` before it leaves this module.
 """
 from __future__ import annotations
 
@@ -15,23 +20,41 @@ import pandas as pd
 import pyarrow.parquet as pq
 from huggingface_hub import HfFileSystem
 
-HF_BASE = (
+BW_BASE = (
     "datasets/BridgewaterAIHackathon/BW-AI-Hackathon"
     "/Structured_Data/SNE/yahoo-finance-data"
 )
-CACHE_DIR = Path(__file__).resolve().parent.parent / "data" / "cache"
+DEFEATBETA_BASE = "datasets/defeatbeta/yahoo-finance-data/data"
+
+# Cache lives at repo-root/data/cache — three levels up from this file
+# (ingestion/prices/hf_loader.py → ingestion/prices → ingestion → repo root).
+CACHE_DIR = Path(__file__).resolve().parent.parent.parent / "data" / "cache"
 
 _OHLC_COLS = ("open", "close", "high", "low")
 
+# Memoize the resolved HF path per filename so we don't `fs.info()` every read.
+_PATH_CACHE: dict[str, str] = {}
+
+
+def _resolve_hf_path(filename: str, fs: HfFileSystem) -> str:
+    """Return a readable HF path for `filename`, preferring the BW repo."""
+    if filename in _PATH_CACHE:
+        return _PATH_CACHE[filename]
+    bw_path = f"{BW_BASE}/{filename}"
+    try:
+        fs.info(bw_path)
+        resolved = bw_path
+    except Exception:
+        resolved = f"{DEFEATBETA_BASE}/{filename}"
+    _PATH_CACHE[filename] = resolved
+    return resolved
+
 
 def _read_hf_parquet(filename: str, filters: list | None) -> pd.DataFrame:
-    """Read a parquet from the private HF repo with optional predicate pushdown."""
+    """Read a parquet from the source-of-truth repo with predicate pushdown."""
     fs = HfFileSystem()
-    table = pq.read_table(
-        f"{HF_BASE}/{filename}",
-        filesystem=fs,
-        filters=filters,
-    )
+    path = _resolve_hf_path(filename, fs)
+    table = pq.read_table(path, filesystem=fs, filters=filters)
     return table.to_pandas()
 
 
@@ -129,7 +152,13 @@ def adjust_for_splits(prices_df: pd.DataFrame, splits_df: pd.DataFrame) -> pd.Da
     Backward-adjust OHLC for splits so historical prices align with the
     post-split share basis. "a:b" means `a` new shares per `b` old shares,
     so pre-split prices are multiplied by b/a for dates strictly before each
-    ex-date. Volume is left untouched (flag in demo if you need it).
+    ex-date. Volume is left untouched.
+
+    NOTE: the stock_prices table in both the BW and defeatbeta repos is
+    ALREADY split-adjusted at source (verified in build_price_panel.py against
+    NVDA 2021-07-20 4:1 and AAPL 2014-06-09 7:1). Do NOT call this on HF
+    data — you'll double-adjust. This helper is here for feeds that arrive
+    unadjusted (e.g. synthetic fixtures, yfinance raw history).
     """
     if splits_df.empty:
         return prices_df.copy()
