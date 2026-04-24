@@ -19,6 +19,10 @@ __pycache__/
 
 # Claude Code local settings
 .claude/settings.local.json
+.agents/
+
+# HuggingFace datasets library clone (not project data)
+datasets/
 
 # Editors
 .vscode/
