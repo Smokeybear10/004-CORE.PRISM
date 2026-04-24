@@ -1,0 +1,44 @@
+{
+  "_schema": "Stage-2 evaluation harness: Layer (a) frozen-case anchor. Each entry is a (ticker, move_date) where the team agreed on the answer. Adding entries is a PR-reviewed team decision; `known_cause` must be defensible in one sentence. The harness runs the live model on each case and reports a diff against `expected` — a non-zero diff on a case means either a prompt/schema regression or a deliberate decision to update the frozen case. Do NOT edit `expected` to match a failing model; that defeats the anchor.",
+  "cases": [
+    {
+      "ticker": "AMD",
+      "move_date": "2022-10-07",
+      "known_cause": "FUNDAMENTAL (down): AMD issued a preliminary Q3 warning, cutting revenue guidance from ~$6.7B to ~$5.6B (a $1.1B miss), citing weaker-than-expected PC demand and significant PC-supply-chain inventory correction. Real demand shock disclosed by the CEO — structural, lean the down move.",
+      "expected": {
+        "dominant_dimension": ["demand"],
+        "direction": "negative",
+        "move_character": "structural",
+        "fade_or_lean": "lean",
+        "must_cite_source_type": ["news"],
+        "must_not_be_dominant": ["macro", "pricing", "management_credibility"]
+      }
+    },
+    {
+      "ticker": "AMD",
+      "move_date": "2023-05-25",
+      "known_cause": "NON-FUNDAMENTAL: AMD +~11% on no company-specific news; NVDA printed a blowout Q1 the night before and AMD ran in AI-chip sympathy. Pure peer/sector spillover; AMD's own business didn't change — transient, fade.",
+      "expected": {
+        "dominant_dimension": ["macro"],
+        "direction": "positive",
+        "move_character": "transient",
+        "fade_or_lean": "fade",
+        "must_cite_source_type": ["peer_news"],
+        "must_not_be_dominant": ["demand", "pricing", "management_credibility"]
+      }
+    },
+    {
+      "ticker": "AMD",
+      "move_date": "2025-10-06",
+      "known_cause": "FUNDAMENTAL (up): AMD/OpenAI multi-year strategic partnership announced, OpenAI committing to MI450 deployments. Directly implies data-center revenue not in analyst models the day before — structural, lean the up move.",
+      "expected": {
+        "dominant_dimension": ["demand", "competitive"],
+        "direction": "positive",
+        "move_character": "structural",
+        "fade_or_lean": "lean",
+        "must_cite_source_type": ["news"],
+        "must_not_be_dominant": ["macro", "management_credibility"]
+      }
+    }
+  ]
+}
