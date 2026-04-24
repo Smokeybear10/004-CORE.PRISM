@@ -26,3 +26,4 @@ anthropic>=0.30
 matplotlib>=3.7
 jupyter>=1.0
 streamlit>=1.30
+plotly>=5.18          # price chart in demo/app.py

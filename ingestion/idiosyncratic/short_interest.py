@@ -19,6 +19,7 @@ whose publication date <= as_of are returned.
 """
 from __future__ import annotations
 
+import logging
 from datetime import date, timedelta
 from pathlib import Path
 from typing import Optional
@@ -28,6 +29,8 @@ import requests
 
 from schema import Event, ShortInterestRecord, SourceType, TextChunk
 
+LOG = logging.getLogger(__name__)
+
 FINRA_API_URL = (
     "https://api.finra.org/data/group/otcMarket/name/consolidatedShortInterest"
 )
@@ -35,7 +38,8 @@ FINRA_API_URL = (
 # Use 14 calendar days as a conservative no-foreknowledge buffer.
 PUBLICATION_LAG_DAYS = 14
 SPIKE_THRESHOLD = 0.20  # >20% PoP increase triggers "short_interest_spike"
-USER_AGENT = "BW-Hackathon/1.0 (henryji327@gmail.com)"
+# Mandatory User-Agent format for this project (see CLAUDE.md conventions §7).
+USER_AGENT = "BW-Hackathon henryji327@gmail.com"
 DATA_DIR = Path("data/short_interest")
 
 
@@ -70,10 +74,14 @@ def fetch_short_interest(
             }
         )
 
-    records: list[ShortInterestRecord] = []
+    # Dedup on (ticker, settlement_date). FINRA emits revisedFlag rows for
+    # the same period, and we don't want the spike detector fed two copies.
+    by_key: dict[tuple[str, date], ShortInterestRecord] = {}
     offset = 0
     page_size = 5000
-    while True:
+    # Hard safety bound so a misbehaving server can't spin the loop forever.
+    max_iterations = 50
+    for _ in range(max_iterations):
         body = {"limit": page_size, "offset": offset, "compareFilters": compare_filters}
         resp = requests.post(
             FINRA_API_URL,
@@ -84,12 +92,19 @@ def fetch_short_interest(
         resp.raise_for_status()
         rows = resp.json()
         if not rows:
-            break
-        records.extend(_row_to_record(row) for row in rows if row.get("symbolCode"))
-        if len(rows) < page_size:
-            break
-        offset += page_size
-    return records
+            break  # only break on empty response — a partial page mid-stream
+                   # could otherwise silently truncate results
+        for row in rows:
+            if not row.get("symbolCode"):
+                continue
+            rec = _row_to_record(row)
+            # Last write wins — FINRA emits revisions in later pages, which
+            # we want to override the original.
+            by_key[(rec.ticker, rec.settlement_date)] = rec
+        offset += len(rows)
+    else:
+        LOG.warning("fetch_short_interest hit %d-page safety bound", max_iterations)
+    return list(by_key.values())
 
 
 def detect_short_interest_spikes(
@@ -182,7 +197,7 @@ def run_short_interest_pipeline(
     suffix = f"_{ticker.upper()}" if ticker else ""
 
     save_short_interest_to_parquet(records, output_dir / f"records{suffix}_{stamp}.parquet")
-    save_events_to_parquet(events, output_dir / f"events{suffix}_{stamp}.parquet")
+    _save_events_to_parquet(events, output_dir / f"events{suffix}_{stamp}.parquet")
     _write_chunks_jsonl(chunks, output_dir / f"chunks{suffix}_{stamp}.jsonl")
 
     return records, events, chunks
@@ -214,7 +229,7 @@ def save_short_interest_to_parquet(
     df.to_parquet(filepath, compression="snappy", index=False)
 
 
-def save_events_to_parquet(events: list[Event], filepath: Path | str) -> None:
+def _save_events_to_parquet(events: list[Event], filepath: Path | str) -> None:
     filepath = Path(filepath)
     filepath.parent.mkdir(parents=True, exist_ok=True)
     if not events:
@@ -253,18 +268,28 @@ def _publication_date(settlement_date: date) -> date:
 
 
 def _row_to_record(row: dict) -> ShortInterestRecord:
-    days_to_cover = row.get("daysToCoverQuantity")
-    # FINRA uses 999.99 as a sentinel for "no volume data"
-    if days_to_cover is not None and days_to_cover >= 999:
-        days_to_cover = None
+    raw_dtc = row.get("daysToCoverQuantity")
+    # FINRA returns daysToCoverQuantity as a string in CSV and as a number in
+    # JSON. Cast to float FIRST, then compare against the 999.99 "no volume
+    # data" sentinel — otherwise a string ">=" comparison silently drops data.
+    if raw_dtc is None or raw_dtc == "":
+        days_to_cover: Optional[float] = None
+    else:
+        try:
+            days_to_cover = float(raw_dtc)
+        except (TypeError, ValueError):
+            days_to_cover = None
+        if days_to_cover is not None and days_to_cover >= 999:
+            days_to_cover = None
+
     avg_vol = row.get("averageDailyVolumeQuantity")
-    if avg_vol is not None:
-        avg_vol = int(avg_vol) or None
+    # Preserve 0 as a real observed value ("stock didn't trade"), not missing.
+    avg_vol = int(avg_vol) if avg_vol is not None else None
     return ShortInterestRecord(
         ticker=row["symbolCode"].upper(),
         settlement_date=date.fromisoformat(row["settlementDate"]),
         shares_short=int(row.get("currentShortPositionQuantity") or 0),
         avg_daily_volume=avg_vol,
-        days_to_cover=float(days_to_cover) if days_to_cover is not None else None,
+        days_to_cover=days_to_cover,
         float_short_percent=None,  # FINRA API doesn't expose float-normalized SI
     )

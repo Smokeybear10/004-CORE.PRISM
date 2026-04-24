@@ -1,0 +1,65 @@
+{
+  "move": {
+    "ticker": "AAPL",
+    "move_date": "2024-02-02",
+    "return_pct": -0.037,
+    "vol_zscore": -2.8,
+    "magnitude_rank": 0.97
+  },
+  "window_start": "2024-01-26",
+  "window_end": "2024-02-05",
+  "events": [
+    {
+      "event_id": "earnings_AAPL_2024-02-01",
+      "ticker": "AAPL",
+      "event_date": "2024-02-01",
+      "event_type": "earnings_release",
+      "source": "yahoo_earnings_calendar",
+      "payload_ref": "yahoo_earnings_calendar:AAPL:2024-02-01",
+      "text": "AAPL reported Q1 FY24 earnings after market close on 2024-02-01. Revenue $119.6B (+2% YoY), beat consensus. iPhone revenue down 1% YoY; Services hit $23.1B record. Greater China revenue down 13% YoY. Guidance for Q2: flat revenue YoY."
+    },
+    {
+      "event_id": "news_AAPL_2024-02-02_china_concerns",
+      "ticker": "AAPL",
+      "event_date": "2024-02-02",
+      "event_type": "news",
+      "source": "yahoo_news",
+      "payload_ref": "news:uuid-abc123:p4",
+      "text": "Analysts zero in on Greater China revenue decline as the main disappointment in Apple's quarter, with multiple firms citing iPhone competition from Huawei."
+    },
+    {
+      "event_id": "13f_delta_berkshire_AAPL_2024Q4",
+      "ticker": "AAPL",
+      "event_date": "2024-02-14",
+      "event_type": "13f_delta",
+      "source": "sec_edgar",
+      "payload_ref": "13f:0001067983:AAPL:2024-02-14",
+      "text": "Berkshire Hathaway trimmed AAPL position by 1.0% quarter-over-quarter in the filing reported 2024-02-14 (as of 2023-12-31)."
+    }
+  ],
+  "text_chunks": [
+    {
+      "chunk_id": "earnings_transcript_AAPL_2024-02-01_qa_003",
+      "ticker": "AAPL",
+      "source_type": "earnings_transcript",
+      "publication_date": "2024-02-01",
+      "period_end": "2023-12-30",
+      "source_url": null,
+      "section_name": "qa",
+      "text": "On Greater China: 'Revenue in the region was down 13% year-over-year, impacted by foreign exchange and competitive dynamics in the smartphone market.' Luca Maestri.",
+      "token_count": 38
+    },
+    {
+      "chunk_id": "news_uuid-abc123_p4",
+      "ticker": "AAPL",
+      "source_type": "news",
+      "publication_date": "2024-02-02",
+      "period_end": null,
+      "source_url": "https://example.com/aapl-china-concerns",
+      "section_name": null,
+      "text": "Huawei's resurgent smartphone lineup has pressured iPhone sales in mainland China, with multiple analysts calling out the competitive dynamic as the biggest incremental risk to FY24 guidance.",
+      "token_count": 41
+    }
+  ],
+  "earnings_day": true
+}

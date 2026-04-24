@@ -1,0 +1,152 @@
+[
+  {
+    "event_id": "fda_pdufa_BIIB_ADUHELM_2021-06-07",
+    "event_type": "pdufa",
+    "event_date": "2021-06-07",
+    "sponsor_ticker": "BIIB",
+    "drug_name": "Aduhelm (aducanumab)",
+    "indication": "Alzheimer's Disease",
+    "description": "Accelerated approval PDUFA target date for aducanumab in Alzheimer's disease. Decision: approved (controversially).",
+    "source_url": "https://www.fda.gov/news-events/press-announcements/fda-grants-accelerated-approval-alzheimers-drug"
+  },
+  {
+    "event_id": "fda_adcomm_BIIB_ADUHELM_2020-11-06",
+    "event_type": "adcomm",
+    "event_date": "2020-11-06",
+    "sponsor_ticker": "BIIB",
+    "drug_name": "Aduhelm (aducanumab)",
+    "indication": "Alzheimer's Disease",
+    "description": "Peripheral and Central Nervous System Drugs Advisory Committee meeting on aducanumab BLA. Committee voted against approval; stock tumbled.",
+    "source_url": "https://www.fda.gov/advisory-committees/peripheral-and-central-nervous-system-drugs-advisory-committee"
+  },
+  {
+    "event_id": "fda_pdufa_BIIB_LEQEMBI_2023-01-06",
+    "event_type": "pdufa",
+    "event_date": "2023-01-06",
+    "sponsor_ticker": "BIIB",
+    "drug_name": "Leqembi (lecanemab)",
+    "indication": "Alzheimer's Disease",
+    "description": "Accelerated approval PDUFA for lecanemab in early Alzheimer's. Decision: approved.",
+    "source_url": "https://www.fda.gov/news-events/press-announcements/fda-grants-accelerated-approval-alzheimers-disease-treatment"
+  },
+  {
+    "event_id": "fda_pdufa_VRTX_CASGEVY_2023-12-08",
+    "event_type": "pdufa",
+    "event_date": "2023-12-08",
+    "sponsor_ticker": "VRTX",
+    "drug_name": "Casgevy (exagamglogene autotemcel)",
+    "indication": "Sickle Cell Disease",
+    "description": "PDUFA target date for first CRISPR-edited therapy. Decision: approved (jointly marketed with CRSP).",
+    "source_url": "https://www.fda.gov/news-events/press-announcements/fda-approves-first-gene-therapies-treat-patients-sickle-cell-disease"
+  },
+  {
+    "event_id": "fda_pdufa_ALNY_AMVUTTRA_2022-06-13",
+    "event_type": "pdufa",
+    "event_date": "2022-06-13",
+    "sponsor_ticker": "ALNY",
+    "drug_name": "Amvuttra (vutrisiran)",
+    "indication": "hATTR Amyloidosis",
+    "description": "PDUFA target date for vutrisiran siRNA for hereditary transthyretin amyloidosis polyneuropathy. Decision: approved.",
+    "source_url": "https://www.fda.gov/drugs/drug-approvals-and-databases"
+  },
+  {
+    "event_id": "fda_pdufa_LLY_MOUNJARO_2022-05-13",
+    "event_type": "pdufa",
+    "event_date": "2022-05-13",
+    "sponsor_ticker": "LLY",
+    "drug_name": "Mounjaro (tirzepatide)",
+    "indication": "Type 2 Diabetes",
+    "description": "PDUFA target date for tirzepatide (GIP/GLP-1) in T2D. Decision: approved; later expanded to weight loss as Zepbound.",
+    "source_url": "https://www.fda.gov/news-events/press-announcements/fda-approves-novel-dual-targeted-treatment-type-2-diabetes"
+  },
+  {
+    "event_id": "fda_pdufa_LLY_ZEPBOUND_2023-11-08",
+    "event_type": "pdufa",
+    "event_date": "2023-11-08",
+    "sponsor_ticker": "LLY",
+    "drug_name": "Zepbound (tirzepatide)",
+    "indication": "Chronic Weight Management",
+    "description": "PDUFA target date for tirzepatide in obesity. Decision: approved.",
+    "source_url": "https://www.fda.gov/news-events/press-announcements/fda-approves-new-medication-chronic-weight-management"
+  },
+  {
+    "event_id": "fda_pdufa_REGN_EYLEA_HD_2023-08-18",
+    "event_type": "pdufa",
+    "event_date": "2023-08-18",
+    "sponsor_ticker": "REGN",
+    "drug_name": "Eylea HD (aflibercept 8mg)",
+    "indication": "Wet AMD / DME",
+    "description": "PDUFA target date for high-dose aflibercept in wet AMD and diabetic macular edema. Decision: approved.",
+    "source_url": "https://www.fda.gov/drugs/drug-approvals-and-databases"
+  },
+  {
+    "event_id": "fda_pdufa_SAGE_ZULRESSO_2019-03-19",
+    "event_type": "pdufa",
+    "event_date": "2019-03-19",
+    "sponsor_ticker": "SAGE",
+    "drug_name": "Zulresso (brexanolone)",
+    "indication": "Postpartum Depression",
+    "description": "PDUFA target date for brexanolone IV infusion in postpartum depression. Decision: approved.",
+    "source_url": "https://www.fda.gov/news-events/press-announcements/fda-approves-first-treatment-post-partum-depression"
+  },
+  {
+    "event_id": "fda_pdufa_BMRN_ROCTAVIAN_2020-08-18",
+    "event_type": "crl",
+    "event_date": "2020-08-18",
+    "sponsor_ticker": "BMRN",
+    "drug_name": "Roctavian (valoctocogene roxaparvovec)",
+    "indication": "Hemophilia A",
+    "description": "Complete Response Letter on original BLA for gene therapy Roctavian; FDA requested 2-year durability data. Stock dropped ~35% same day.",
+    "source_url": "https://www.fda.gov/drugs/news-events-human-drugs/complete-response-letters"
+  },
+  {
+    "event_id": "fda_pdufa_GILD_VEKLURY_2020-10-22",
+    "event_type": "approval",
+    "event_date": "2020-10-22",
+    "sponsor_ticker": "GILD",
+    "drug_name": "Veklury (remdesivir)",
+    "indication": "COVID-19",
+    "description": "Full FDA approval (NDA) for remdesivir in COVID-19 hospitalized patients; converted from EUA.",
+    "source_url": "https://www.fda.gov/news-events/press-announcements/fda-approves-first-treatment-covid-19"
+  },
+  {
+    "event_id": "fda_pdufa_MRNA_SPIKEVAX_2022-01-31",
+    "event_type": "approval",
+    "event_date": "2022-01-31",
+    "sponsor_ticker": "MRNA",
+    "drug_name": "Spikevax (mRNA-1273)",
+    "indication": "COVID-19",
+    "description": "Full BLA approval for Moderna COVID-19 vaccine primary series in adults (converted from EUA).",
+    "source_url": "https://www.fda.gov/news-events/press-announcements/coronavirus-covid-19-update-fda-takes-key-action-approving-second-covid-19-vaccine"
+  },
+  {
+    "event_id": "fda_pdufa_SAGE_ZURZUVAE_2023-08-04",
+    "event_type": "crl",
+    "event_date": "2023-08-04",
+    "sponsor_ticker": "SAGE",
+    "drug_name": "Zurzuvae (zuranolone)",
+    "indication": "Major Depressive Disorder",
+    "description": "Split decision: approved for postpartum depression, CRL for major depressive disorder citing insufficient evidence. MDD was the larger commercial opportunity.",
+    "source_url": "https://www.fda.gov/news-events/press-announcements/fda-approves-first-oral-treatment-postpartum-depression"
+  },
+  {
+    "event_id": "fda_adcomm_LLY_DONANEMAB_2024-06-10",
+    "event_type": "adcomm",
+    "event_date": "2024-06-10",
+    "sponsor_ticker": "LLY",
+    "drug_name": "Kisunla (donanemab)",
+    "indication": "Alzheimer's Disease",
+    "description": "Peripheral and Central Nervous System Drugs Advisory Committee on donanemab BLA. Committee voted unanimously in favor.",
+    "source_url": "https://www.fda.gov/advisory-committees/peripheral-and-central-nervous-system-drugs-advisory-committee"
+  },
+  {
+    "event_id": "fda_pdufa_LLY_KISUNLA_2024-07-02",
+    "event_type": "pdufa",
+    "event_date": "2024-07-02",
+    "sponsor_ticker": "LLY",
+    "drug_name": "Kisunla (donanemab)",
+    "indication": "Alzheimer's Disease",
+    "description": "PDUFA target date for donanemab in early symptomatic Alzheimer's. Decision: approved.",
+    "source_url": "https://www.fda.gov/news-events/press-announcements/fda-approves-treatment-adults-alzheimers-disease"
+  }
+]
