@@ -34,3 +34,6 @@ datasets/
 .vscode/
 .idea/
 *.swp
+
+# Generated backtest outputs
+out/
