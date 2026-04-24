@@ -1,0 +1,46 @@
+[
+  {
+    "target_id": "target_GS_NVDA_2024-02-28_raise",
+    "ticker": "NVDA",
+    "analyst_firm": "Goldman Sachs Group Inc",
+    "analyst_name": "Toshiya Hari",
+    "new_target": 800.0,
+    "prior_target": 625.0,
+    "change_pct": 0.28,
+    "action_date": "2024-02-28",
+    "source_url": "https://research.gs.com/nvda-target-raise-feb2024"
+  },
+  {
+    "target_id": "target_JPM_AAPL_2024-01-15_raise",
+    "ticker": "AAPL",
+    "analyst_firm": "JPMorgan Chase & Co",
+    "analyst_name": "Samik Chatterjee",
+    "new_target": 225.0,
+    "prior_target": 200.0,
+    "change_pct": 0.125,
+    "action_date": "2024-01-15",
+    "source_url": "https://research.jpmorgan.com/aapl-target-raise-jan2024"
+  },
+  {
+    "target_id": "target_MS_TSLA_2024-03-10_lower",
+    "ticker": "TSLA",
+    "analyst_firm": "Morgan Stanley",
+    "analyst_name": "Adam Jonas",
+    "new_target": 180.0,
+    "prior_target": 250.0,
+    "change_pct": -0.28,
+    "action_date": "2024-03-10",
+    "source_url": "https://research.morganstanley.com/tsla-target-lower-mar2024"
+  },
+  {
+    "target_id": "target_BAML_AMZN_2024-04-05_initiate",
+    "ticker": "AMZN",
+    "analyst_firm": "Bank of America Merrill Lynch",
+    "analyst_name": "Justin Post",
+    "new_target": 200.0,
+    "prior_target": null,
+    "change_pct": null,
+    "action_date": "2024-04-05",
+    "source_url": "https://research.bankofamerica.com/amzn-target-initiate-apr2024"
+  }
+]

@@ -1,0 +1,38 @@
+[
+  {
+    "fund_cik": "0000102909",
+    "fund_name": "Berkshire Hathaway Inc",
+    "ticker": "AAPL",
+    "current_filing_date": "2024-02-14",
+    "current_period_end": "2023-12-31",
+    "action": "reduced",
+    "shares_change": -10000000,
+    "market_value_change": -1900000000,
+    "prior_shares": 925560000,
+    "current_shares": 915560000
+  },
+  {
+    "fund_cik": "0001067983",
+    "fund_name": "Vanguard Group Inc",
+    "ticker": "NVDA",
+    "current_filing_date": "2024-02-14",
+    "current_period_end": "2023-12-31",
+    "action": "new",
+    "shares_change": 25000000,
+    "market_value_change": 15000000000,
+    "prior_shares": null,
+    "current_shares": 25000000
+  },
+  {
+    "fund_cik": "0000315066",
+    "fund_name": "Blackrock Inc",
+    "ticker": "TSLA",
+    "current_filing_date": "2024-02-14",
+    "current_period_end": "2023-12-31",
+    "action": "exited",
+    "shares_change": -50000000,
+    "market_value_change": -9000000000,
+    "prior_shares": 50000000,
+    "current_shares": 0
+  }
+]

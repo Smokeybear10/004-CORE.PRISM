@@ -1,0 +1,32 @@
+[
+  {
+    "fund_cik": "0000102909",
+    "fund_name": "Berkshire Hathaway Inc",
+    "ticker": "AAPL",
+    "filing_date": "2024-02-14",
+    "period_end": "2023-12-31",
+    "shares": 915560000,
+    "market_value": 174252000000,
+    "percent_of_portfolio": 47.8
+  },
+  {
+    "fund_cik": "0000102909",
+    "fund_name": "Berkshire Hathaway Inc",
+    "ticker": "BAC",
+    "filing_date": "2024-02-14",
+    "period_end": "2023-12-31",
+    "shares": 1032852000,
+    "market_value": 35899000000,
+    "percent_of_portfolio": 9.9
+  },
+  {
+    "fund_cik": "0000102909",
+    "fund_name": "Berkshire Hathaway Inc",
+    "ticker": "CVX",
+    "filing_date": "2024-02-14",
+    "period_end": "2023-12-31",
+    "shares": 123100000,
+    "market_value": 18276000000,
+    "percent_of_portfolio": 5.0
+  }
+]
