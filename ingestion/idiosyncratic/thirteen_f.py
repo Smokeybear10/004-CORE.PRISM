@@ -82,6 +82,16 @@ def compute_holding_deltas(
     fund_name = any_current.fund_name
     fund_cik_padded = any_current.fund_cik
 
+    # Defensive: if any prior holding reports a different fund_cik we'd be
+    # ascribing the prior fund's positions to the current fund. Refuse.
+    if prior_by_cusip:
+        any_prior = next(iter(prior_by_cusip.values()))
+        if any_prior.fund_cik != fund_cik_padded:
+            raise ValueError(
+                f"fund_cik mismatch across quarters: current "
+                f"{fund_cik_padded!r} vs prior {any_prior.fund_cik!r}"
+            )
+
     deltas: list[HoldingDelta] = []
     for cusip in sorted(set(current_by_cusip) | set(prior_by_cusip)):
         cur = current_by_cusip.get(cusip)
@@ -131,7 +141,13 @@ def deltas_to_events(deltas: list[HoldingDelta]) -> list[Event]:
 
     If two deltas share (fund_cik, ticker, period_end) — which happens when
     two CUSIPs resolve to the same ticker — a numeric ordinal is appended to
-    the event_id so IDs remain unique. Order follows the deltas list.
+    the event_id so IDs remain unique.
+
+    Order determinism: the suffix is assigned in input order. Since
+    `compute_holding_deltas` sorts by CUSIP, the end-to-end pipeline output
+    is deterministic. Callers that assemble deltas through other paths must
+    themselves pass them in a stable order to get stable event_ids for the
+    colliding pair.
     """
     events: list[Event] = []
     base_id_counts: dict[str, int] = {}
@@ -212,6 +228,12 @@ def save_holdings_to_parquet(
     holdings: list[HoldingRecord],
     filepath: Path | str,
 ) -> None:
+    """
+    Write `holdings` to parquet as-is. The pipeline writes current + prior
+    concatenated, so the file holds two quarterly snapshots per fund; same
+    CUSIP can appear twice with different (filing_date, period_end). Join
+    on (fund_cik, ticker, period_end), NOT ticker alone.
+    """
     filepath = Path(filepath)
     filepath.parent.mkdir(parents=True, exist_ok=True)
     if not holdings:

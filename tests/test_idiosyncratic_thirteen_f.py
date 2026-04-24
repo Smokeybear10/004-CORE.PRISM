@@ -140,6 +140,30 @@ def test_new_exited_increased_reduced_all_classified(monkeypatch):
     assert by_action[HoldingAction.EXITED].prior_shares == 100
 
 
+def test_compute_deltas_rejects_fund_cik_mismatch_between_quarters(monkeypatch):
+    """Guards against silently ascribing prior fund's positions to current fund."""
+    cur = {"C": _rec("C", "T", 200, 20_000)}  # fund_cik = 0001067983
+    prior_rec = HoldingRecord(
+        fund_cik="0000000123",  # Different fund
+        fund_name="OTHER FUND",
+        ticker="T",
+        filing_date=date(2024, 11, 14),
+        period_end=date(2024, 9, 30),
+        shares=100,
+        market_value=10_000,
+    )
+    prior = {"C": prior_rec}
+
+    def _fake_load(cik, quarter_end):
+        return cur if quarter_end == date(2024, 12, 31) else prior
+
+    monkeypatch.setattr(tf, "_load_quarter_holdings_by_cusip", _fake_load)
+    with pytest.raises(ValueError, match="fund_cik mismatch"):
+        tf.compute_holding_deltas(
+            "0001067983", date(2024, 12, 31), date(2024, 9, 30),
+        )
+
+
 def test_no_change_positions_are_omitted(monkeypatch):
     same = _rec("C", "T", 100, 10_000)
     monkeypatch.setattr(
