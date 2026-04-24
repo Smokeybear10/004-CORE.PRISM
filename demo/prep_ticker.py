@@ -17,9 +17,12 @@ import sys
 from datetime import date, datetime, timedelta
 from pathlib import Path
 
+from ingestion.earnings_news.earnings import run_earnings_calendar_pipeline
+from ingestion.earnings_news.news import run_news_pipeline
 from ingestion.idiosyncratic.index_changes import run_index_changes_pipeline
 from ingestion.idiosyncratic.short_interest import run_short_interest_pipeline
 from ingestion.idiosyncratic.thirteen_f import run_thirteen_f_pipeline
+from ingestion.sec.filings import run_sec_pipeline
 
 # Berkshire is a known-good CIK: already has data under data/thirteen_f/ and
 # is a huge AAPL holder — useful for sanity-checking the joined evidence.
@@ -30,10 +33,16 @@ DEFAULT_FUND_CIKS: list[str] = [
 SHORT_INTEREST_DIR = Path("data/short_interest")
 INDEX_CHANGES_DIR = Path("data/index_changes")
 THIRTEEN_F_DIR = Path("data/thirteen_f")
+NEWS_DIR = Path("data/news")
+EARNINGS_DIR = Path("data/earnings")
+SEC_DIR = Path("data/sec")
 
 SHORT_INTEREST_RECENCY_DAYS = 14
 INDEX_CHANGES_RECENCY_DAYS = 7
 THIRTEEN_F_FILING_LAG_DAYS = 45
+NEWS_RECENCY_DAYS = 7
+EARNINGS_RECENCY_DAYS = 7
+SEC_RECENCY_DAYS = 30
 
 
 def prep_ticker(
@@ -51,6 +60,9 @@ def prep_ticker(
     summary["short_interest"] = _run_short_interest(ticker, as_of, force=force)
     summary["index_changes"] = _run_index_changes(as_of, force=force)
     summary.update(_run_thirteen_f(ciks, as_of, force=force))
+    summary["news"] = _run_news(ticker, as_of, force=force)
+    summary["earnings_calendar"] = _run_earnings_calendar(as_of, force=force)
+    summary["sec"] = _run_sec(ticker, as_of, force=force)
 
     _log("=== summary ===")
     for source, status in summary.items():
@@ -83,6 +95,45 @@ def _run_index_changes(as_of: date, *, force: bool) -> str:
         run_index_changes_pipeline(as_of)
     except Exception as e:  # noqa: BLE001
         _log(f"index_changes: FAILED: {e}")
+        return f"failed: {e}"
+    return "ok"
+
+
+def _run_news(ticker: str, as_of: date, *, force: bool) -> str:
+    if not force and _news_recent(ticker, as_of):
+        _log(f"news: skipped (recent file within {NEWS_RECENCY_DAYS}d)")
+        return "skipped_recent"
+    _log(f"news: running for {ticker} as_of={as_of.isoformat()}")
+    try:
+        run_news_pipeline(ticker, as_of)
+    except Exception as e:  # noqa: BLE001
+        _log(f"news: FAILED: {e}")
+        return f"failed: {e}"
+    return "ok"
+
+
+def _run_earnings_calendar(as_of: date, *, force: bool) -> str:
+    if not force and _earnings_recent(as_of):
+        _log(f"earnings_calendar: skipped (recent file within {EARNINGS_RECENCY_DAYS}d)")
+        return "skipped_recent"
+    _log(f"earnings_calendar: running as_of={as_of.isoformat()}")
+    try:
+        run_earnings_calendar_pipeline(as_of)
+    except Exception as e:  # noqa: BLE001
+        _log(f"earnings_calendar: FAILED: {e}")
+        return f"failed: {e}"
+    return "ok"
+
+
+def _run_sec(ticker: str, as_of: date, *, force: bool) -> str:
+    if not force and _sec_recent(ticker, as_of):
+        _log(f"sec: skipped (recent file within {SEC_RECENCY_DAYS}d)")
+        return "skipped_recent"
+    _log(f"sec: running for {ticker} as_of={as_of.isoformat()}")
+    try:
+        run_sec_pipeline(ticker, as_of)
+    except Exception as e:  # noqa: BLE001
+        _log(f"sec: FAILED: {e}")
         return f"failed: {e}"
     return "ok"
 
@@ -160,6 +211,50 @@ def _thirteen_f_deltas_exists(cik: str, current_quarter_end: date) -> bool:
     cik10 = str(int(cik)).zfill(10)
     path = THIRTEEN_F_DIR / f"deltas_{cik10}_{current_quarter_end.isoformat()}.parquet"
     return path.exists()
+
+
+def _news_recent(ticker: str, as_of: date) -> bool:
+    """True if any `news_<TICKER>_<date>.parquet` has an encoded as_of within
+    `NEWS_RECENCY_DAYS` of the requested as_of."""
+    return _recent_by_encoded_as_of(
+        NEWS_DIR, f"news_{ticker.upper()}_*.parquet", as_of, NEWS_RECENCY_DAYS
+    )
+
+
+def _earnings_recent(as_of: date) -> bool:
+    """True if any shared `calendar_<date>.parquet` has an encoded as_of
+    within `EARNINGS_RECENCY_DAYS` of the requested as_of."""
+    return _recent_by_encoded_as_of(
+        EARNINGS_DIR, "calendar_*.parquet", as_of, EARNINGS_RECENCY_DAYS
+    )
+
+
+def _sec_recent(ticker: str, as_of: date) -> bool:
+    """True if any `events_<TICKER>_<date>.parquet` has an encoded as_of
+    within `SEC_RECENCY_DAYS` of the requested as_of."""
+    return _recent_by_encoded_as_of(
+        SEC_DIR, f"events_{ticker.upper()}_*.parquet", as_of, SEC_RECENCY_DAYS
+    )
+
+
+def _recent_by_encoded_as_of(
+    dir_: Path, pattern: str, as_of: date, within_days: int
+) -> bool:
+    """Generic helper: does any file matching `pattern` under `dir_` have an
+    ISO-date suffix (before `.parquet`) within `within_days` of `as_of`?"""
+    if not dir_.exists():
+        return False
+    for f in dir_.glob(pattern):
+        parts = f.stem.rsplit("_", 1)
+        if len(parts) != 2:
+            continue
+        try:
+            file_as_of = date.fromisoformat(parts[1])
+        except ValueError:
+            continue
+        if abs((as_of - file_as_of).days) <= within_days:
+            return True
+    return False
 
 
 # ---------- quarter-end math ----------

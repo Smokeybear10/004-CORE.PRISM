@@ -31,6 +31,11 @@ from typing import Any, Optional
 
 from schema import SourceType, TextChunk
 
+# HF-backed pipelines that write raw rows into data/news/ and data/earnings/
+# for the aggregator to pick up. See news.py and earnings.py.
+from ingestion.earnings_news.earnings import run_earnings_calendar_pipeline  # noqa: E402,F401
+from ingestion.earnings_news.news import run_news_pipeline  # noqa: E402,F401
+
 CACHE_DIR = Path(__file__).parent / ".cache"
 NEWS_PARQUET_FILENAME = "Structured_Data/SNE/yahoo-finance-data/stock_news.parquet"
 HF_REPO_ID = "BridgewaterAIHackathon/BW-AI-Hackathon"
