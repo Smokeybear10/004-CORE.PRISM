@@ -1,7 +1,7 @@
 # Demo
 
 This is where the interpretability layer lives. Per mentor feedback, the demo
-is the deliverable - NOT a trading strategy.
+is the deliverable — NOT a trading strategy.
 
 ## Target artifact
 
@@ -13,20 +13,23 @@ attribution with cited evidence chunks. Mentor's exact ask:
 
 ## Planned notebooks / scripts
 
-- `run_mvp.py` - end-to-end on AAPL, single ablation. Target for next mentor check-in.
-- `ablation_chart.ipynb` - side-by-side bars for each AblationConfig:
+- `run_mvp.py` — end-to-end on one ticker, single ablation. Target for the next mentor check-in.
+- `ablation_chart.ipynb` — side-by-side bars for each AblationConfig:
   base_news, +sec, +earnings, +peer_news, +sector, +macro.
   Y-axis: hit rate / plausibility / Sharpe. This is the demo goldmine.
-- `case_study_aapl_covid.ipynb` - deep dive on the frozen test case
-  (tests/fixtures/aapl_march2020_expected.json). Show how attribution
-  changes as ablations add sources.
+- `case_study.ipynb` — deep dive on the frozen test case
+  (whichever ticker/event the team picks). Show how attribution changes as
+  ablations add sources.
 
 ## What good looks like (demo narrative)
 
-> "Here's AAPL in March 2020. Run 1 (news only): model says 'pricing'. Wrong.
->  Run 2 (+10-K risk factors): 'macro + competitive'. Closer. Run 3 (+peer
->  news MSFT/GOOGL): sector-wide weakness visible, 'macro, high confidence'.
->  Run 4 (+Fed/VIX): confidence jumps, coherence passes, predicted return
->  within 2pp of realized. Character: transient. Fade signal hit."
+For one flagged move, walk through each ablation:
 
-Each ablation bar is a defensible claim.
+1. **base_news** — attribution + confidence. Often wrong on macro-driven moves.
+2. **+sec** — does the dominant dimension shift? Does confidence change?
+3. **+peer_news** — can the model now see sector-wide weakness?
+4. **+macro** — does `predicted_return_pct` align with realized?
+
+Each bar is a defensible claim. "10-K language flips the dominant dimension in
+N% of cases; peer news adds X% to hit rate; macro aligns predicted with
+realized on Y% of moves." Whatever the numbers show, that's the story.

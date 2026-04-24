@@ -21,15 +21,15 @@ parallelize and swap implementations with fixtures.
 6. **Fade-or-follow framework.** `backtest/` — compare predicted return vs realized. Keep simple: lean on structural, fade on transient.
 
 ## The three strategic messages (from mentor meeting)
-1. **Sprint to a crappy end-to-end MVP before polishing anything.** Don't perfect Step 1 for 5 hours. Get AAPL end-to-end first, then iterate.
+1. **Sprint to a crappy end-to-end MVP before polishing anything.** Don't perfect Step 1 for 5 hours. Get ONE ticker end-to-end first, then iterate.
 2. **Demo the thought process and ablations, not just the final result.** The demo sells "here's what happens when we add 10-Ks, then peer news, then macro." Each addition is a talking point.
 3. **Put energy into data-source additive testing + interpretability, not into a sophisticated trading strategy.** Lean/fade logic should be sensible, not clever.
 
 ## MVP scope (hour 0 → next mentor check-in)
-- **Universe:** one company (AAPL recommended — COVID drop is a known event with obvious attribution, so we can spot-check the model). Expand to 5 after MVP works.
+- **Universe:** ONE ticker first. Pick one where the team has personal intuition about at least one past move — mentor's point is that spot-checking requires knowing what the right attribution "feels like." Expand to ~5 after MVP works.
 - **History:** 2–5 years. Not 20. Longer burns compute without adding MVP value.
 - **Sources for MVP:** company news + SEC 10-K/10-Q. Add peer/macro as ablations *after* MVP is end-to-end.
-- **Caching:** always. Write fetched data to `*/\.cache/` (gitignored). Re-running the pipeline must not re-hit APIs.
+- **Caching:** always. Write fetched data to `*/.cache/` (gitignored). Re-running the pipeline must not re-hit APIs.
 
 ## Non-negotiable rules
 1. **No foreknowledge leak.** Every retrieval function takes an `as_of` date and MUST filter by `publication_date <= as_of`. Mentor note: model foreknowledge (trained on post-event journalism) is harder than data foreknowledge — don't rabbit-hole on it, but always make sure you're feeding dates that match actual publication dates.
@@ -46,11 +46,12 @@ parallelize and swap implementations with fixtures.
 - `macro` — rates, FX, commodities, geopolitics (evidence can come from MACRO / SECTOR / PEER_NEWS chunks)
 
 ## Frozen test case (use for all prompt iteration)
-Canonical: **AAPL, March 2020 COVID drop.**
-- Expected dominant dimension: `macro` (negative).
-- Expected `move_character`: `mixed` or `transient` — market recovered by summer.
-- Use this case while iterating prompts. If a prompt change breaks AAPL-COVID attribution, revert. Don't swap the test case mid-iteration — you lose the ability to isolate what changed.
-- See `tests/fixtures/aapl_march2020_expected.json` for the exact expected output contract.
+Once tickers are chosen, pick ONE (ticker, date) pair where the team knows what caused the move — e.g. a COVID-era drop for a consumer name, a rate-hike day for a bank. That pair becomes the prompt-iteration target.
+
+Rules (mentor, explicit):
+- Freeze the inputs. Don't swap the test case mid-iteration — you lose the ability to isolate what a prompt change caused.
+- Write the expected output BEFORE running the model (dominant dimension, direction, plausible `move_character`). A regression is only obvious if you can name it ahead of time.
+- Store the expected-output contract as `tests/fixtures/<ticker>_<event>_expected.json`. A test should assert it parses and contains the expected-attribution keys.
 
 ## Ablation configs (the demo goldmine)
 Mentor emphasized additive testing. Build these runs and compare side-by-side in `demo/`:

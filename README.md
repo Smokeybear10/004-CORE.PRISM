@@ -37,7 +37,7 @@ Team branches: `person1-sec`, `person2-yahoo`, `person3-research`, `person4-news
 
 ## Workflow (MVP first)
 
-1. **Sprint to a crappy end-to-end MVP on AAPL before polishing anything.** The target for the next mentor check-in is: AAPL, big moves flagged, company news + 10-Ks pulled, model produces `Attribution`, basic fade-or-follow output. No peer / macro yet.
+1. **Sprint to a crappy end-to-end MVP on ONE ticker before polishing anything.** Target for the next mentor check-in: one ticker, big moves flagged, company news + 10-Ks pulled, model produces `Attribution`, basic fade-or-follow output. No peer / macro yet.
 2. After MVP works end-to-end, **add sources one at a time as ablations** — each is a demo talking point.
 3. Each person works on their own branch. Build against `tests/fixtures/` while your real data source is in progress.
 4. `pytest tests/` before every push.
@@ -46,19 +46,22 @@ Team branches: `person1-sec`, `person2-yahoo`, `person3-research`, `person4-news
 
 ## Frozen test case
 
-`tests/fixtures/aapl_march2020_expected.json` — AAPL COVID drop. Use this as the
-fixed prompt-iteration target. Don't change the test case mid-iteration — freeze
-inputs so you can isolate which prompt change caused which output change.
+Once tickers are chosen, pick one (ticker, date) where the team knows what caused
+the move. Store expected outputs in `tests/fixtures/<ticker>_<event>_expected.json`.
+Don't change the test case mid-iteration — freeze inputs so you can isolate which
+prompt change caused which output change. See CLAUDE.md for the detailed rules.
 
 ## Demo story (design backward from this)
 
-The demo is **the journey, not just the result.**
+The demo is **the journey, not just the result.** For one flagged move, walk the
+audience through each ablation in order:
 
-> Here's AAPL in March 2020 — a 12% one-day drop.
-> **Run 1 (news only):** model says "pricing, negative" — wrong.
-> **Run 2 (+ 10-K risk factors):** model says "macro + competitive" — closer.
-> **Run 3 (+ peer news — MSFT, GOOGL):** model sees sector-wide weakness, says "macro, high confidence" — right.
-> **Run 4 (+ macro: Fed + VIX):** confidence jumps, coherence check passes, predicted return matches realized within 2pp.
-> Move character: `transient`. Next-5d return: reversal. Fade signal: ✓.
+- **Run 1 — base news only:** attribution + confidence. Often wrong on macro-driven moves.
+- **Run 2 — + SEC 10-K/10-Q:** does the dominant dimension shift? Does confidence change?
+- **Run 3 — + peer news:** can the model now see sector-wide weakness?
+- **Run 4 — + macro (Fed / VIX / commodities):** does `predicted_return_pct` align with realized?
 
-Build toward this exact narrative. Each ablation bar on the chart is a claim we can defend.
+Each ablation bar on the chart is a claim we can defend. "We found that 10-K
+language moves the dominant dimension in N% of cases; peer news adds X% to hit
+rate; macro flips the sign on Y% of moves." Whatever the numbers show, that's
+the story.

@@ -7,8 +7,8 @@ Public API that downstream modules rely on:
     - fetch_filings(tickers, start_date, end_date) -> list[TextChunk]
     - get_filings_as_of(ticker, as_of) -> list[TextChunk]
 
-MVP scope: AAPL only, last 2-5 years of 10-Ks/10-Qs. Cache aggressively to
-.cache/ so re-runs don't re-hit HuggingFace / SEC EDGAR.
+MVP scope: ONE ticker first, last 2-5 years of 10-Ks/10-Qs. Cache aggressively
+to .cache/ so re-runs don't re-hit HuggingFace / SEC EDGAR.
 
 CRITICAL: get_filings_as_of enforces the no-foreknowledge rule. It MUST
 return only chunks whose publication_date <= as_of.
