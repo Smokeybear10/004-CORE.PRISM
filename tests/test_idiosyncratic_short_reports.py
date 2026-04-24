@@ -70,6 +70,22 @@ def test_extract_ticker_none_when_unresolvable(monkeypatch):
     assert sr.extract_ticker("Random post with no ticker") is None
 
 
+def test_name_to_ticker_safe_does_not_cache_on_failure(monkeypatch):
+    """A transient failure must not poison the cache permanently with {}."""
+    calls = {"n": 0}
+
+    def _flaky_loader():
+        calls["n"] += 1
+        raise RuntimeError("network down")
+
+    monkeypatch.setattr(sr, "_NAME_MAP_CACHE", None)
+    monkeypatch.setattr(sr, "_load_name_to_ticker", _flaky_loader)
+    assert sr._load_name_to_ticker_safe() is None
+    assert sr._load_name_to_ticker_safe() is None
+    # Two retry attempts, not served from a poisoned empty cache
+    assert calls["n"] == 2
+
+
 # ---------- dispatcher validation ----------
 
 
@@ -177,6 +193,48 @@ def test_generic_scraper_skips_untickered_entries(monkeypatch):
         "Hindenburg Research", as_of=date(2024, 12, 31), session=sess,
     )
     assert reports == []
+
+
+def test_generic_scraper_drops_entries_with_no_url_date(monkeypatch):
+    """
+    URLs without a /YYYY/MM/DD/ slug would need an `as_of` fallback for the
+    publication_date, and that makes the chunk_id drift between runs. We
+    drop them instead. Regression guard for CLAUDE.md rule #3 (stable IDs).
+    """
+    html = """
+    <html><body>
+      <article><a href="https://hindenburgresearch.com/reports/nkla-mirage">
+        $NKLA: Nikola Technology Mirage Continues
+      </a></article>
+    </body></html>
+    """
+    sess = _FakeSession({"https://hindenburgresearch.com/": html})
+    monkeypatch.setattr(sr, "_NAME_MAP_CACHE", {})
+    reports = sr.fetch_short_reports(
+        "Hindenburg Research", as_of=date(2024, 12, 31), session=sess,
+    )
+    assert reports == []
+
+
+def test_generic_scraper_intra_publisher_dedup(monkeypatch):
+    """Same publisher + ticker + date on two different article URLs → keep first."""
+    html = """
+    <html><body>
+      <article><a href="https://hindenburgresearch.com/2024/02/28/nkla-part-1">
+        $NKLA: Part 1
+      </a></article>
+      <article><a href="https://hindenburgresearch.com/2024/02/28/nkla-part-2">
+        $NKLA: Part 2
+      </a></article>
+    </body></html>
+    """
+    sess = _FakeSession({"https://hindenburgresearch.com/": html})
+    monkeypatch.setattr(sr, "_NAME_MAP_CACHE", {})
+    reports = sr.fetch_short_reports(
+        "Hindenburg Research", as_of=date(2024, 12, 31), session=sess,
+    )
+    assert len(reports) == 1
+    assert reports[0].title.endswith("Part 1")
 
 
 def test_generic_scraper_network_failure_returns_empty(monkeypatch):

@@ -88,7 +88,8 @@ _GENERIC_CONFIG: dict[str, dict] = {
 # Scorpion Capital's archive is JavaScript-rendered. requests+bs4 gets an
 # empty shell; a Selenium/Playwright scraper is out-of-scope for this
 # hackathon. The scraper below makes one attempt and logs a warning.
-_SCORPION_URL = "https://www.scorpioncapital.com/reports"
+# Trailing slash matters for urljoin — without it urljoin drops "/reports".
+_SCORPION_URL = "https://www.scorpioncapital.com/reports/"
 
 
 # ---------- Public API ----------
@@ -280,9 +281,16 @@ def _scrape_generic(
 ) -> list[ShortReport]:
     """
     Generic scraper for WordPress-ish research indexes. Walks one landing
-    page, collects unique article links, fetches each, extracts title + a
-    date (from <time datetime="..."> or URL slug /YYYY/MM/DD/), extracts the
-    target ticker, and snips the first few paragraphs as thesis text.
+    page, collects unique article links, extracts title + publication date
+    from the URL slug (/YYYY/MM/DD/), extracts the target ticker from the
+    title ($TICKER regex or SEC name lookup), and uses the title as the
+    thesis snippet. If no ticker is found in the title we fetch the article
+    body for a second-chance extraction.
+
+    Reports without a parseable URL date are DROPPED — a chunk_id built
+    from `as_of` would drift every run and violate CLAUDE.md rule #3
+    (stable IDs). A dated-URL-only policy keeps IDs deterministic at the
+    cost of missing some reports on sites that don't embed dates in URLs.
     """
     cfg = _GENERIC_CONFIG[publisher]
     url = cfg["url"]
@@ -293,22 +301,27 @@ def _scrape_generic(
     soup = BeautifulSoup(resp.text, "html.parser")
 
     reports: list[ShortReport] = []
-    seen: set[str] = set()
+    seen_urls: set[str] = set()
+    seen_chunk_ids: set[str] = set()
     for a in soup.select(selector):
         href = (a.get("href") or "").strip()
         if not href or href.startswith("#"):
             continue
         if not href.startswith("http"):
             href = requests.compat.urljoin(url, href)
-        if href in seen:
+        if href in seen_urls:
             continue
-        seen.add(href)
+        seen_urls.add(href)
 
         title = a.get_text(strip=True) or a.get("title", "") or ""
         if not title or len(title) < 6:  # skip nav links, logos, etc.
             continue
 
-        pub_date = _parse_date_from_url(href) or _today_fallback(as_of)
+        pub_date = _parse_date_from_url(href)
+        if pub_date is None:
+            LOG.info("skipping %s (no URL date, chunk_id would drift): %s",
+                     publisher, href)
+            continue
         if pub_date > as_of:
             continue
 
@@ -325,9 +338,15 @@ def _scrape_generic(
             LOG.info("skipping %s (no ticker found): %s", publisher, title)
             continue
 
+        chunk_id = make_chunk_id(publisher, ticker, pub_date)
+        if chunk_id in seen_chunk_ids:
+            # Two articles same publisher, ticker, day → keep the first only.
+            continue
+        seen_chunk_ids.add(chunk_id)
+
         reports.append(
             ShortReport(
-                chunk_id=make_chunk_id(publisher, ticker, pub_date),
+                chunk_id=chunk_id,
                 publisher=publisher,
                 target_ticker=ticker,
                 publication_date=pub_date,
@@ -381,28 +400,35 @@ def _scrape_scorpion(as_of: date, session: requests.Session) -> list[ShortReport
     except Exception as e:  # noqa: BLE001
         LOG.warning("Scorpion Capital scrape failed: %s", e)
         return []
-    # If we ever get real HTML, fall back to generic parsing of the anchor set
+    # If we ever get real HTML, fall back to generic parsing of the anchor set.
+    # Same undated-drop rule as _scrape_generic — no as_of fallback, stable IDs.
     reports: list[ShortReport] = []
+    seen_chunk_ids: set[str] = set()
     for a in anchors:
         href = a["href"]
         title = a.get_text(strip=True)
         if not title or len(title) < 6:
             continue
-        pub_date = _parse_date_from_url(href) or _today_fallback(as_of)
-        if pub_date > as_of:
+        pub_date = _parse_date_from_url(href)
+        if pub_date is None or pub_date > as_of:
             continue
         ticker = extract_ticker(title)
         if not ticker:
             continue
+        chunk_id = make_chunk_id("Scorpion Capital", ticker, pub_date)
+        if chunk_id in seen_chunk_ids:
+            continue
+        seen_chunk_ids.add(chunk_id)
+        absolute = href if href.startswith("http") else requests.compat.urljoin(_SCORPION_URL, href)
         reports.append(
             ShortReport(
-                chunk_id=make_chunk_id("Scorpion Capital", ticker, pub_date),
+                chunk_id=chunk_id,
                 publisher="Scorpion Capital",
                 target_ticker=ticker,
                 publication_date=pub_date,
                 title=title,
                 thesis_text=title,
-                source_url=href if href.startswith("http") else requests.compat.urljoin(_SCORPION_URL, href),
+                source_url=absolute,
                 token_count=len(title.split()),
             )
         )
@@ -435,12 +461,6 @@ def _parse_date_from_url(url: str) -> Optional[date]:
         return None
 
 
-def _today_fallback(as_of: date) -> date:
-    """Some sites don't expose a date on the landing page. We conservatively
-    treat the report as freshly published so the as_of filter keeps it."""
-    return as_of
-
-
 def _fetch_article_body(url: str, session: requests.Session) -> Optional[str]:
     try:
         resp = session.get(url, timeout=30)
@@ -461,16 +481,20 @@ _NAME_MAP_CACHE: Optional[dict[str, str]] = None
 
 
 def _load_name_to_ticker_safe() -> Optional[dict[str, str]]:
-    """Wrap the SEC name-to-ticker loader; return None if the network hiccups."""
+    """
+    Wrap the SEC name-to-ticker loader. Populate the cache on success only;
+    a transient network failure should NOT poison the cache with {} for the
+    rest of the process — that would permanently disable the fallback path.
+    """
     global _NAME_MAP_CACHE
     if _NAME_MAP_CACHE is not None:
         return _NAME_MAP_CACHE
     try:
         _NAME_MAP_CACHE = _load_name_to_ticker()
+        return _NAME_MAP_CACHE
     except Exception as e:  # noqa: BLE001
         LOG.info("SEC name→ticker lookup unavailable: %s", e)
-        _NAME_MAP_CACHE = {}
-    return _NAME_MAP_CACHE
+        return None
 
 
 def _fallback_slug(publisher: str) -> str:
