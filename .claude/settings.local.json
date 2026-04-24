@@ -1,0 +1,11 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(git pull origin main)",
+      "Bash(git add .)",
+      "Bash(git commit -m \"Add initial CLAUDE.md configuration and test script\")"
+    ],
+    "deny": [],
+    "ask": []
+  }
+}
