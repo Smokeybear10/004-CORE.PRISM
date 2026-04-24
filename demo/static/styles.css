@@ -168,7 +168,7 @@ code { font-family: var(--mono); font-size: 0.85em; }
 
 .toggle-row {
   display: grid;
-  grid-template-columns: repeat(6, 1fr);
+  grid-template-columns: repeat(7, minmax(0, 1fr));
   gap: 8px;
 }
 .src-toggle {
@@ -460,8 +460,8 @@ code { font-family: var(--mono); font-size: 0.85em; }
 .footbar code { color: var(--accent); background: rgba(94, 181, 255, 0.06); padding: 1px 5px; border-radius: 3px; }
 
 /* ---------- Responsive ---------- */
-@media (max-width: 1000px) {
-  .toggle-row { grid-template-columns: repeat(3, 1fr); }
+@media (max-width: 1100px) {
+  .toggle-row { grid-template-columns: repeat(4, minmax(0, 1fr)); }
 }
 @media (max-width: 800px) {
   .overview { flex-direction: column; align-items: flex-start; }

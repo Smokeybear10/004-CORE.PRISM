@@ -40,7 +40,7 @@ if str(_ROOT) not in sys.path:
     sys.path.insert(0, str(_ROOT))
 
 from demo.mock_data import FOCAL_TICKERS  # noqa: E402
-from demo.real_chunks import chunks_for_real, preload_news  # noqa: E402
+from demo.real_chunks import chunks_for_real, preload_news, preload_thirteen_f  # noqa: E402
 from model import attribute as model_attribute  # noqa: E402
 from schema import (  # noqa: E402
     AblationConfig,
@@ -69,14 +69,14 @@ app = FastAPI(title="Price Action Tagger", version="0.3")
 
 @app.on_event("startup")
 def _warm_caches() -> None:
-    """Load the 628 MB news parquet once and pre-index for the 5 focal tickers.
-
-    Cheap after the first run (parquet is already local in
-    `ingestion/earnings_news/.cache/`); expensive on a clean machine.
+    """Load the 628 MB news parquet once and pre-index for the 5 focal tickers,
+    plus the pre-fetched 13F chunks JSONL.
     """
     print("[server] warming news parquet (this is the one-time startup cost)…", flush=True)
     preload_news(list(FOCAL_TICKERS.keys()))
     print("[server] news parquet indexed", flush=True)
+    preload_thirteen_f()
+    print("[server] 13F chunks loaded", flush=True)
 
 
 # ---------- Schemas ----------

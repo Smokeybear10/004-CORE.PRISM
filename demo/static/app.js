@@ -18,6 +18,7 @@ const SOURCE_TYPES = [
   { id: 'earnings_transcript',  label: 'Earnings call' },
   { id: 'peer_news',            label: 'Peer news' },
   { id: 'macro',                label: 'Macro' },
+  { id: 'thirteen_f',           label: '13F positioning' },
 ];
 const ALL_SOURCE_IDS = SOURCE_TYPES.map(s => s.id);
 
@@ -276,6 +277,12 @@ async function recomputeAttribution() {
 
 function computeAvailableCounts(move) {
   const counts = Object.fromEntries(ALL_SOURCE_IDS.map(s => [s, 0]));
+  if (move.chunks_available && typeof move.chunks_available === 'object') {
+    // Pre-baked truth: counts over the full pool, not just the top-10.
+    Object.assign(counts, move.chunks_available);
+    return counts;
+  }
+  // Fallback for old bundles that didn't carry chunks_available.
   for (const c of (move.chunks || [])) {
     counts[c.source_type] = (counts[c.source_type] ?? 0) + 1;
   }
@@ -499,7 +506,7 @@ async function selectTicker(t) {
   if (t === STATE.currentTicker) return;
   STATE.currentTicker = t;
   STATE.selectedMoveIdx = null;
-  STATE.enabledSources = new Set(ALL_SOURCE_IDS);
+  // enabledSources gets set in selectMove once we know what's available.
   renderTickerPills();
   const bundle = await fetchJSON(`data/${t}.json`);
   STATE.bundle = bundle;
@@ -520,12 +527,16 @@ async function selectTicker(t) {
 
 function selectMove(idx) {
   STATE.selectedMoveIdx = idx;
-  // Reset to full stack every time the user switches moves — otherwise toggle
-  // state from a previous move leaks into the new one.
-  STATE.enabledSources = new Set(ALL_SOURCE_IDS);
-  renderAttribution(STATE.bundle, idx);
   const move = STATE.bundle.moves[idx];
   const counts = computeAvailableCounts(move);
+  // Enable only sources that actually have chunks for THIS move. Sources
+  // with zero chunks (always-empty like earnings_transcript/peer_news/macro,
+  // or sparse like thirteen_f for ABT) start disabled — both in STATE and
+  // in the UI.
+  STATE.enabledSources = new Set(
+    ALL_SOURCE_IDS.filter(id => (counts[id] ?? 0) > 0)
+  );
+  renderAttribution(STATE.bundle, idx);
   renderToggleRow(counts);
   const totalAvailable = Object.keys(counts).filter(k => counts[k] > 0).length;
   renderToggleCaption(STATE.enabledSources.size, totalAvailable,
@@ -534,10 +545,12 @@ function selectMove(idx) {
 
 function resetToggles() {
   if (STATE.selectedMoveIdx === null) return;
-  STATE.enabledSources = new Set(ALL_SOURCE_IDS);
   const move = STATE.bundle.moves[STATE.selectedMoveIdx];
-  renderToggleRow(computeAvailableCounts(move));
-  // Use pre-baked full-stack attribution — avoids a server round trip.
+  const counts = computeAvailableCounts(move);
+  STATE.enabledSources = new Set(
+    ALL_SOURCE_IDS.filter(id => (counts[id] ?? 0) > 0)
+  );
+  renderToggleRow(counts);
   renderAttribution(STATE.bundle, STATE.selectedMoveIdx);
 }
 
