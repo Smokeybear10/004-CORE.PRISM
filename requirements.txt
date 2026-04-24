@@ -4,6 +4,10 @@ python-dateutil>=2.8
 
 # Ingestion
 datasets>=2.0          # for JanosAudran/financial-reports-sec from HuggingFace
+edgartools>=3.0        # SEC EDGAR live fetch (10-K fallback, 8-K primary)
+huggingface_hub>=0.20  # direct parquet download for bundled dataset (news)
+beautifulsoup4>=4.12   # strip HTML/XBRL from raw 8-K filings
+lxml>=4.9              # bs4's preferred parser for HTML/XML
 requests>=2.31
 tiktoken>=0.5          # accurate token counting for chunking
 sec-edgar-downloader>=5.0  # for 13F filings from SEC EDGAR
@@ -21,3 +25,4 @@ anthropic>=0.30
 # Backtest & demo
 matplotlib>=3.7
 jupyter>=1.0
+streamlit>=1.30

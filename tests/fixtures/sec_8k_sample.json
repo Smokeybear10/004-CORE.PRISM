@@ -1,0 +1,35 @@
+[
+  {
+    "chunk_id": "sec_8k_AAPL_2024-11-01_item202+901_001",
+    "ticker": "AAPL",
+    "source_type": "sec_8k",
+    "publication_date": "2024-11-01",
+    "period_end": "2024-09-28",
+    "source_url": "https://www.sec.gov/Archives/edgar/data/320193/000032019324000123/aapl-20240928.htm",
+    "section_name": "2.02, 9.01",
+    "text": "Apple Inc. today announced financial results for its fiscal 2024 fourth quarter ended September 28, 2024. The Company posted quarterly revenue of $94.9 billion, up 6 percent year over year, and quarterly diluted earnings per share of $0.97. Services revenue set an all-time record, reaching $24.97 billion, while iPhone revenue grew 5.5 percent versus the prior year.",
+    "token_count": 82
+  },
+  {
+    "chunk_id": "sec_8k_AAPL_2024-08-15_item502_001",
+    "ticker": "AAPL",
+    "source_type": "sec_8k",
+    "publication_date": "2024-08-15",
+    "period_end": null,
+    "source_url": "https://www.sec.gov/Archives/edgar/data/320193/000032019324000098/aapl-20240815.htm",
+    "section_name": "5.02",
+    "text": "On August 14, 2024, Luca Maestri, Senior Vice President and Chief Financial Officer of Apple Inc., notified the Company of his decision to transition from the role of Chief Financial Officer effective January 1, 2025. The Board of Directors has appointed Kevan Parekh, currently Vice President of Financial Planning and Analysis, as Senior Vice President and Chief Financial Officer effective January 1, 2025. Mr. Maestri will continue at the Company leading the Corporate Services teams.",
+    "token_count": 94
+  },
+  {
+    "chunk_id": "sec_8k_AAPL_2024-10-17_item701_001",
+    "ticker": "AAPL",
+    "source_type": "sec_8k",
+    "publication_date": "2024-10-17",
+    "period_end": null,
+    "source_url": "https://www.sec.gov/Archives/edgar/data/320193/000032019324000115/aapl-20241017.htm",
+    "section_name": "7.01",
+    "text": "Apple Inc. is furnishing under Item 7.01 of this Current Report on Form 8-K the following guidance for the fiscal 2025 first quarter. The Company expects total revenue to grow low to mid single digits year over year. Services revenue is expected to grow double digits, while gross margin is expected to be between 46.0 percent and 47.0 percent. This information is being furnished, not filed, pursuant to Regulation FD.",
+    "token_count": 91
+  }
+]
