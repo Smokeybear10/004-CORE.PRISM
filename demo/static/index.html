@@ -2002,6 +2002,14 @@ function pickAblationName(enabledSet) {
 // the two move in lockstep — meaningful, since the model only makes
 // claims at events. If predicted is null for an event (no chunks of
 // the right type), the gap factor stays unchanged.
+//
+// Returns the series split into two arrays so the caller can render
+// "model has data here" vs. "model has no prediction" as visually
+// distinct line styles. yDense = segments after an event with a real
+// prediction (drawn solid/dashed). ySparse = pre-first-event days +
+// segments after a no-prediction event (drawn as dotted-with-gaps so
+// users can see at a glance "the model isn't claiming anything here,
+// the line is just inheriting the prior cumulative gap").
 function computePredictedSeries(bundle, ablationName) {
   const eventByDate = new Map();
   const eventsSorted = bundle.moves
@@ -2012,22 +2020,36 @@ function computePredictedSeries(bundle, ablationName) {
   for (const e of eventsSorted) {
     const pred = e.predictions_by_ablation?.[ablationName];
     const denom = 1 + e.return_pct;
-    if (pred !== null && pred !== undefined && denom !== 0) {
+    const hasPred = (pred !== null && pred !== undefined);
+    if (hasPred && denom !== 0) {
       cumGap *= (1 + pred) / denom;
     }
-    eventByDate.set(e.move_date, { cumGap, idx: e.idx, predicted: pred });
+    eventByDate.set(e.move_date, {
+      cumGap, idx: e.idx, predicted: pred, hasPred,
+    });
   }
 
+  // activeStyle tracks the most recent event's prediction status. Each
+  // segment up to the next event takes that style. Pre-first-event we
+  // start in 'sparse' (no claim yet); the line trivially equals actual
+  // there, but rendering it as dots makes that meaning explicit.
+  const dates = bundle.prices.map(p => p.date);
+  const yDense = new Array(dates.length).fill(null);
+  const ySparse = new Array(dates.length).fill(null);
   let runningGap = 1.0;
-  const dates = [];
-  const predicted = [];
-  for (const p of bundle.prices) {
+  let activeStyle = 'sparse';
+  for (let i = 0; i < bundle.prices.length; i++) {
+    const p = bundle.prices[i];
     const ev = eventByDate.get(p.date);
-    if (ev) runningGap = ev.cumGap;
-    dates.push(p.date);
-    predicted.push(p.close * runningGap);
+    if (ev) {
+      runningGap = ev.cumGap;
+      activeStyle = ev.hasPred ? 'dense' : 'sparse';
+    }
+    const yVal = p.close * runningGap;
+    if (activeStyle === 'dense') yDense[i] = yVal;
+    else ySparse[i] = yVal;
   }
-  return { dates, predicted, eventByDate };
+  return { dates, yDense, ySparse, eventByDate };
 }
 
 function renderChart(bundle) {
@@ -2065,14 +2087,31 @@ function renderChart(bundle) {
   ];
 
   if (overlay) {
+    // "Dense" segments — model has a prediction at the most recent event,
+    // so the cumulative-gap line carries real information. Drawn dashed.
     traces.push({
       x: overlay.dates,
-      y: overlay.predicted,
+      y: overlay.yDense,
       mode: 'lines',
-      line: { color: '#c2410c', width: 1.6, dash: 'dash' },
+      line: { color: '#c2410c', width: 1.8, dash: 'dash' },
       name: `Model prediction (${ablationName})`,
       hovertemplate: '%{x}<br>predicted $%{y:.2f}<extra></extra>',
-      opacity: 0.92,
+      opacity: 0.95,
+      connectgaps: false,
+    });
+    // "Sparse" segments — most recent event had no prediction. The line
+    // is just inheriting the prior cumulative gap, not making a claim.
+    // Wide dotted pattern (2px dot, 8px gap) makes "no data here"
+    // immediately legible.
+    traces.push({
+      x: overlay.dates,
+      y: overlay.ySparse,
+      mode: 'lines',
+      line: { color: '#c2410c', width: 1.4, dash: '2px,8px' },
+      name: 'No prediction (line inherits prior gap)',
+      hovertemplate: '%{x}<br>no model prediction · $%{y:.2f}<extra></extra>',
+      opacity: 0.7,
+      connectgaps: false,
     });
   }
 
