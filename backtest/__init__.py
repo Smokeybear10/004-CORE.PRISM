@@ -38,8 +38,20 @@ from schema import (
 )
 
 from backtest.fixtures import generate_attribution
+from backtest.frameworks import (
+    DEFAULT_DIMENSION_PERSISTENCE,
+    FRAMEWORK_STRATEGIES,
+    dominant_dimension,
+    strategy_dimension_weighted,
+    strategy_expected_vs_realized,
+    strategy_hybrid,
+)
 from backtest.pnl import compute_pnl, summarize
-from backtest.signal import attribution_to_trade, strategy_fundamental_vs_nonfundamental
+from backtest.signal import (
+    STRATEGY_REGISTRY,
+    attribution_to_trade,
+    strategy_fundamental_vs_nonfundamental,
+)
 
 
 # ---------- The 6 canonical ablation configs (demo goldmine) ----------

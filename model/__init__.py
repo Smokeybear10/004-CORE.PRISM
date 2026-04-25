@@ -6,6 +6,20 @@ Public API:
     - predict_expected_return(move, chunks) -> float              (used by attribute)
     - check_coherence(attribution) -> CoherenceCheck              (Step 5 gate)
 
+`attribute()` is the demo / runner entry point. It will call the real
+Claude-backed `model.attribution.run_attribution` when LIVE mode is enabled
+(see `_should_use_live` below) and fall back to the synthetic placeholder
+otherwise. The returned Attribution always sets `model_notes` to indicate
+which path produced it so downstream reports can stay honest about what's
+real and what's placeholder.
+
+LIVE mode opt-in:
+    export BW_USE_LIVE_ATTRIBUTION=1
+    export ANTHROPIC_API_KEY=sk-ant-...
+
+Default is OFF — running the test suite or the synthetic-events backtest
+should never silently bill the Anthropic account.
+
 Prompt-iteration rule (mentor, explicit):
     Iterate prompts using a FROZEN test case: pick one (ticker, date) pair with
     a known cause, store expected outputs in tests/fixtures/, and don't change
@@ -23,26 +37,171 @@ Foreknowledge defense:
 
 from __future__ import annotations
 
+import logging
 import os
-from datetime import timedelta
+import time
+from typing import Optional
 
 from schema import (
     AblationConfig,
     Attribution,
     CoherenceCheck,
+    JoinedEvidence,
     PriceMove,
     TextChunk,
 )
 
-
-# Env flag that flips model.attribute() from placeholder → real Claude call.
-# Mirrors the pattern used by the live-API tests
-# (tests/test_attribution.py, tests/test_eval_frozen.py).
-LIVE_API_FLAG = "RUN_LIVE_API"
+log = logging.getLogger(__name__)
 
 
-def _live_api_enabled() -> bool:
-    return os.environ.get(LIVE_API_FLAG) == "1"
+# ---------- LIVE / placeholder gate ----------
+
+LIVE_ENV_VAR = "BW_USE_LIVE_ATTRIBUTION"
+LIVE_NOTE_PREFIX = "live attribution"
+PLACEHOLDER_NOTE_PREFIX = "synthetic fixture"
+
+# Rate-limit retry config. The Anthropic SDK retries 429s once internally,
+# but for batch jobs (build_static, eval matrix) we want to ride through
+# brief cap windows instead of immediately falling back to placeholder.
+# The base delay is doubled per attempt (30s, 60s, …) and is capped at
+# RATE_LIMIT_MAX_DELAY_S. If the 429 response carries a Retry-After header
+# we honor that instead, also capped.
+RATE_LIMIT_MAX_RETRIES = 2
+RATE_LIMIT_BASE_DELAY_S = 30.0
+RATE_LIMIT_MAX_DELAY_S = 90.0
+
+
+def _should_use_live(chunks: list[TextChunk]) -> tuple[bool, Optional[str]]:
+    """
+    Return (use_live, skip_reason). When use_live is False, skip_reason is the
+    short string we attach to model_notes so reports show why the placeholder
+    fired instead of guessing.
+    """
+    if os.environ.get(LIVE_ENV_VAR, "").strip() != "1":
+        return False, f"{LIVE_ENV_VAR} not set"
+    if not os.environ.get("ANTHROPIC_API_KEY", "").strip():
+        return False, "ANTHROPIC_API_KEY missing"
+    if not chunks:
+        return False, "no chunks to ground the call"
+    return True, None
+
+
+def _build_evidence(move: PriceMove, chunks: list[TextChunk]) -> JoinedEvidence:
+    """
+    Bridge `(move, chunks)` → `JoinedEvidence` for the run_attribution API.
+    `events=[]` because callers of `attribute()` don't currently carry the
+    unified Event records — only TextChunks. window_start/end are derived
+    from chunk publication dates, capped at move.move_date so we never
+    advertise foreknowledge.
+    """
+    if chunks:
+        dates = [c.publication_date for c in chunks if c.publication_date is not None]
+        window_start = min(dates) if dates else move.move_date
+        window_end = max(dates) if dates else move.move_date
+    else:
+        window_start = window_end = move.move_date
+    if window_end > move.move_date:
+        window_end = move.move_date
+    return JoinedEvidence(
+        move=move,
+        window_start=window_start,
+        window_end=window_end,
+        events=[],
+        text_chunks=list(chunks),
+    )
+
+
+def _retry_delay_for(err: "Exception", attempt: int) -> float:
+    """Honor a Retry-After response header when present; otherwise back off
+    exponentially from RATE_LIMIT_BASE_DELAY_S. Always capped at
+    RATE_LIMIT_MAX_DELAY_S so a misbehaving server can't park us forever."""
+    response = getattr(err, "response", None)
+    if response is not None:
+        try:
+            ra = response.headers.get("retry-after") or response.headers.get("Retry-After")
+            if ra:
+                seconds = float(ra)
+                if seconds > 0:
+                    return min(seconds, RATE_LIMIT_MAX_DELAY_S)
+        except (AttributeError, ValueError):
+            pass
+    return min(RATE_LIMIT_BASE_DELAY_S * (2 ** attempt), RATE_LIMIT_MAX_DELAY_S)
+
+
+def _live_attribute(
+    move: PriceMove,
+    chunks: list[TextChunk],
+    config: AblationConfig,
+) -> Attribution:
+    """Wrap run_attribution, retry on 429s, and pin contract fields the
+    demo / runner expect.
+
+    On `anthropic.RateLimitError` we sleep (Retry-After header if present,
+    else exponential backoff) and retry up to RATE_LIMIT_MAX_RETRIES times.
+    On the final attempt the error propagates and the outer `attribute()`
+    falls back to the placeholder with an honest model_notes tag.
+    """
+    import anthropic
+
+    from model.attribution import run_attribution
+
+    evidence = _build_evidence(move, chunks)
+
+    attempts = RATE_LIMIT_MAX_RETRIES + 1
+    attr = None
+    for attempt in range(attempts):
+        try:
+            attr = run_attribution(evidence, ablation_name=config.name)
+            break
+        except anthropic.RateLimitError as e:
+            if attempt >= attempts - 1:
+                raise
+            delay = _retry_delay_for(e, attempt)
+            log.warning(
+                "rate-limited on %s %s; sleeping %.0fs before retry %d/%d",
+                move.ticker, move.move_date, delay, attempt + 2, attempts,
+            )
+            time.sleep(delay)
+
+    assert attr is not None  # loop either set it or raised
+
+    attr.ablation_name = config.name
+    attr.sources_used = list(config.sources)
+    attr.chunks_considered = len(chunks)
+    attr.model_notes = (attr.model_notes or LIVE_NOTE_PREFIX)
+    if not attr.model_notes.startswith(LIVE_NOTE_PREFIX):
+        attr.model_notes = f"{LIVE_NOTE_PREFIX}: {attr.model_notes}"
+    return attr
+
+
+def _placeholder_attribute(
+    move: PriceMove,
+    chunks: list[TextChunk],
+    config: AblationConfig,
+    *,
+    note_suffix: Optional[str] = None,
+) -> Attribution:
+    from backtest.fixtures import generate_attribution
+
+    attr = generate_attribution(
+        ticker=move.ticker,
+        move_date=move.move_date,
+        return_pct=move.return_pct,
+        vol_zscore=move.vol_zscore,
+        ablation_name=config.name,
+    )
+    real_ids = [c.chunk_id for c in chunks[:5]] or ["no_chunks_provided_0"]
+    for ds in (attr.demand, attr.pricing, attr.competitive,
+               attr.management_credibility, attr.macro):
+        ds.evidence_chunk_ids = list(real_ids)
+    attr.ablation_name = config.name
+    attr.sources_used = list(config.sources)
+    attr.chunks_considered = len(chunks)
+    notes = attr.model_notes or PLACEHOLDER_NOTE_PREFIX
+    if note_suffix:
+        notes = f"{PLACEHOLDER_NOTE_PREFIX}: {note_suffix}"
+    attr.model_notes = notes
+    return attr
 
 
 def attribute(
@@ -54,102 +213,34 @@ def attribute(
     Attribute `move` across the 5 dimensions using `chunks` (already filtered
     to source types in config.sources and to publication_date <= move.move_date).
 
-    MUST set:
-        attribution.ablation_name        = config.name
-        attribution.sources_used         = config.sources
-        attribution.predicted_return_pct = predict_expected_return(move, chunks)
-        every DimensionScore.evidence_chunk_ids non-empty and referencing real chunks
+    LIVE PATH (default OFF; enable with BW_USE_LIVE_ATTRIBUTION=1):
+        Builds a JoinedEvidence and calls model.attribution.run_attribution,
+        which hits the Anthropic API via the schema's tool_use contract and
+        runs validate_attribution before returning.
 
-    DUAL PATH
-    ---------
-    Default path: placeholder. Delegates to `backtest.fixtures.generate_attribution`,
-    which synthesizes a plausible Attribution from the PriceMove's realized
-    characteristics. Deterministic via seeded RNG, no API calls. Tests the
-    pipeline, not the model.
+    PLACEHOLDER PATH:
+        Delegates to backtest.fixtures.generate_attribution — RNG-driven
+        labels with a per-ablation noise schedule. Useful for plumbing tests
+        and synthetic-data backtests; *not* a real attribution.
 
-    Live path: real Claude. When env `RUN_LIVE_API=1` AND `chunks` is non-empty,
-    builds a `JoinedEvidence` from (move, chunks) and calls
-    `model.attribution.run_attribution`. Returns a real model-backed
-    Attribution with citations from the chunks. Costs a real API call.
-
-    The chunks-non-empty gate is intentional: with no evidence, the model
-    can't cite anything, and the validator rejects uncited DimensionScores.
-    The frozen-case test (which passes chunks=[]) gracefully stays on the
-    placeholder path even with RUN_LIVE_API=1 set.
+    Either way, attribution.model_notes carries a short tag explaining which
+    path produced the result. Downstream reports should surface that tag.
     """
-    if _live_api_enabled() and chunks:
-        return _attribute_live(move, chunks, config)
+    use_live, skip_reason = _should_use_live(chunks)
+    if use_live:
+        try:
+            return _live_attribute(move, chunks, config)
+        except Exception as e:  # noqa: BLE001 — fall back on any live error
+            log.warning(
+                "live attribute failed for %s %s (%s: %s); using placeholder",
+                move.ticker, move.move_date, type(e).__name__, e,
+            )
+            return _placeholder_attribute(
+                move, chunks, config,
+                note_suffix=f"live call failed ({type(e).__name__})",
+            )
 
-    from backtest.fixtures import generate_attribution
-
-    attr = generate_attribution(
-        ticker=move.ticker,
-        move_date=move.move_date,
-        return_pct=move.return_pct,
-        vol_zscore=move.vol_zscore,
-        ablation_name=config.name,
-    )
-    # Echo the actual chunk IDs we were given into the evidence slots so the
-    # contract "evidence_chunk_ids reference real chunks" holds.
-    real_ids = [c.chunk_id for c in chunks[:5]] or ["no_chunks_provided_0"]
-    for ds in (attr.demand, attr.pricing, attr.competitive,
-               attr.management_credibility, attr.macro):
-        ds.evidence_chunk_ids = list(real_ids)
-    # Pin the contract fields the docstring calls out explicitly:
-    attr.ablation_name = config.name
-    attr.sources_used = list(config.sources)
-    attr.chunks_considered = len(chunks)
-    return attr
-
-
-def _attribute_live(
-    move: PriceMove,
-    chunks: list[TextChunk],
-    config: AblationConfig,
-) -> Attribution:
-    """Real Claude-backed attribution. Wraps `model.attribution.run_attribution`.
-
-    Builds a `JoinedEvidence` from the (move, chunks) pair the eval pipeline
-    hands us. The eval flow doesn't carry idiosyncratic Events (those live in
-    Henry's ingestion/idiosyncratic module and aren't surfaced through the
-    eval/runner.py chunk provider), so we pass an empty events list — the
-    model relies entirely on the text chunks for evidence.
-
-    Window inferred from chunk publication-date span; defensively re-filters
-    to publication_date <= move.move_date even though the contract says
-    chunks are pre-filtered. Foreknowledge defense, cheap.
-    """
-    from schema import JoinedEvidence
-    from model.attribution import run_attribution
-
-    visible = [c for c in chunks if c.publication_date <= move.move_date]
-    if not visible:
-        # No evidence to cite — fall back rather than send Claude an empty bag.
-        from backtest.fixtures import generate_attribution
-        return generate_attribution(
-            ticker=move.ticker, move_date=move.move_date,
-            return_pct=move.return_pct, vol_zscore=move.vol_zscore,
-            ablation_name=config.name, sources_used=list(config.sources),
-        )
-
-    window_start = min(c.publication_date for c in visible)
-    window_end = move.move_date
-
-    evidence = JoinedEvidence(
-        move=move,
-        window_start=window_start,
-        window_end=window_end,
-        events=[],  # eval flow is text-chunk-only
-        text_chunks=visible,
-    )
-    attr = run_attribution(evidence, ablation_name=config.name)
-
-    # run_attribution sets ablation_name from the arg; pin the rest the
-    # contract requires (sources_used and chunks_considered are not derivable
-    # from JoinedEvidence alone).
-    attr.sources_used = list(config.sources)
-    attr.chunks_considered = len(chunks)
-    return attr
+    return _placeholder_attribute(move, chunks, config, note_suffix=skip_reason)
 
 
 def predict_expected_return(move: PriceMove, chunks: list[TextChunk]) -> float:

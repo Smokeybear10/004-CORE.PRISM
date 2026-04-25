@@ -1,20 +1,26 @@
 """
 Ingestion glue for the demo.
 
-Wraps `ingestion.sec.get_filings_as_of` + `ingestion.earnings_news` into a
-single call, but with an in-memory preload of the news parquet so per-request
-latency is tolerable. `ingestion.earnings_news.fetch_news` re-reads the full
-628 MB parquet every call (~4 minutes for AMD); the demo can't pay that per
-request, so we load once at server startup and index by ticker.
+Wraps three ingestion streams into a single call:
+    - `ingestion.sec.get_filings_as_of`               (disk-cached JSON)
+    - an in-memory slice of the news parquet          (~628 MB, load once)
+    - a pre-fetched 13F chunks JSONL                  (built offline)
+
+`ingestion.earnings_news.fetch_news` re-reads the full 628 MB parquet every
+call (~4 minutes for AMD); the demo can't pay that per request, so we load
+once at server startup and index by ticker. Same pattern for 13F.
 
 Public API:
-    preload_news(tickers)                 # call at startup / module import
-    chunks_for_real(ticker, as_of)        # SEC filings + news, publication_date <= as_of
+    preload_news(tickers)                 # call at startup
+    preload_thirteen_f()                  # call at startup
+    chunks_for_real(ticker, as_of)        # SEC + news + 13F, pub_date <= as_of
 """
 
 from __future__ import annotations
 
+import json
 from datetime import date
+from pathlib import Path
 from typing import Optional
 
 import pandas as pd
@@ -32,6 +38,10 @@ from schema import SourceType, TextChunk
 
 _NEWS_DF: Optional[pd.DataFrame] = None
 _NEWS_BY_TICKER: dict[str, pd.DataFrame] = {}
+_THIRTEEN_F_BY_TICKER: dict[str, list[TextChunk]] = {}
+
+_REPO_ROOT = Path(__file__).resolve().parent.parent
+_THIRTEEN_F_JSONL = _REPO_ROOT / "data" / "thirteen_f" / "focal_chunks.jsonl"
 
 
 def preload_news(tickers: list[str]) -> None:
@@ -94,16 +104,57 @@ def _news_chunks_for(ticker: str, as_of: date) -> list[TextChunk]:
     return out
 
 
+def preload_thirteen_f() -> None:
+    """Load pre-fetched 13F TextChunks from the JSONL built by demo/build_13f_chunks.py."""
+    if _THIRTEEN_F_BY_TICKER:
+        return
+    if not _THIRTEEN_F_JSONL.exists():
+        return   # No 13F data available yet — chunks_for_real just skips the source.
+    with _THIRTEEN_F_JSONL.open() as f:
+        for line in f:
+            line = line.strip()
+            if not line:
+                continue
+            rec = json.loads(line)
+            chunk = TextChunk.model_validate(rec)
+            _THIRTEEN_F_BY_TICKER.setdefault(chunk.ticker.upper(), []).append(chunk)
+
+
+def _thirteen_f_chunks_for(ticker: str, as_of: date) -> list[TextChunk]:
+    """Return 13F chunks for (ticker, as_of) from the pre-loaded JSONL."""
+    pool = _THIRTEEN_F_BY_TICKER.get(ticker.upper(), [])
+    if not pool:
+        return []
+    return [c for c in pool if c.publication_date <= as_of]
+
+
 def chunks_for_real(ticker: str, as_of: date) -> list[TextChunk]:
     """
-    Real SEC filings + news chunks for (ticker, as_of).
+    Real SEC filings + news + 13F chunks for (ticker, as_of).
 
-    Sorted by publication_date DESC so the most recent evidence is first —
-    `model.attribute()` picks `chunks[:5]` for evidence, so recent-first means
-    the citations surface current narrative, not ancient boilerplate.
+    Chunks are *stratified* by source_type: within each source we sort
+    recent-first, then we round-robin one chunk per source until all are
+    drained. This guarantees every source that has data gets representation
+    in the top-N that `model.attribute()` consumes (it cites `chunks[:5]`).
+
+    Pure-recency sort was crowding out SEC + 13F on recent moves where
+    daily news dominates the timeline — the toggle would show
+    `sec_10k: 94 available` but the evidence panel only ever cited news.
     """
     sec = get_filings_as_of(ticker, as_of)
     news = _news_chunks_for(ticker, as_of)
-    combined = sec + news
-    combined.sort(key=lambda c: c.publication_date, reverse=True)
-    return combined
+    thirteen_f = _thirteen_f_chunks_for(ticker, as_of)
+
+    by_type: dict[SourceType, list[TextChunk]] = {}
+    for c in sec + news + thirteen_f:
+        by_type.setdefault(c.source_type, []).append(c)
+    for bucket in by_type.values():
+        bucket.sort(key=lambda c: c.publication_date, reverse=True)
+
+    interleaved: list[TextChunk] = []
+    source_order = list(by_type.keys())
+    while any(by_type[t] for t in source_order):
+        for t in source_order:
+            if by_type[t]:
+                interleaved.append(by_type[t].pop(0))
+    return interleaved

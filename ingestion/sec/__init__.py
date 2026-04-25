@@ -28,6 +28,10 @@ from schema import TextChunk, SourceType
 
 CACHE_DIR = Path(__file__).parent / ".cache"
 
+# HF-backed filings pipeline (see filings.py). Writes data/sec/events_* +
+# chunks_* which the aggregator picks up via ingestion/events/adapters/sec.py.
+from ingestion.sec.filings import run_sec_pipeline  # noqa: E402,F401
+
 
 def make_chunk_id(
     source_type: SourceType,
