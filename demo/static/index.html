@@ -1674,18 +1674,6 @@ const STRATEGIES = [
       'than the news justifies, the price hasn\'t caught up yet — bet on ' +
       'more move in the same direction (<span class="pos">lean</span>). If ' +
       'they roughly agree, the news is already priced in — skip.' },
-  { id: 'dimension_weighted', label: 'Dimension-weighted',
-    blurb: 'fundamental drivers → lean. Macro/sentiment drivers → fade.',
-    description:
-      'Different <em>kinds</em> of price moves have very different staying ' +
-      'power, going back to the post-earnings drift literature. Moves ' +
-      'driven by real <em>demand</em> (units, customers) or <em>pricing</em> ' +
-      '(margins, price hikes) tend to keep paying off for weeks. Moves ' +
-      'driven by <em>macro</em> shocks (Fed, rates, geopolitics) or single ' +
-      'management-credibility hits tend to fully unwind. This strategy ' +
-      'measures how much of the move came from each cause and weights them: ' +
-      'mostly demand or pricing → <span class="pos">lean</span>; mostly ' +
-      'macro or one-off mgmt noise → <span class="neg">fade</span>.' },
   { id: 'hybrid', label: 'Hybrid',
     blurb: 'fundamental check, then overshoot check, then driver sanity check.',
     description:
@@ -1719,9 +1707,9 @@ const DIM_PHRASE_SHORT = {
   management_credibility: 'management credibility (guidance, execution)',
   macro:                  'macro forces (rates, FX, geopolitics)',
 };
-// Mirrors backtest.frameworks.RESEARCH_GROUNDED_PERSISTENCE — used to
-// reproduce strategy_dimension_weighted's score client-side. Keep in sync if
-// the backend priors are recalibrated.
+// Mirrors backtest.frameworks.RESEARCH_GROUNDED_PERSISTENCE — used by the
+// hybrid strategy's dimension-sanity layer. Keep in sync if the backend
+// priors are recalibrated.
 const PERSISTENCE = {
   demand: 0.85,
   pricing: 0.65,
@@ -1948,15 +1936,6 @@ function judgeVerdict(verdict, moveSign, fwdReturn) {
  * reflects the live /api/attribute response (or pre-baked bundle on first
  * paint).
  */
-function _dimWeightedScore(ref) {
-  let score = 0, top = null, topAbs = 0;
-  for (const [k, v] of Object.entries(ref.dimensions || {})) {
-    const c = (PERSISTENCE[k] ?? 0) * (v?.weight ?? 0);
-    score += c;
-    if (Math.abs(c) > topAbs) { topAbs = Math.abs(c); top = k; }
-  }
-  return { score, top };
-}
 function _dominantDimension(ref) {
   let domName = null, domWeight = 0;
   for (const [k, v] of Object.entries(ref.dimensions || {})) {
@@ -2104,22 +2083,6 @@ function buildStrategyReasoning(strategyId, verdict, ref, tag) {
     }
     return `Realized and expected magnitudes are within the neutral band — the ` +
            `news already looks priced in, so this strategy says ${tag}.`;
-  }
-  if (strategyId === 'dimension_weighted') {
-    const { score, top } = _dimWeightedScore(ref);
-    const topPhrase = top ? (DIM_PHRASE[top] || top) : '—';
-    if (score >= 0.20) {
-      return `The dominant driver is <span class="num">${topPhrase}</span> — the kind ` +
-             `of cause that historically keeps paying off in the same direction. So ` +
-             `this strategy says ${tag}.`;
-    }
-    if (score <= -0.20) {
-      return `The dominant driver is <span class="num">${topPhrase}</span> — the kind ` +
-             `of cause that historically tends to fully reverse. So this strategy ` +
-             `says ${tag} (bet against the move).`;
-    }
-    return `No single driver dominates this move clearly enough to call — the mix ` +
-           `washes out, so this strategy says ${tag}.`;
   }
   if (strategyId === 'hybrid') {
     const char = ref.character;
@@ -2882,9 +2845,6 @@ function deriveStrategies(attr) {
     const ratio = Math.abs(r) / Math.abs(p);
     if (ratio >= 1.5) exp = 'fade'; else if (ratio <= 0.5) exp = 'lean';
   }
-  let score = 0;
-  for (const [k, coeff] of Object.entries(DIM_PERSISTENCE)) score += ((dims[k] || {}).weight ?? 0) * coeff;
-  const dimW = score >= 0.20 ? 'lean' : score <= -0.20 ? 'fade' : 'neutral';
   let hybrid;
   if (c === 'transient') hybrid = 'fade';
   else if (c === 'mixed' || c === 'unclear') hybrid = 'neutral';
@@ -2897,7 +2857,7 @@ function deriveStrategies(attr) {
     }
     hybrid = domName && (DIM_PERSISTENCE[domName] ?? 0) < 0 ? 'neutral' : 'lean';
   }
-  return { fundamental_vs_nonfundamental: fund, expected_vs_realized: exp, dimension_weighted: dimW, hybrid };
+  return { fundamental_vs_nonfundamental: fund, expected_vs_realized: exp, hybrid };
 }
 
 /* ════════════════════════════════════════════════════════════════

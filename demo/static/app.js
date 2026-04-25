@@ -44,10 +44,9 @@ const DIM_LABEL = {
 };
 const ARROW = { positive: '↑', negative: '↓', neutral: '→' };
 
-// Mirror of backtest.frameworks.RESEARCH_GROUNDED_PERSISTENCE — used to
-// reproduce strategy_dimension_weighted's score client-side so the verdict
-// subline can show the actual driver, not a generic blurb. Keep these in
-// sync with backtest/frameworks.py if the priors are recalibrated.
+// Mirror of backtest.frameworks.RESEARCH_GROUNDED_PERSISTENCE — used by
+// the hybrid strategy's dimension-sanity layer. Keep in sync with
+// backtest/frameworks.py if the priors are recalibrated.
 const PERSISTENCE = {
   demand: 0.85,
   pricing: 0.65,
@@ -85,19 +84,6 @@ const STRATEGIES = [
       'than the news justifies, the price hasn\'t caught up yet — bet on ' +
       'more move in the same direction (<span class="pos">lean</span>). If ' +
       'they roughly agree, the news is already priced in — skip.' },
-
-  { id: 'dimension_weighted',            label: 'Dimension-weighted',
-    blurb: 'fundamental drivers → lean. Macro/sentiment drivers → fade.',
-    description:
-      'Different <em>kinds</em> of price moves have very different staying ' +
-      'power, going back to the post-earnings drift literature. Moves ' +
-      'driven by real <em>demand</em> (units, customers) or <em>pricing</em> ' +
-      '(margins, price hikes) tend to keep paying off for weeks. Moves ' +
-      'driven by <em>macro</em> shocks (Fed, rates, geopolitics) or single ' +
-      'management-credibility hits tend to fully unwind. This strategy ' +
-      'measures how much of the move came from each cause and weights them: ' +
-      'mostly demand or pricing → <span class="pos">lean</span>; mostly ' +
-      'macro or one-off mgmt noise → <span class="neg">fade</span>.' },
 
   { id: 'hybrid',                        label: 'Hybrid',
     blurb: 'fundamental check, then overshoot check, then driver sanity check.',
@@ -385,16 +371,6 @@ function renderStrategyVerdict() {
 }
 
 // Helpers for strategy-specific computations the subline + explainer share.
-function _dimWeightedScore(ref) {
-  let score = 0, top = null, topAbs = 0;
-  for (const [k, v] of Object.entries(ref.dimensions || {})) {
-    const c = (PERSISTENCE[k] ?? 0) * (v.weight ?? 0);
-    score += c;
-    if (Math.abs(c) > topAbs) { topAbs = Math.abs(c); top = k; }
-  }
-  return { score, top };
-}
-
 function _dominantDimension(ref) {
   let domName = null, domWeight = 0;
   for (const [k, v] of Object.entries(ref.dimensions || {})) {
@@ -443,13 +419,6 @@ function buildVerdictSubline(strategyId, verdict) {
                    `predicted <span class="num">${pct(predicted)}</span>${SEP}` +
                    `ratio <span class="num">${ratio.toFixed(2)}×</span>`;
     }
-  } else if (strategyId === 'dimension_weighted') {
-    const { score, top } = _dimWeightedScore(ref);
-    const scoreSign = score >= 0 ? '+' : '';
-    const scoreCls = score >= 0.20 ? 'delta-up' : score <= -0.20 ? 'delta-down' : '';
-    const topLabel = top ? (DIM_LABEL[top] || top) : '—';
-    driverHtml = `score <span class="num ${scoreCls}">${scoreSign}${score.toFixed(2)}</span>${SEP}` +
-                 `top driver <span class="num">${topLabel}</span>`;
   } else if (strategyId === 'hybrid') {
     const domName = _dominantDimension(ref);
     const domLabel = domName ? (DIM_LABEL[domName] || domName) : '—';
@@ -650,23 +619,6 @@ function buildStrategyReasoning(strategyId, verdict, ref, tag) {
     }
     return `Realized and expected magnitudes are within the neutral band — the ` +
            `news already looks priced in, so this strategy says ${tag}.`;
-  }
-
-  if (strategyId === 'dimension_weighted') {
-    const { score, top } = _dimWeightedScore(ref);
-    const topPhrase = top ? (DIM_PHRASE[top] || top) : '—';
-    if (score >= 0.20) {
-      return `The dominant driver is <span class="num">${topPhrase}</span> — the kind ` +
-             `of cause that historically keeps paying off in the same direction. So ` +
-             `this strategy says ${tag}.`;
-    }
-    if (score <= -0.20) {
-      return `The dominant driver is <span class="num">${topPhrase}</span> — the kind ` +
-             `of cause that historically tends to fully reverse. So this strategy ` +
-             `says ${tag} (bet against the move).`;
-    }
-    return `No single driver dominates this move clearly enough to call — the mix ` +
-           `washes out, so this strategy says ${tag}.`;
   }
 
   if (strategyId === 'hybrid') {
