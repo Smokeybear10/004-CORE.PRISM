@@ -1,0 +1,13 @@
+{
+  "ticker": "AMD",
+  "move_date": "2025-04-09",
+  "known_cause": "FUNDAMENTAL: AMD climbed ~18% during the week with two stacked catalysts: (1) the Trump administration announced a short-term postponement of U.S. tariffs on Chinese electronics, removing a near-term cost-of-goods headwind on TSMC-fabricated chips; (2) AMD disclosed that Google Cloud's new C4D and H4D virtual machines are powered by 5th Gen AMD EPYC processors, with C4D delivering up to 80% higher throughput/vCPU and H4D optimized for HPC with Cloud RDMA scaling to tens of thousands of cores. Fundamental — both catalysts move forward cash flows: the tariff postponement removes a quantifiable cost headwind, and the Google Cloud C4D/H4D launch converts AMD's 5th Gen EPYC roadmap into deployed hyperscaler instances at one of the three largest cloud providers, expanding contracted server-CPU revenue.",
+  "expected": {
+    "dominant_dimension": ["demand", "competitive", "pricing"],
+    "direction": "positive",
+    "move_character": "structural",
+    "fade_or_lean": "lean",
+    "must_cite_source_type": ["news"],
+    "must_not_be_dominant": ["management_credibility"]
+  }
+}

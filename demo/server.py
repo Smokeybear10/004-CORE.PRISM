@@ -43,6 +43,7 @@ from demo.mock_data import FOCAL_TICKERS  # noqa: E402
 from demo.real_chunks import (  # noqa: E402
     chunks_for_real,
     preload_earnings_transcripts,
+    preload_finnhub_news,
     preload_news,
     preload_peer_and_sector_news,
     preload_thirteen_f,
@@ -92,6 +93,16 @@ def _warm_caches() -> None:
     print("[server] loading earnings-call transcripts…", flush=True)
     preload_earnings_transcripts(list(FOCAL_TICKERS.keys()))
     print("[server] earnings transcripts loaded", flush=True)
+    # Optional: pull historical news from Finnhub when FINNHUB_API_KEY is
+    # set in .env. No-op without the key. Disk-cached so subsequent starts
+    # are free.
+    print("[server] checking Finnhub supplemental news…", flush=True)
+    preload_finnhub_news(list(FOCAL_TICKERS.keys()))
+    from ingestion.earnings_news.finnhub import is_finnhub_available
+    if is_finnhub_available():
+        print("[server] Finnhub news indexed", flush=True)
+    else:
+        print("[server] Finnhub disabled (FINNHUB_API_KEY not set)", flush=True)
 
 
 # ---------- Schemas ----------
