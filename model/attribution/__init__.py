@@ -39,6 +39,19 @@ the AAPL fixture; skipped by default so CI does not need an API key.
 """
 from __future__ import annotations
 
+# Load repo-root .env once so ANTHROPIC_API_KEY is visible to the SDK
+# regardless of how the process was started (pytest, demo CLI, eval CLI,
+# direct python -c, ...). Idempotent — load_dotenv won't overwrite vars
+# that are already set in the shell.
+try:
+    from dotenv import load_dotenv as _load_dotenv
+    from pathlib import Path as _Path
+    _env_path = _Path(__file__).resolve().parents[2] / ".env"
+    if _env_path.exists():
+        _load_dotenv(_env_path)
+except ImportError:
+    pass  # python-dotenv missing — fall back to whatever the shell set
+
 from model.attribution.coherence import check_coherence
 from model.attribution.run import run_attribution, run_attribution_batch
 from model.attribution.validate import (
