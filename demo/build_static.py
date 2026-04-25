@@ -23,6 +23,7 @@ if str(_ROOT) not in sys.path:
 
 from backtest.signal import STRATEGY_REGISTRY
 from demo.mock_data import FOCAL_TICKERS
+from demo.pnl_summary import build_pnl_summary
 from demo.real_chunks import (
     chunks_for_real,
     preload_earnings_transcripts,
@@ -252,6 +253,14 @@ def build_for_ticker(ticker: str, meta: dict, end_date: date) -> dict:
             "predictions_by_ablation": predictions_by_ablation,
         })
 
+    # Closes the loop: dollar P&L for the model + 4 baselines over a 5-day
+    # window per flagged event. Failure here must not break the bundle build.
+    try:
+        pnl = build_pnl_summary(ticker, moves_payload, prices_df)
+    except Exception as exc:
+        print(f"  WARN: pnl summary failed for {ticker}: {exc}", flush=True)
+        pnl = None
+
     return {
         "ticker": ticker,
         "name": meta["name"],
@@ -260,6 +269,7 @@ def build_for_ticker(ticker: str, meta: dict, end_date: date) -> dict:
         "end_date": end_date.isoformat(),
         "prices": prices,
         "moves": moves_payload,
+        "pnl": pnl,
     }
 
 
