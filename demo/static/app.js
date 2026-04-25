@@ -30,6 +30,8 @@ const STATE = {
   enabledSources: new Set(ALL_SOURCE_IDS),  // full stack by default
   lastFullStack: null,  // last full-stack reference attribution
   fetchSeq: 0,          // monotonic to cancel stale fetches
+  selectedStrategy: 'fundamental_vs_nonfundamental',
+  lastStrategies: {},   // {strategy_name: 'lean'|'fade'|'neutral'}
 };
 
 const DIM_LABEL = {
@@ -40,6 +42,22 @@ const DIM_LABEL = {
   macro: 'Macro',
 };
 const ARROW = { positive: '↑', negative: '↓', neutral: '→' };
+
+// ---------- Strategies ----------
+// Strategy verdicts are computed by backtest.signal.STRATEGY_REGISTRY in
+// Python — server.py runs them per-request, build_static.py bakes them into
+// the static bundles. The frontend never recomputes them. STRATEGIES below
+// is UI metadata only (labels + blurbs); IDs MUST match Python registry keys.
+const STRATEGIES = [
+  { id: 'fundamental_vs_nonfundamental', label: 'Fundamental vs Non',
+    blurb: 'structural → lean, transient → fade.' },
+  { id: 'expected_vs_realized',          label: 'Expected vs Realized',
+    blurb: 'realized overshoots predicted → fade. Undershoots → lean.' },
+  { id: 'dimension_weighted',            label: 'Dimension-weighted',
+    blurb: 'weighted by per-dim persistence (demand+, macro−).' },
+  { id: 'hybrid',                        label: 'Hybrid',
+    blurb: 'fundamentality gate → expected/realized → dim sanity.' },
+];
 
 // ---------- Fetch helpers ----------
 async function fetchJSON(path) {
@@ -75,9 +93,9 @@ function renderTickerPills() {
 
 // ---------- Overview (top stats) ----------
 function renderOverview(bundle) {
-  document.getElementById('ticker-title').textContent = `${bundle.ticker} · ${bundle.name}`;
+  document.getElementById('ticker-title').textContent = bundle.name;
   document.getElementById('ticker-sub').textContent =
-    `${bundle.sector}  ·  ${bundle.start_date} → ${bundle.end_date}`;
+    `${bundle.ticker} · ${bundle.sector} · ${bundle.start_date} → ${bundle.end_date}`;
 
   const n = bundle.prices.length;
   const m = bundle.moves.length;
@@ -218,6 +236,88 @@ function renderToggleRow(availableCounts) {
   }
 }
 
+// ---------- Strategy row + verdict ----------
+function renderStrategyRow() {
+  const row = document.getElementById('strategy-row');
+  row.innerHTML = '';
+  for (const s of STRATEGIES) {
+    const verdict = STATE.lastStrategies[s.id];
+    const verdictClass = verdict || 'pending';
+    const verdictText = verdict || '—';
+    const active = s.id === STATE.selectedStrategy;
+    const wrapper = document.createElement('label');
+    wrapper.className = 'strategy-pill' + (active ? ' active' : '');
+    wrapper.setAttribute('role', 'radio');
+    wrapper.setAttribute('aria-checked', active);
+    wrapper.innerHTML =
+      `<input type="radio" name="strategy" value="${s.id}" ${active ? 'checked' : ''}>` +
+      `<span class="name">${s.label}</span>` +
+      `<span class="verdict ${verdictClass}">${verdictText}</span>`;
+    wrapper.addEventListener('click', () => selectStrategy(s.id));
+    row.appendChild(wrapper);
+  }
+  renderStrategyVerdict();
+}
+
+function renderStrategyVerdict() {
+  const nameEl = document.getElementById('verdict-strategy-name');
+  const wordEl = document.getElementById('verdict-word');
+  const subEl = document.getElementById('verdict-subline');
+  const verdict = STATE.lastStrategies[STATE.selectedStrategy];
+  const meta = STRATEGIES.find(s => s.id === STATE.selectedStrategy);
+
+  if (!verdict) {
+    nameEl.textContent = meta ? meta.label.toUpperCase() : 'PICK A MOVE';
+    wordEl.textContent = '—';
+    wordEl.dataset.state = 'idle';
+    subEl.innerHTML = meta ? meta.blurb : '';
+    return;
+  }
+
+  // Brief swap animation: fade out, swap text, fade in.
+  wordEl.classList.add('swap');
+  setTimeout(() => {
+    nameEl.textContent = `${meta.label.toUpperCase()} SAYS`;
+    const display = verdict === 'neutral' ? 'SKIP' : verdict.toUpperCase();
+    wordEl.textContent = display;
+    wordEl.dataset.state = verdict === 'neutral' ? 'skip' : verdict;
+    subEl.innerHTML = buildVerdictSubline(STATE.selectedStrategy, verdict);
+    wordEl.classList.remove('swap');
+  }, 90);
+}
+
+function buildVerdictSubline(strategyId, verdict) {
+  const ref = STATE.lastFullStack;
+  const move = (STATE.bundle && STATE.selectedMoveIdx !== null)
+    ? STATE.bundle.moves[STATE.selectedMoveIdx]
+    : null;
+  if (!move || !ref) {
+    const meta = STRATEGIES.find(s => s.id === strategyId);
+    return meta ? meta.blurb : '';
+  }
+  const realized = ref.realized;
+  const predicted = ref.predicted;
+  const hasPred = predicted !== null && predicted !== undefined;
+  const realizedHtml = `realized <span class="num">${pct(realized)}</span>`;
+  const predHtml = hasPred
+    ? `predicted <span class="num">${pct(predicted)}</span>`
+    : `predicted <span class="num">—</span>`;
+  let deltaHtml = '';
+  if (hasPred) {
+    const delta = realized - predicted;
+    const cls = delta >= 0 ? 'delta-up' : 'delta-down';
+    const sign = delta >= 0 ? '+' : '';
+    deltaHtml = ` &nbsp;·&nbsp; gap <span class="${cls}">${sign}${(delta * 100).toFixed(2)}%</span>`;
+  }
+  return `${realizedHtml} &nbsp;·&nbsp; ${predHtml}${deltaHtml}`;
+}
+
+function selectStrategy(id) {
+  if (id === STATE.selectedStrategy) return;
+  STATE.selectedStrategy = id;
+  renderStrategyRow();
+}
+
 function renderToggleCaption(enabledCount, totalCount, chunksConsidered) {
   const el = document.getElementById('toggle-caption');
   if (enabledCount === 0) {
@@ -260,6 +360,8 @@ async function recomputeAttribution() {
     .filter(k => availableCounts[k] > 0).length;
 
   if (enabled.length === 0) {
+    // Invalidate any in-flight fetch so it can't land and clobber the empty render.
+    STATE.fetchSeq++;
     renderAttributionEmpty(move);
     renderToggleCaption(0, totalAvailable, 0);
     return;
@@ -327,6 +429,8 @@ function renderAttributionFromResponse(move, response) {
     },
     chunks: response.chunks,
   };
+  STATE.lastStrategies = response.strategies || {};
+  renderStrategyRow();
   renderAttributionDetails(renderableMove);
 }
 
@@ -334,6 +438,8 @@ function renderAttributionFromResponse(move, response) {
 function renderAttribution(bundle, moveIdx) {
   const card = document.getElementById('attribution-card');
   if (moveIdx === null || moveIdx === undefined) {
+    STATE.lastStrategies = {};
+    renderStrategyRow();
     document.getElementById('attr-title').textContent = 'Attribution';
     document.getElementById('attr-sub').textContent = 'Pick a flagged move to begin.';
     document.getElementById('kpis').hidden = true;
@@ -349,7 +455,11 @@ function renderAttribution(bundle, moveIdx) {
   // Cache the full-stack pre-baked attribution for the "vs full stack" reference.
   STATE.lastFullStack = bundle.moves[moveIdx].attribution;
 
+  STATE.lastStrategies = bundle.moves[moveIdx].strategies || {};
+  renderStrategyRow();
+
   renderAttributionDetails(bundle.moves[moveIdx]);
+  card.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
 }
 
 function renderAttributionDetails(move) {
@@ -497,8 +607,6 @@ function renderAttributionDetails(move) {
     banner.hidden = true;
   }
 
-  // Scroll attribution into view
-  card.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
 }
 
 // ---------- Interactions ----------

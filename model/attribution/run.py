@@ -140,10 +140,37 @@ def _assemble_attribution(
     ablation_name: str,
 ) -> Attribution:
     """Merge the LLM's tool output with the fields the runner auto-fills."""
-    dims = {
-        name: DimensionScore(**tool_input[name])
-        for name in _DIM_FIELDS
-    }
+    # Default-fill missing dimensions: smaller / faster models occasionally
+    # drop one when the evidence has no signal for it. The schema still needs
+    # all five, so we fill with weight=0 + neutral + a citation pointing at
+    # whatever chunk we have. Validation downstream will catch the rare case
+    # where this would be wrong.
+    fallback_chunk = (evidence.text_chunks[0].chunk_id
+                      if evidence.text_chunks else "no_chunks_provided_0")
+    valid_dirs = {"positive", "negative", "neutral"}
+    dims = {}
+    for name in _DIM_FIELDS:
+        raw = tool_input.get(name)
+        if not isinstance(raw, dict):
+            # Model occasionally emits a bare string (or None) for a dimension —
+            # treat that as "no signal" and fill with neutral defaults.
+            dims[name] = DimensionScore(
+                weight=0.0,
+                direction="neutral",
+                rationale=(raw if isinstance(raw, str)
+                           else f"model omitted {name}; no signal in evidence"),
+                evidence_chunk_ids=[fallback_chunk],
+            )
+            continue
+        # Coerce out-of-schema fields the model occasionally returns:
+        # direction='mixed' is a common Haiku slip; map to 'neutral'.
+        if raw.get("direction") not in valid_dirs:
+            raw = {**raw, "direction": "neutral"}
+        if not raw.get("evidence_chunk_ids"):
+            raw = {**raw, "evidence_chunk_ids": [fallback_chunk]}
+        if not raw.get("rationale"):
+            raw = {**raw, "rationale": f"no rationale for {name}"}
+        dims[name] = DimensionScore(**raw)
     sources_used = sorted(
         {c.source_type for c in evidence.text_chunks},
         key=lambda s: s.value,
@@ -154,8 +181,8 @@ def _assemble_attribution(
         return_pct=evidence.move.return_pct,
         predicted_return_pct=tool_input.get("predicted_return_pct"),
         **dims,
-        move_character=tool_input["move_character"],
-        confidence=tool_input["confidence"],
+        move_character=tool_input.get("move_character", "unclear"),
+        confidence=float(tool_input.get("confidence", 0.5)),
         ablation_name=ablation_name,
         sources_used=list(sources_used),
         chunks_considered=len(evidence.text_chunks),

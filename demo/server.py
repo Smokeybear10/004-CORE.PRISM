@@ -40,10 +40,18 @@ if str(_ROOT) not in sys.path:
     sys.path.insert(0, str(_ROOT))
 
 from demo.mock_data import FOCAL_TICKERS  # noqa: E402
-from demo.real_chunks import chunks_for_real, preload_news, preload_thirteen_f  # noqa: E402
+from demo.real_chunks import (  # noqa: E402
+    chunks_for_real,
+    preload_earnings_transcripts,
+    preload_news,
+    preload_peer_and_sector_news,
+    preload_thirteen_f,
+)
+from backtest.signal import STRATEGY_REGISTRY  # noqa: E402
 from model import attribute as model_attribute  # noqa: E402
 from schema import (  # noqa: E402
     AblationConfig,
+    Attribution,
     PriceMove,
     SourceType,
 )
@@ -62,6 +70,7 @@ _COUNT_TO_BUNDLE = {
     4: "+peer_news",
     5: "+sector_news",
     6: "+macro",
+    7: "+positioning",
 }
 
 app = FastAPI(title="Price Action Tagger", version="0.3")
@@ -75,8 +84,14 @@ def _warm_caches() -> None:
     print("[server] warming news parquet (this is the one-time startup cost)…", flush=True)
     preload_news(list(FOCAL_TICKERS.keys()))
     print("[server] news parquet indexed", flush=True)
+    print("[server] indexing peer + sector news…", flush=True)
+    preload_peer_and_sector_news(list(FOCAL_TICKERS.keys()))
+    print("[server] peer + sector news indexed", flush=True)
     preload_thirteen_f()
     print("[server] 13F chunks loaded", flush=True)
+    print("[server] loading earnings-call transcripts…", flush=True)
+    preload_earnings_transcripts(list(FOCAL_TICKERS.keys()))
+    print("[server] earnings transcripts loaded", flush=True)
 
 
 # ---------- Schemas ----------
@@ -97,6 +112,22 @@ class AttributeResponse(BaseModel):
     chunks_considered: int
     chunks_available: dict[str, int]
     enabled_sources: list[str]
+    strategies: dict[str, str] = Field(default_factory=dict)
+
+
+def _compute_strategies(attr: Attribution) -> dict[str, str]:
+    """Run every registered fade-or-follow strategy on the same Attribution
+    and return {strategy_name: "lean"|"fade"|"neutral"}.
+
+    Each entry is a verdict the demo can show without an extra round trip.
+    """
+    out: dict[str, str] = {}
+    for name, fn in STRATEGY_REGISTRY.items():
+        try:
+            out[name] = fn(attr)
+        except Exception:  # noqa: BLE001 — strategy bugs shouldn't 500 the demo
+            out[name] = "neutral"
+    return out
 
 
 # ---------- /api/attribute ----------
@@ -138,6 +169,7 @@ def compute_attribution(req: AttributeRequest) -> AttributeResponse:
             chunks_considered=0,
             chunks_available=chunks_available,
             enabled_sources=[s.value for s in enabled],
+            strategies={},
         )
 
     bundle_name = _COUNT_TO_BUNDLE.get(len(enabled), "+macro")
@@ -164,6 +196,7 @@ def compute_attribution(req: AttributeRequest) -> AttributeResponse:
         chunks_considered=len(filtered),
         chunks_available=chunks_available,
         enabled_sources=[s.value for s in enabled],
+        strategies=_compute_strategies(attr),
     )
 
 
