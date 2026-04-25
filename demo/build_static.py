@@ -78,9 +78,14 @@ def build_for_ticker(ticker: str, meta: dict, end_date: date) -> dict:
         for d, c in zip(prices_df["date"], prices_df["close"])
     ]
 
-    full_moves = detect_significant_moves(load_prices([ticker], as_of=end_date))
+    full_moves = detect_significant_moves(
+        load_prices([ticker], as_of=end_date),
+        lookback_vol=63,  # ~3 trading months
+    )
     moves_in_window: list[PriceMove] = [
-        m for m in full_moves if start_date <= m.move_date <= end_date
+        m for m in full_moves
+        if start_date <= m.move_date <= end_date
+        and abs(m.vol_zscore) >= 3.0  # demo: keep only 3-sigma+ moves to declutter chart
     ]
 
     moves_payload: list[dict] = []

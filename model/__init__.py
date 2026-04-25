@@ -41,33 +41,66 @@ def attribute(
     Attribute `move` across the 5 dimensions using `chunks` (already filtered
     to source types in config.sources and to publication_date <= move.move_date).
 
-    MUST set:
-        attribution.ablation_name        = config.name
-        attribution.sources_used         = config.sources
-        attribution.predicted_return_pct = predict_expected_return(move, chunks)
-        every DimensionScore.evidence_chunk_ids non-empty and referencing real chunks
+    Live path: when ANTHROPIC_API_KEY is set, calls `model.attribution.run` to
+    get a real Claude attribution with grounded rationales.
 
-    PLACEHOLDER IMPLEMENTATION
-    --------------------------
-    Until the real Claude-backed attribution lands, this delegates to
-    `backtest.fixtures.generate_attribution`, which synthesizes a plausible
-    Attribution from the PriceMove's realized characteristics. The
-    fundamental-vs-non-fundamental classification is noisy (randomized with a
-    per-ablation noise schedule that decreases as more sources are added), so
-    results here test the PIPELINE not the MODEL.
-
-    When the real LLM attribution is ready, replace the body of this function
-    with the Claude call. Every downstream consumer already works with a
-    properly-shaped Attribution, so nothing else has to change.
-
-    TODO: Claude prompt + structured output (pydantic-ai or raw JSON schema).
+    Fallback path: when the key is unset OR the live call raises (network,
+    validation, etc.), delegates to `backtest.fixtures.generate_attribution`
+    so tests + offline demos still produce a properly-shaped Attribution.
     """
+    import os
+
+    if os.environ.get("ANTHROPIC_API_KEY"):
+        try:
+            return _attribute_live(move, chunks, config)
+        except Exception as exc:
+            # Fall through to placeholder. We surface the failure in
+            # model_notes so the UI can show why we degraded.
+            attr = _attribute_placeholder(move, chunks, config)
+            attr.model_notes = (
+                f"live LLM call failed ({type(exc).__name__}: {exc}); "
+                f"falling back to placeholder fixture"
+            )
+            return attr
+    return _attribute_placeholder(move, chunks, config)
+
+
+def _attribute_live(
+    move: PriceMove,
+    chunks: list[TextChunk],
+    config: AblationConfig,
+) -> Attribution:
+    from datetime import timedelta
+    from model.attribution.run import run_attribution
+    from schema import JoinedEvidence
+
+    if not chunks:
+        # run_attribution would have nothing to cite; placeholder handles this.
+        return _attribute_placeholder(move, chunks, config)
+
+    pub_dates = [c.publication_date for c in chunks]
+    evidence = JoinedEvidence(
+        move=move,
+        window_start=min(pub_dates),
+        window_end=max(pub_dates) if max(pub_dates) > move.move_date
+                   else move.move_date + timedelta(days=0),
+        events=[],
+        text_chunks=chunks,
+        earnings_day=False,
+    )
+    attr = run_attribution(evidence, ablation_name=config.name, validate=False)
+    attr.sources_used = list(config.sources)
+    attr.chunks_considered = len(chunks)
+    return attr
+
+
+def _attribute_placeholder(
+    move: PriceMove,
+    chunks: list[TextChunk],
+    config: AblationConfig,
+) -> Attribution:
     from backtest.fixtures import generate_attribution
 
-    # Mix the chunk source-set into the rng seed so toggling any source in the
-    # demo visibly shifts weights / character / confidence — without this, the
-    # placeholder fixture is keyed only on (ticker, move_date) and the UI looks
-    # frozen when sources change. Stable: same chunk set → same output.
     chunk_sig = "|".join(sorted({c.source_type.value for c in chunks})) or "_empty"
     chunk_sig += f"|n={len(chunks)}"
     chunk_seed = hash((move.ticker, move.move_date.toordinal(), chunk_sig)) & 0x7FFFFFFF
@@ -81,13 +114,10 @@ def attribute(
         seed=chunk_seed,
         sources_used=list(config.sources),
     )
-    # Echo the actual chunk IDs we were given into the evidence slots so the
-    # contract "evidence_chunk_ids reference real chunks" holds.
     real_ids = [c.chunk_id for c in chunks[:5]] or ["no_chunks_provided_0"]
     for ds in (attr.demand, attr.pricing, attr.competitive,
                attr.management_credibility, attr.macro):
         ds.evidence_chunk_ids = list(real_ids)
-    # Pin the contract fields the docstring calls out explicitly:
     attr.ablation_name = config.name
     attr.sources_used = list(config.sources)
     attr.chunks_considered = len(chunks)

@@ -11,6 +11,30 @@ pip install -r requirements.txt
 pytest tests/
 ```
 
+## Run the demo site
+
+The clickable demo is a FastAPI backend (`demo/server.py`) serving the static
+frontend in `demo/static/`.
+
+```bash
+# 1. One-time: log into HuggingFace (the bundled news + transcripts parquets
+#    live in the private BridgewaterAIHackathon repo).
+huggingface-cli login
+
+# 2. From the repo root:
+uvicorn demo.server:app --host 127.0.0.1 --port 8000
+
+# 3. Open http://127.0.0.1:8000
+```
+
+Startup warms three caches in order: news parquet (~628 MB, indexed per focal
+ticker), 13F chunks (JSONL), earnings transcripts (~1.7 GB, pyarrow-filtered to
+the focal universe). First boot downloads the parquets to
+`ingestion/earnings_news/.cache/` and takes a couple of minutes; subsequent
+boots are ~30–60s. Per-request attribution is milliseconds.
+
+Focal universe is currently `ABT, ACU, AIR, AMD, APD` (see `demo/mock_data.py`).
+
 ## Pipeline (6 steps, mentor framework)
 
 | Step | Module | Input → Output |

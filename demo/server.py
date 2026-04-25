@@ -44,6 +44,7 @@ from demo.real_chunks import (  # noqa: E402
     chunks_for_real,
     preload_earnings_transcripts,
     preload_news,
+    preload_peer_and_sector_news,
     preload_thirteen_f,
 )
 from model import attribute as model_attribute  # noqa: E402
@@ -81,6 +82,9 @@ def _warm_caches() -> None:
     print("[server] warming news parquet (this is the one-time startup cost)…", flush=True)
     preload_news(list(FOCAL_TICKERS.keys()))
     print("[server] news parquet indexed", flush=True)
+    print("[server] indexing peer + sector news…", flush=True)
+    preload_peer_and_sector_news(list(FOCAL_TICKERS.keys()))
+    print("[server] peer + sector news indexed", flush=True)
     preload_thirteen_f()
     print("[server] 13F chunks loaded", flush=True)
     print("[server] loading earnings-call transcripts…", flush=True)
