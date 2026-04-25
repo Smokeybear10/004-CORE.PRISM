@@ -185,10 +185,27 @@ def compute_attribution(req: AttributeRequest) -> AttributeResponse:
     attr_dump = attr.model_dump(mode="json")
     attr_dump["ablation_name"] = "custom"
 
-    # Send only the first 10 filtered chunks over the wire — `model.attribute`
-    # uses `chunks[:5]` for evidence, so 10 is a comfortable buffer. Keeps
-    # responses small even when `filtered` is thousands of news items.
-    chunks_payload = [c.model_dump(mode="json") for c in filtered[:10]]
+    # Collect every chunk_id the model cited so the UI can resolve all
+    # citations. Without this, citations to chunks past the top-10 by
+    # relevance show as "Missing chunk" in the UI, even though the IDs are
+    # genuine — the frontend just didn't receive them.
+    cited_ids: set[str] = set()
+    for dim_name in (
+        "demand", "pricing", "competitive", "management_credibility", "macro",
+    ):
+        dim = (attr_dump.get(dim_name) or {})
+        for cid in (dim.get("evidence_chunk_ids") or []):
+            cited_ids.add(cid)
+
+    chunk_by_id = {c.chunk_id: c for c in filtered}
+    # Top-10 by relevance + every cited chunk that wasn't already in the top-10.
+    payload_set: dict[str, "TextChunk"] = {}
+    for c in filtered[:10]:
+        payload_set[c.chunk_id] = c
+    for cid in cited_ids:
+        if cid in chunk_by_id and cid not in payload_set:
+            payload_set[cid] = chunk_by_id[cid]
+    chunks_payload = [c.model_dump(mode="json") for c in payload_set.values()]
 
     return AttributeResponse(
         attribution=attr_dump,
