@@ -222,3 +222,128 @@ def test_build_evidence_with_empty_chunks_uses_move_date():
     assert evidence.window_start == move.move_date
     assert evidence.window_end == move.move_date
     assert evidence.text_chunks == []
+
+
+# ---------- Rate-limit retry ----------
+
+
+def _rate_limit_error(retry_after: str | None = None):
+    """Construct a RateLimitError without going through the SDK's strict init."""
+    import anthropic
+
+    err = anthropic.RateLimitError.__new__(anthropic.RateLimitError)
+    Exception.__init__(err, "stub rate limit")
+    if retry_after is not None:
+        from types import SimpleNamespace
+        err.response = SimpleNamespace(headers={"retry-after": retry_after})
+    else:
+        err.response = None
+    return err
+
+
+def test_rate_limit_retried_then_succeeds(monkeypatch):
+    """A single 429 followed by success → retry, return live result."""
+    monkeypatch.setenv(model.LIVE_ENV_VAR, "1")
+    monkeypatch.setenv("ANTHROPIC_API_KEY", "sk-doesnotmatter")
+
+    sleeps: list[float] = []
+    monkeypatch.setattr(model.time, "sleep", lambda s: sleeps.append(s))
+
+    call_count = {"n": 0}
+
+    def stub_run_attribution(evidence, ablation_name="full", **kwargs):
+        call_count["n"] += 1
+        if call_count["n"] == 1:
+            raise _rate_limit_error()
+        # second call: return a hand-built Attribution
+        cid = evidence.text_chunks[0].chunk_id
+        dim = lambda w: DimensionScore(
+            weight=w, direction="negative", rationale="stub",
+            evidence_chunk_ids=[cid],
+        )
+        return Attribution(
+            ticker=evidence.move.ticker,
+            move_date=evidence.move.move_date,
+            return_pct=evidence.move.return_pct,
+            predicted_return_pct=evidence.move.return_pct,
+            demand=dim(0.6), pricing=dim(0.10), competitive=dim(0.10),
+            management_credibility=dim(0.10), macro=dim(0.10),
+            move_character="structural", confidence=0.85,
+            ablation_name=ablation_name, sources_used=[SourceType.NEWS],
+            chunks_considered=len(evidence.text_chunks),
+        )
+
+    import model.attribution as ma
+    monkeypatch.setattr(ma, "run_attribution", stub_run_attribution)
+
+    attr = model.attribute(_move(), _chunks(), _config())
+    assert attr.model_notes.startswith(model.LIVE_NOTE_PREFIX)
+    assert call_count["n"] == 2
+    assert sleeps and sleeps[0] >= model.RATE_LIMIT_BASE_DELAY_S
+
+
+def test_rate_limit_exhausted_falls_back_to_placeholder(monkeypatch):
+    """Every attempt 429s → falls back with honest model_notes."""
+    monkeypatch.setenv(model.LIVE_ENV_VAR, "1")
+    monkeypatch.setenv("ANTHROPIC_API_KEY", "sk-doesnotmatter")
+
+    sleeps: list[float] = []
+    monkeypatch.setattr(model.time, "sleep", lambda s: sleeps.append(s))
+
+    call_count = {"n": 0}
+
+    def always_429(evidence, ablation_name="full", **kwargs):
+        call_count["n"] += 1
+        raise _rate_limit_error()
+
+    import model.attribution as ma
+    monkeypatch.setattr(ma, "run_attribution", always_429)
+
+    attr = model.attribute(_move(), _chunks(), _config())
+    # All attempts exhausted; placeholder fired.
+    assert attr.model_notes.startswith(model.PLACEHOLDER_NOTE_PREFIX)
+    assert "RateLimitError" in attr.model_notes
+    # MAX_RETRIES + 1 attempts total = 3 calls, 2 sleeps between them.
+    assert call_count["n"] == model.RATE_LIMIT_MAX_RETRIES + 1
+    assert len(sleeps) == model.RATE_LIMIT_MAX_RETRIES
+
+
+def test_retry_delay_honors_retry_after_header():
+    err = _rate_limit_error(retry_after="7")
+    assert model._retry_delay_for(err, attempt=0) == 7.0
+
+
+def test_retry_delay_caps_retry_after_at_max():
+    err = _rate_limit_error(retry_after=str(int(model.RATE_LIMIT_MAX_DELAY_S * 10)))
+    assert model._retry_delay_for(err, attempt=0) == model.RATE_LIMIT_MAX_DELAY_S
+
+
+def test_retry_delay_falls_back_to_exponential_backoff():
+    err = _rate_limit_error(retry_after=None)
+    d0 = model._retry_delay_for(err, attempt=0)
+    d1 = model._retry_delay_for(err, attempt=1)
+    assert d0 == model.RATE_LIMIT_BASE_DELAY_S
+    assert d1 == min(model.RATE_LIMIT_BASE_DELAY_S * 2, model.RATE_LIMIT_MAX_DELAY_S)
+
+
+def test_non_rate_limit_errors_do_not_retry(monkeypatch):
+    """Random RuntimeError must NOT be retried (only 429s are)."""
+    monkeypatch.setenv(model.LIVE_ENV_VAR, "1")
+    monkeypatch.setenv("ANTHROPIC_API_KEY", "sk-doesnotmatter")
+
+    sleeps: list[float] = []
+    monkeypatch.setattr(model.time, "sleep", lambda s: sleeps.append(s))
+
+    call_count = {"n": 0}
+
+    def boom(evidence, ablation_name="full", **kwargs):
+        call_count["n"] += 1
+        raise RuntimeError("unrelated failure")
+
+    import model.attribution as ma
+    monkeypatch.setattr(ma, "run_attribution", boom)
+
+    attr = model.attribute(_move(), _chunks(), _config())
+    assert attr.model_notes.startswith(model.PLACEHOLDER_NOTE_PREFIX)
+    assert call_count["n"] == 1
+    assert sleeps == []
