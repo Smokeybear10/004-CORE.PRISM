@@ -811,6 +811,43 @@
       letter-spacing: 0.02em;
     }
 
+    /* Inline cited_evidence under each dimension's rationale. Surfaces the
+       LLM's per-citation quote + reasoning directly so users see "how the
+       model concluded" without clicking a chunk-id chip to expand. */
+    .dim-citations {
+      grid-column: 2 / -1;
+      margin: 2px 0 6px;
+      padding-left: 12px;
+      border-left: 2px solid var(--rule-strong);
+    }
+    .dim-citation {
+      margin: 8px 0;
+    }
+    .dim-citation .quote {
+      font: italic 500 13px var(--serif);
+      color: var(--ink);
+      margin: 0 0 4px;
+      line-height: 1.5;
+    }
+    .dim-citation .reasoning {
+      font: 400 12px var(--serif);
+      color: var(--ink-2);
+      line-height: 1.5;
+    }
+    .dim-citation .chunk-ref {
+      font: 500 10px var(--mono);
+      color: var(--oxblood);
+      background: var(--oxblood-soft);
+      padding: 1px 5px;
+      margin-right: 6px;
+      border-radius: 3px;
+      letter-spacing: 0.02em;
+      cursor: pointer;
+    }
+    .dim-citation .chunk-ref:hover {
+      background: rgba(122,31,31,0.15);
+    }
+
     /* Evidence */
     .ev-row {
       padding: 14px 0;
@@ -2181,6 +2218,14 @@ function pickAblationName(enabledSet) {
 // the two move in lockstep — meaningful, since the model only makes
 // claims at events. If predicted is null for an event (no chunks of
 // the right type), the gap factor stays unchanged.
+//
+// Returns the series split into two arrays so the caller can render
+// "model has data here" vs. "model has no prediction" as visually
+// distinct line styles. yDense = segments after an event with a real
+// prediction (drawn solid/dashed). ySparse = pre-first-event days +
+// segments after a no-prediction event (drawn as dotted-with-gaps so
+// users can see at a glance "the model isn't claiming anything here,
+// the line is just inheriting the prior cumulative gap").
 function computePredictedSeries(bundle, ablationName) {
   const eventByDate = new Map();
   const eventsSorted = bundle.moves
@@ -2191,22 +2236,36 @@ function computePredictedSeries(bundle, ablationName) {
   for (const e of eventsSorted) {
     const pred = e.predictions_by_ablation?.[ablationName];
     const denom = 1 + e.return_pct;
-    if (pred !== null && pred !== undefined && denom !== 0) {
+    const hasPred = (pred !== null && pred !== undefined);
+    if (hasPred && denom !== 0) {
       cumGap *= (1 + pred) / denom;
     }
-    eventByDate.set(e.move_date, { cumGap, idx: e.idx, predicted: pred });
+    eventByDate.set(e.move_date, {
+      cumGap, idx: e.idx, predicted: pred, hasPred,
+    });
   }
 
+  // activeStyle tracks the most recent event's prediction status. Each
+  // segment up to the next event takes that style. Pre-first-event we
+  // start in 'sparse' (no claim yet); the line trivially equals actual
+  // there, but rendering it as dots makes that meaning explicit.
+  const dates = bundle.prices.map(p => p.date);
+  const yDense = new Array(dates.length).fill(null);
+  const ySparse = new Array(dates.length).fill(null);
   let runningGap = 1.0;
-  const dates = [];
-  const predicted = [];
-  for (const p of bundle.prices) {
+  let activeStyle = 'sparse';
+  for (let i = 0; i < bundle.prices.length; i++) {
+    const p = bundle.prices[i];
     const ev = eventByDate.get(p.date);
-    if (ev) runningGap = ev.cumGap;
-    dates.push(p.date);
-    predicted.push(p.close * runningGap);
+    if (ev) {
+      runningGap = ev.cumGap;
+      activeStyle = ev.hasPred ? 'dense' : 'sparse';
+    }
+    const yVal = p.close * runningGap;
+    if (activeStyle === 'dense') yDense[i] = yVal;
+    else ySparse[i] = yVal;
   }
-  return { dates, predicted, eventByDate };
+  return { dates, yDense, ySparse, eventByDate };
 }
 
 function renderChart(bundle) {
@@ -2244,14 +2303,31 @@ function renderChart(bundle) {
   ];
 
   if (overlay) {
+    // "Dense" segments — model has a prediction at the most recent event,
+    // so the cumulative-gap line carries real information. Drawn dashed.
     traces.push({
       x: overlay.dates,
-      y: overlay.predicted,
+      y: overlay.yDense,
       mode: 'lines',
-      line: { color: '#c2410c', width: 1.6, dash: 'dash' },
+      line: { color: '#c2410c', width: 1.8, dash: 'dash' },
       name: `Model prediction (${ablationName})`,
       hovertemplate: '%{x}<br>predicted $%{y:.2f}<extra></extra>',
-      opacity: 0.92,
+      opacity: 0.95,
+      connectgaps: false,
+    });
+    // "Sparse" segments — most recent event had no prediction. The line
+    // is just inheriting the prior cumulative gap, not making a claim.
+    // Wide dotted pattern (2px dot, 8px gap) makes "no data here"
+    // immediately legible.
+    traces.push({
+      x: overlay.dates,
+      y: overlay.ySparse,
+      mode: 'lines',
+      line: { color: '#c2410c', width: 1.4, dash: '2px,8px' },
+      name: 'No prediction (line inherits prior gap)',
+      hovertemplate: '%{x}<br>no model prediction · $%{y:.2f}<extra></extra>',
+      opacity: 0.7,
+      connectgaps: false,
     });
   }
 
@@ -3134,11 +3210,31 @@ function renderDimensions(panel) {
     const citeBadges = cites.length
       ? ' ' + cites.slice(0, 3).map(c => `<code data-chunk-id="${escapeHtml(c)}">${escapeHtml(c)}</code>`).join(' ')
       : '';
+    // Inline cited_evidence: show top-2 quotes + per-citation reasoning
+    // directly under the rationale, no click required. The chunk-id badges
+    // above still expand to full chunk text via toggleChunkPreview.
+    // Synthetic / older bundles have empty cited_evidence — gracefully
+    // render nothing in that case (the badges + rationale carry the load).
+    const cited = (d.cited_evidence || []).filter(ce => ce && (ce.quote || ce.reasoning)).slice(0, 2);
+    const citationsHtml = cited.length
+      ? '<div class="dim-citations">' + cited.map(ce =>
+          '<div class="dim-citation">' +
+            (ce.quote
+              ? `<blockquote class="quote">${escapeHtml(ce.quote)}</blockquote>`
+              : '') +
+            '<div class="reasoning">' +
+              `<code class="chunk-ref" data-chunk-id="${escapeHtml(ce.chunk_id || '')}">${escapeHtml(ce.chunk_id || '')}</code>` +
+              escapeHtml(ce.reasoning || '') +
+            '</div>' +
+          '</div>'
+        ).join('') + '</div>'
+      : '';
     row.innerHTML =
       `<div class="name"><span class="arrow ${dir}">${ARROW[dir] || '·'}</span> ${d.label}</div>` +
       `<div class="bar"><div class="fill ${dir}" style="width:${Math.max(2, w*100)}%"></div></div>` +
       `<div class="num ${dir}">${sym}${w.toFixed(2)}</div>` +
-      `<div class="dim-rationale">${escapeHtml(d.rationale || 'no rationale')}${citeBadges}</div>`;
+      `<div class="dim-rationale">${escapeHtml(d.rationale || 'no rationale')}${citeBadges}</div>` +
+      citationsHtml;
     row.addEventListener('mouseenter', () => bindHighlight(cites, true));
     row.addEventListener('mouseleave', () => bindHighlight(cites, false));
 

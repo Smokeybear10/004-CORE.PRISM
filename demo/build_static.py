@@ -12,6 +12,7 @@ Output:
 
 from __future__ import annotations
 
+import asyncio
 import json
 import sys
 from datetime import date, timedelta
@@ -75,6 +76,47 @@ DEMO_ABLATION_BUNDLES: dict[str, list[SourceType]] = {
 OUT_DIR = _ROOT / "demo" / "static" / "data"
 WINDOW_YEARS = 5
 CHUNK_TEXT_CAP = 600  # trim chunk body for payload size
+
+# Cap concurrent live LLM calls per move at 4. Anthropic per-key tier
+# allows much higher, but 4 keeps a single move's burst small enough that
+# rate-limit retries don't dominate wall time.
+ABLATION_CONCURRENCY = 4
+
+
+async def _one_ablation_prediction(
+    m, chunks, ab_name: str, ab_sources: list, sem: "asyncio.Semaphore",
+) -> "tuple[str, float | None]":
+    """Run one ablation's filtered model.attribute() call and return the
+    predicted_return_pct. None when the source filter zeros out the chunk
+    pool (matches server.py's behavior — UI hides the overlay for that
+    ablation). Wraps the sync call in to_thread so we can gather siblings
+    in parallel without rewriting model.attribute itself."""
+    ab_filtered = [c for c in chunks if c.source_type in ab_sources]
+    if not ab_filtered:
+        return ab_name, None
+    async with sem:
+        cfg = AblationConfig(
+            name=ab_name, sources=list(ab_sources),
+            description="pre-baked ablation",
+        )
+        attr = await asyncio.to_thread(model_attribute, m, ab_filtered, cfg)
+    return ab_name, (
+        round(float(attr.predicted_return_pct), 6)
+        if attr.predicted_return_pct is not None else None
+    )
+
+
+async def _gather_predictions_by_ablation(m, chunks) -> "dict[str, float | None]":
+    """Fan out the 7 canonical ablations for one move and gather their
+    predicted_return_pct values into a {ablation_name: float|None} dict.
+    Cap is ABLATION_CONCURRENCY so a single move's burst stays polite."""
+    sem = asyncio.Semaphore(ABLATION_CONCURRENCY)
+    tasks = [
+        _one_ablation_prediction(m, chunks, name, sources, sem)
+        for name, sources in DEMO_ABLATION_BUNDLES.items()
+    ]
+    results = await asyncio.gather(*tasks)
+    return dict(results)
 
 
 def _news_coverage_start(ticker: str) -> "date | None":
@@ -180,24 +222,12 @@ def build_for_ticker(ticker: str, meta: dict, end_date: date) -> dict:
         # Per-ablation predicted_return_pct, baked once at build time so the
         # chart-overlay in app.js can switch source filters without round
         # trips. Each ablation re-filters the same `chunks` pool by source
-        # type and re-attributes — synthetic path is fast (~ms per call).
-        predictions_by_ablation: dict[str, "float | None"] = {}
-        for ab_name, ab_sources in DEMO_ABLATION_BUNDLES.items():
-            ab_filtered = [c for c in chunks if c.source_type in ab_sources]
-            if not ab_filtered:
-                # Match server.py behavior on zero-source-after-filter: no
-                # prediction, UI hides this ablation's overlay if selected.
-                predictions_by_ablation[ab_name] = None
-                continue
-            ab_attr = model_attribute(
-                m, ab_filtered,
-                AblationConfig(name=ab_name, sources=list(ab_sources),
-                               description="pre-baked ablation"),
-            )
-            predictions_by_ablation[ab_name] = (
-                round(float(ab_attr.predicted_return_pct), 6)
-                if ab_attr.predicted_return_pct is not None else None
-            )
+        # type and re-attributes. Live LLM mode dominates wall-time here, so
+        # we run the 7 ablation calls in parallel via asyncio + a semaphore
+        # cap — synthetic mode is fast enough that the overhead is fine.
+        predictions_by_ablation = asyncio.run(
+            _gather_predictions_by_ablation(m, chunks)
+        )
 
         # Bundle's `chunks` field must include every chunk_id the attribution
         # cites, otherwise the UI flags valid citations as "Missing chunk".
