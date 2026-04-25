@@ -93,11 +93,18 @@ def run_baseline(events_df: pd.DataFrame, baseline_name: str,
 
 
 def run_all(events_df: pd.DataFrame, horizon: int = 5, use_excess: bool = True,
-            seed: int = 0) -> list[BacktestResult]:
-    """Run every ablation and every baseline, return combined list of results."""
+            seed: int = 0,
+            strategy: str = "fundamental_vs_nonfundamental") -> list[BacktestResult]:
+    """Run every ablation and every baseline, return combined list of results.
+
+    `strategy` selects the fade-or-follow framework for structured ablations:
+    one of `STRATEGY_REGISTRY`'s keys (see backtest/frameworks.py for the
+    additions). Baselines are framework-independent.
+    """
     results: list[BacktestResult] = []
     for name in ABLATION_BUNDLES:
-        r, _ = run_ablation(events_df, name, horizon=horizon, use_excess=use_excess, seed=seed)
+        r, _ = run_ablation(events_df, name, horizon=horizon, use_excess=use_excess,
+                            strategy=strategy, seed=seed)
         results.append(r)
     for name in BASELINES:
         r, _ = run_baseline(events_df, name, horizon=horizon, use_excess=use_excess)
@@ -130,6 +137,7 @@ def results_to_frame(
 
 
 def main(argv: Optional[list[str]] = None):
+    from backtest.signal import STRATEGY_REGISTRY
     p = argparse.ArgumentParser()
     p.add_argument("--events",    default="events_focal.parquet")
     p.add_argument("--universe",  default="significant",
@@ -138,6 +146,10 @@ def main(argv: Optional[list[str]] = None):
                    help="run only this ablation (default: all)")
     p.add_argument("--baseline",  default=None,
                    help="run only this baseline (default: all)")
+    p.add_argument("--strategy",  default="fundamental_vs_nonfundamental",
+                   choices=sorted(STRATEGY_REGISTRY),
+                   help="fade-or-follow framework for structured ablations "
+                        "(does not affect baselines)")
     p.add_argument("--horizon",   type=int, default=5)
     p.add_argument("--raw",       action="store_true",
                    help="use raw forward returns (default: SPY-excess)")
@@ -151,7 +163,8 @@ def main(argv: Optional[list[str]] = None):
 
     events_df = _load_events(args.events, args.universe, seed=args.seed)
     print(f"Universe: {args.universe}  |  events: {len(events_df):,}  |  horizon: {args.horizon}d"
-          f"  |  returns: {'raw' if args.raw else 'SPY-excess'}")
+          f"  |  returns: {'raw' if args.raw else 'SPY-excess'}  "
+          f"|  strategy: {args.strategy}")
 
     use_excess = not args.raw
     results: list[BacktestResult] = []
@@ -168,14 +181,16 @@ def main(argv: Optional[list[str]] = None):
 
     if args.ablation:
         _record(*run_ablation(events_df, args.ablation, horizon=args.horizon,
-                              use_excess=use_excess, seed=args.seed))
+                              use_excess=use_excess, strategy=args.strategy,
+                              seed=args.seed))
     if args.baseline:
         _record(*run_baseline(events_df, args.baseline, horizon=args.horizon,
                               use_excess=use_excess))
     if not args.ablation and not args.baseline:
         for name in ABLATION_BUNDLES:
             _record(*run_ablation(events_df, name, horizon=args.horizon,
-                                  use_excess=use_excess, seed=args.seed))
+                                  use_excess=use_excess, strategy=args.strategy,
+                                  seed=args.seed))
         for name in BASELINES:
             _record(*run_baseline(events_df, name, horizon=args.horizon,
                                   use_excess=use_excess))

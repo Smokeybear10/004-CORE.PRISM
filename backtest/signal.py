@@ -47,9 +47,16 @@ def strategy_fundamental_vs_nonfundamental(attr: Attribution) -> FadeFollow:
     return "neutral"
 
 
-# Future frameworks can be added here and selected via runner --strategy flag.
+# Registry of fade-or-follow frameworks. Add a new strategy by writing a
+# function with signature `(Attribution) -> FadeFollow` and registering it
+# here; runner --strategy <name> and attribution_to_trade(strategy=<name>)
+# both dispatch through this dict. Alternative frameworks (expected vs
+# realized, dimension-weighted, hybrid) live in backtest.frameworks.
+from backtest.frameworks import FRAMEWORK_STRATEGIES
+
 STRATEGY_REGISTRY = {
     "fundamental_vs_nonfundamental": strategy_fundamental_vs_nonfundamental,
+    **FRAMEWORK_STRATEGIES,
 }
 
 

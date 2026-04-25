@@ -6,6 +6,20 @@ Public API:
     - predict_expected_return(move, chunks) -> float              (used by attribute)
     - check_coherence(attribution) -> CoherenceCheck              (Step 5 gate)
 
+`attribute()` is the demo / runner entry point. It will call the real
+Claude-backed `model.attribution.run_attribution` when LIVE mode is enabled
+(see `_should_use_live` below) and fall back to the synthetic placeholder
+otherwise. The returned Attribution always sets `model_notes` to indicate
+which path produced it so downstream reports can stay honest about what's
+real and what's placeholder.
+
+LIVE mode opt-in:
+    export BW_USE_LIVE_ATTRIBUTION=1
+    export ANTHROPIC_API_KEY=sk-ant-...
+
+Default is OFF — running the test suite or the synthetic-events backtest
+should never silently bill the Anthropic account.
+
 Prompt-iteration rule (mentor, explicit):
     Iterate prompts using a FROZEN test case: pick one (ticker, date) pair with
     a known cause, store expected outputs in tests/fixtures/, and don't change
@@ -23,13 +37,117 @@ Foreknowledge defense:
 
 from __future__ import annotations
 
+import logging
+import os
+from typing import Optional
+
 from schema import (
     AblationConfig,
     Attribution,
     CoherenceCheck,
+    JoinedEvidence,
     PriceMove,
     TextChunk,
 )
+
+log = logging.getLogger(__name__)
+
+
+# ---------- LIVE / placeholder gate ----------
+
+LIVE_ENV_VAR = "BW_USE_LIVE_ATTRIBUTION"
+LIVE_NOTE_PREFIX = "live attribution"
+PLACEHOLDER_NOTE_PREFIX = "synthetic fixture"
+
+
+def _should_use_live(chunks: list[TextChunk]) -> tuple[bool, Optional[str]]:
+    """
+    Return (use_live, skip_reason). When use_live is False, skip_reason is the
+    short string we attach to model_notes so reports show why the placeholder
+    fired instead of guessing.
+    """
+    if os.environ.get(LIVE_ENV_VAR, "").strip() != "1":
+        return False, f"{LIVE_ENV_VAR} not set"
+    if not os.environ.get("ANTHROPIC_API_KEY", "").strip():
+        return False, "ANTHROPIC_API_KEY missing"
+    if not chunks:
+        return False, "no chunks to ground the call"
+    return True, None
+
+
+def _build_evidence(move: PriceMove, chunks: list[TextChunk]) -> JoinedEvidence:
+    """
+    Bridge `(move, chunks)` → `JoinedEvidence` for the run_attribution API.
+    `events=[]` because callers of `attribute()` don't currently carry the
+    unified Event records — only TextChunks. window_start/end are derived
+    from chunk publication dates, capped at move.move_date so we never
+    advertise foreknowledge.
+    """
+    if chunks:
+        dates = [c.publication_date for c in chunks if c.publication_date is not None]
+        window_start = min(dates) if dates else move.move_date
+        window_end = max(dates) if dates else move.move_date
+    else:
+        window_start = window_end = move.move_date
+    if window_end > move.move_date:
+        window_end = move.move_date
+    return JoinedEvidence(
+        move=move,
+        window_start=window_start,
+        window_end=window_end,
+        events=[],
+        text_chunks=list(chunks),
+    )
+
+
+def _live_attribute(
+    move: PriceMove,
+    chunks: list[TextChunk],
+    config: AblationConfig,
+) -> Attribution:
+    """Wrap run_attribution and pin contract fields the demo/runner expect."""
+    from model.attribution import run_attribution
+
+    evidence = _build_evidence(move, chunks)
+    attr = run_attribution(evidence, ablation_name=config.name)
+
+    attr.ablation_name = config.name
+    attr.sources_used = list(config.sources)
+    attr.chunks_considered = len(chunks)
+    attr.model_notes = (attr.model_notes or LIVE_NOTE_PREFIX)
+    if not attr.model_notes.startswith(LIVE_NOTE_PREFIX):
+        attr.model_notes = f"{LIVE_NOTE_PREFIX}: {attr.model_notes}"
+    return attr
+
+
+def _placeholder_attribute(
+    move: PriceMove,
+    chunks: list[TextChunk],
+    config: AblationConfig,
+    *,
+    note_suffix: Optional[str] = None,
+) -> Attribution:
+    from backtest.fixtures import generate_attribution
+
+    attr = generate_attribution(
+        ticker=move.ticker,
+        move_date=move.move_date,
+        return_pct=move.return_pct,
+        vol_zscore=move.vol_zscore,
+        ablation_name=config.name,
+    )
+    real_ids = [c.chunk_id for c in chunks[:5]] or ["no_chunks_provided_0"]
+    for ds in (attr.demand, attr.pricing, attr.competitive,
+               attr.management_credibility, attr.macro):
+        ds.evidence_chunk_ids = list(real_ids)
+    attr.ablation_name = config.name
+    attr.sources_used = list(config.sources)
+    attr.chunks_considered = len(chunks)
+    notes = attr.model_notes or PLACEHOLDER_NOTE_PREFIX
+    if note_suffix:
+        notes = f"{PLACEHOLDER_NOTE_PREFIX}: {note_suffix}"
+    attr.model_notes = notes
+    return attr
 
 
 def attribute(
@@ -41,47 +159,34 @@ def attribute(
     Attribute `move` across the 5 dimensions using `chunks` (already filtered
     to source types in config.sources and to publication_date <= move.move_date).
 
-    MUST set:
-        attribution.ablation_name        = config.name
-        attribution.sources_used         = config.sources
-        attribution.predicted_return_pct = predict_expected_return(move, chunks)
-        every DimensionScore.evidence_chunk_ids non-empty and referencing real chunks
+    LIVE PATH (default OFF; enable with BW_USE_LIVE_ATTRIBUTION=1):
+        Builds a JoinedEvidence and calls model.attribution.run_attribution,
+        which hits the Anthropic API via the schema's tool_use contract and
+        runs validate_attribution before returning.
 
-    PLACEHOLDER IMPLEMENTATION
-    --------------------------
-    Until the real Claude-backed attribution lands, this delegates to
-    `backtest.fixtures.generate_attribution`, which synthesizes a plausible
-    Attribution from the PriceMove's realized characteristics. The
-    fundamental-vs-non-fundamental classification is noisy (randomized with a
-    per-ablation noise schedule that decreases as more sources are added), so
-    results here test the PIPELINE not the MODEL.
+    PLACEHOLDER PATH:
+        Delegates to backtest.fixtures.generate_attribution — RNG-driven
+        labels with a per-ablation noise schedule. Useful for plumbing tests
+        and synthetic-data backtests; *not* a real attribution.
 
-    When the real LLM attribution is ready, replace the body of this function
-    with the Claude call. Every downstream consumer already works with a
-    properly-shaped Attribution, so nothing else has to change.
-
-    TODO: Claude prompt + structured output (pydantic-ai or raw JSON schema).
+    Either way, attribution.model_notes carries a short tag explaining which
+    path produced the result. Downstream reports should surface that tag.
     """
-    from backtest.fixtures import generate_attribution
+    use_live, skip_reason = _should_use_live(chunks)
+    if use_live:
+        try:
+            return _live_attribute(move, chunks, config)
+        except Exception as e:  # noqa: BLE001 — fall back on any live error
+            log.warning(
+                "live attribute failed for %s %s (%s: %s); using placeholder",
+                move.ticker, move.move_date, type(e).__name__, e,
+            )
+            return _placeholder_attribute(
+                move, chunks, config,
+                note_suffix=f"live call failed ({type(e).__name__})",
+            )
 
-    attr = generate_attribution(
-        ticker=move.ticker,
-        move_date=move.move_date,
-        return_pct=move.return_pct,
-        vol_zscore=move.vol_zscore,
-        ablation_name=config.name,
-    )
-    # Echo the actual chunk IDs we were given into the evidence slots so the
-    # contract "evidence_chunk_ids reference real chunks" holds.
-    real_ids = [c.chunk_id for c in chunks[:5]] or ["no_chunks_provided_0"]
-    for ds in (attr.demand, attr.pricing, attr.competitive,
-               attr.management_credibility, attr.macro):
-        ds.evidence_chunk_ids = list(real_ids)
-    # Pin the contract fields the docstring calls out explicitly:
-    attr.ablation_name = config.name
-    attr.sources_used = list(config.sources)
-    attr.chunks_considered = len(chunks)
-    return attr
+    return _placeholder_attribute(move, chunks, config, note_suffix=skip_reason)
 
 
 def predict_expected_return(move: PriceMove, chunks: list[TextChunk]) -> float:
