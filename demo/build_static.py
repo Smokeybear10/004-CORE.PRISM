@@ -50,6 +50,20 @@ WINDOW_YEARS = 5
 CHUNK_TEXT_CAP = 600  # trim chunk body for payload size
 
 
+def _news_coverage_start(ticker: str) -> "date | None":
+    """Earliest publication_date for `ticker` in the bundled news parquet,
+    or None if no rows. Used to restrict the demo's flagged-moves list so
+    every clickable dot has News + Peer-news data populated."""
+    from demo.real_chunks import _NEWS_BY_TICKER, preload_news
+    if ticker.upper() not in _NEWS_BY_TICKER:
+        preload_news([ticker])
+    df = _NEWS_BY_TICKER.get(ticker.upper())
+    if df is None or len(df) == 0 or "_pub_date" not in df.columns:
+        return None
+    dates = [d for d in df["_pub_date"] if d is not None]
+    return min(dates) if dates else None
+
+
 def _dim_dict(score) -> dict:
     return {
         "weight": round(float(score.weight), 4),
@@ -89,6 +103,10 @@ def build_for_ticker(ticker: str, meta: dict, end_date: date) -> dict:
         load_prices([ticker], as_of=end_date),
         lookback_vol=63,  # ~3 trading months
     )
+    # Older flagged moves are kept even though Yahoo News only covers ~2025+;
+    # the UI auto-disables source toggles whose chunk_available count is 0,
+    # so users can still inspect SEC + Earnings + Macro + 13F evidence on
+    # historical moves and the empty-data sources are visibly off.
     moves_in_window: list[PriceMove] = [
         m for m in full_moves
         if start_date <= m.move_date <= end_date

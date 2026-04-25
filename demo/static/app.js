@@ -210,6 +210,18 @@ function renderToggleRow(availableCounts) {
     wrapper.className = 'src-toggle' +
       (checked ? ' checked' : '') +
       (disabled ? ' disabled' : '');
+    if (disabled) {
+      // Hover hint explaining why the toggle is greyed out. News + peer_news
+      // come from a Yahoo Finance parquet whose coverage starts in early
+      // 2025, so older moves legitimately have nothing in those slots.
+      // The other sources (SEC / earnings / macro / 13F) extend further
+      // back but can still be sparse per (ticker, date).
+      const hint = (src.id === 'news' || src.id === 'peer_news' ||
+                    src.id === 'sector_news')
+        ? 'No Yahoo News coverage for this date — bundled news parquet starts in early 2025.'
+        : `No ${src.label} chunks for this (ticker, date).`;
+      wrapper.setAttribute('title', hint);
+    }
 
     const input = document.createElement('input');
     input.type = 'checkbox';
