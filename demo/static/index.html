@@ -1488,6 +1488,86 @@
       font-style: italic; color: var(--ink-dim);
       font-size: 0.78rem;
     }
+
+    /* ── PnL card (closes the loop: attribution → verdict → realized $) ── */
+    .pnl-card {
+      background: #fbf6e8;
+      border: 1px solid var(--rule);
+      border-radius: var(--radius);
+      padding: 18px 22px 20px;
+      margin-bottom: 16px;
+    }
+    .pnl-card .pnl-head {
+      display: flex; justify-content: space-between;
+      align-items: flex-start; gap: 20px; margin-bottom: 12px;
+    }
+    .pnl-card .kicker {
+      font: 600 10px var(--mono);
+      color: var(--oxblood);
+      letter-spacing: 0.22em; text-transform: uppercase;
+    }
+    .pnl-card h3 {
+      font-family: var(--serif); font-weight: 600;
+      font-size: 1.35rem; color: var(--ink);
+      margin: 4px 0 6px; letter-spacing: -0.005em;
+    }
+    .pnl-card .pnl-sub {
+      font: italic 400 12.5px var(--serif);
+      color: var(--ink-quiet); max-width: 580px; margin: 0;
+    }
+    .pnl-card .pnl-meta {
+      text-align: right; display: flex;
+      flex-direction: column; gap: 3px;
+    }
+    .pnl-card .pnl-meta-label {
+      font: 600 10px var(--mono); color: var(--ink-dim);
+      letter-spacing: 0.18em; text-transform: uppercase;
+    }
+    .pnl-card .pnl-meta-value {
+      font: 500 12px var(--mono); color: var(--ink-quiet);
+    }
+    .pnl-card .pnl-num-pos { color: var(--up); font-variant-numeric: tabular-nums; }
+    .pnl-card .pnl-num-neg { color: var(--down); font-variant-numeric: tabular-nums; }
+    .pnl-card .pnl-num-zero { color: var(--ink-quiet); font-variant-numeric: tabular-nums; }
+    .pnl-card #pnl-chart { margin-top: 10px; }
+    .pnl-grid {
+      display: flex; flex-direction: column; gap: 6px; margin-top: 10px;
+    }
+    .pnl-row {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) auto auto;
+      gap: 14px; align-items: center;
+      border: 1px solid var(--rule); border-radius: 6px;
+      background: var(--paper-2); padding: 10px 14px;
+    }
+    .pnl-row-model { border-left: 3px solid var(--oxblood); }
+    .pnl-row-name {
+      font: 500 0.86rem var(--mono);
+      color: var(--ink); letter-spacing: -0.005em;
+      white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+    }
+    .pnl-row-name .pnl-row-tag {
+      display: inline-block; margin-left: 8px;
+      font: 600 0.58rem var(--mono); letter-spacing: 0.16em;
+      padding: 1px 6px 0; border-radius: 3px;
+      color: var(--oxblood); border: 1px solid currentColor;
+      text-transform: uppercase; vertical-align: 1px;
+    }
+    .pnl-row-dollars {
+      font: 600 0.95rem var(--mono);
+      font-variant-numeric: tabular-nums;
+      text-align: right; min-width: 110px;
+    }
+    .pnl-row-stats {
+      font: 400 0.74rem var(--sans);
+      color: var(--ink-quiet); text-align: right; min-width: 130px;
+    }
+    .pnl-disclaimer {
+      margin: 12px 0 0 0; padding-top: 10px;
+      border-top: 1px solid var(--rule);
+      font-style: italic; color: var(--ink-dim);
+      font-size: 0.78rem;
+    }
   </style>
 </head>
 <body>
@@ -1607,6 +1687,29 @@
   <section class="event-card empty" id="event-card">
     <div class="label">No event selected</div>
     <div class="body">Pick a ticker above, then click any annotated dot in the chart to load the lean/fade reading and the cited evidence.</div>
+  </section>
+
+  <section class="pnl-card" id="pnl-card" hidden>
+    <div class="pnl-head">
+      <div>
+        <span class="kicker">Closing the Loop</span>
+        <h3 id="pnl-headline">— · —</h3>
+        <p class="pnl-sub" id="pnl-sub">
+          If we'd traded each flagged event over a 5-trading-day window using
+          the model's verdict, here's the realized dollar P&amp;L vs. the four
+          mandated baselines.
+        </p>
+      </div>
+      <div class="pnl-meta">
+        <span class="pnl-meta-label">Notional / trade</span>
+        <span class="pnl-meta-value" id="pnl-notional">$10,000</span>
+      </div>
+    </div>
+    <div id="pnl-chart"></div>
+    <div class="pnl-grid" id="pnl-grid"></div>
+    <p class="pnl-disclaimer" id="pnl-disclaimer">
+      5-day raw forward returns (not SPY-excess); fixed-size sleeves; no fees or slippage.
+    </p>
   </section>
 
 </main>
@@ -1858,6 +1961,58 @@ function passesFilters(m) {
   if (!STATE.filters.directions.has(dir)) return false;
   return true;
 }
+
+// Mirrors demo/server.py:_COUNT_TO_BUNDLE — count of enabled sources →
+// canonical ablation_name baked in build_static.predictions_by_ablation.
+const COUNT_TO_BUNDLE = {
+  0: 'base_news', 1: 'base_news', 2: '+sec', 3: '+earnings',
+  4: '+peer_news', 5: '+sector_news', 6: '+macro', 7: '+positioning',
+};
+function pickAblationName(enabledSet) {
+  const n = enabledSet.size ?? 0;
+  return COUNT_TO_BUNDLE[Math.min(n, 7)] ?? '+positioning';
+}
+
+// Build a "what the model expected" price series from actual closes +
+// each event's predicted_return_pct under the active ablation.
+//
+// Construction (cumulative-gap formulation):
+//   predicted_close[i] = actual_close[i] × ∏ over events e ≤ date[i]
+//                        of (1 + predicted_return(e)) / (1 + actual_return(e))
+//
+// Effect: predicted overlaps actual until the first event, then drifts
+// proportionally to how wrong the model has been so far. Between events
+// the two move in lockstep — meaningful, since the model only makes
+// claims at events. If predicted is null for an event (no chunks of
+// the right type), the gap factor stays unchanged.
+function computePredictedSeries(bundle, ablationName) {
+  const eventByDate = new Map();
+  const eventsSorted = bundle.moves
+    .map((m, idx) => ({ idx, ...m }))
+    .sort((a, b) => a.move_date.localeCompare(b.move_date));
+
+  let cumGap = 1.0;
+  for (const e of eventsSorted) {
+    const pred = e.predictions_by_ablation?.[ablationName];
+    const denom = 1 + e.return_pct;
+    if (pred !== null && pred !== undefined && denom !== 0) {
+      cumGap *= (1 + pred) / denom;
+    }
+    eventByDate.set(e.move_date, { cumGap, idx: e.idx, predicted: pred });
+  }
+
+  let runningGap = 1.0;
+  const dates = [];
+  const predicted = [];
+  for (const p of bundle.prices) {
+    const ev = eventByDate.get(p.date);
+    if (ev) runningGap = ev.cumGap;
+    dates.push(p.date);
+    predicted.push(p.close * runningGap);
+  }
+  return { dates, predicted, eventByDate };
+}
+
 function renderChart(bundle) {
   document.getElementById('chart-card').hidden = false;
   const visible = bundle.moves.map((m, i) => ({ m, i })).filter(x => passesFilters(x.m));
@@ -1871,25 +2026,113 @@ function renderChart(bundle) {
   const moveY = visible.map(x => priceByDate.get(x.m.move_date) ?? null);
   const moveColors = visible.map(x => x.m.return_pct < 0 ? '#8c2f2f' : '#0a1d36');
 
+  // Predicted-overlay derivation. Active ablation is picked by current
+  // STATE.enabledSources count, mapping to the ablations pre-baked in
+  // build_static.predictions_by_ablation. Empty selection hides the
+  // overlay entirely (caption in the pill explains why).
+  const ablationName = pickAblationName(STATE.enabledSources);
+  const hasOverlay = (STATE.enabledSources?.size ?? 0) > 0;
+  const overlay = hasOverlay
+    ? computePredictedSeries(bundle, ablationName)
+    : null;
+
   const traces = [
     {
       x: bundle.prices.map(p => p.date),
       y: bundle.prices.map(p => p.close),
       mode: 'lines',
       line: { color: '#0a1d36', width: 1.4 },
-      name: 'Close',
+      name: 'Close (actual)',
       hovertemplate: '%{x}<br>$%{y:.2f}<extra></extra>',
     },
-    {
-      x: moveX, y: moveY,
-      customdata: visible.map(x => x.i),
-      mode: 'markers',
-      marker: { size: 7, color: moveColors, line: { color: '#fbf6e8', width: 1.4 } },
-      text: visible.map(x => `<b>${x.m.move_date}</b><br>${pct(x.m.return_pct)} · z ${x.m.vol_zscore.toFixed(1)}σ`),
-      hovertemplate: '%{text}<extra></extra>',
-      name: 'Flagged',
-    }
   ];
+
+  if (overlay) {
+    traces.push({
+      x: overlay.dates,
+      y: overlay.predicted,
+      mode: 'lines',
+      line: { color: '#c2410c', width: 1.6, dash: 'dash' },
+      name: `Model prediction (${ablationName})`,
+      hovertemplate: '%{x}<br>predicted $%{y:.2f}<extra></extra>',
+      opacity: 0.92,
+    });
+  }
+
+  // Bolded actual markers — bigger + thicker outer ring so the
+  // "clickable affordance" is obvious.
+  traces.push({
+    x: moveX, y: moveY,
+    customdata: visible.map(x => x.i),
+    mode: 'markers',
+    marker: { size: 10, color: moveColors,
+              line: { color: '#fbf6e8', width: 2 } },
+    text: visible.map(x => `<b>${x.m.move_date}</b><br>${pct(x.m.return_pct)} · z ${x.m.vol_zscore.toFixed(1)}σ`),
+    hovertemplate: '%{text}<extra></extra>',
+    name: 'Flagged (actual)',
+  });
+
+  // Predicted markers at event dates — same per-direction colors as
+  // actual, hollow diamond shape distinguishes them visually. Click
+  // routes to the same selectMove via customdata.
+  if (overlay) {
+    const predX = [], predY = [], predCD = [], predTxt = [], predColors = [];
+    for (const x of visible) {
+      const ev = overlay.eventByDate.get(x.m.move_date);
+      if (!ev || ev.predicted === null || ev.predicted === undefined) continue;
+      const actualY = priceByDate.get(x.m.move_date);
+      if (actualY === undefined) continue;
+      const predYVal = actualY * ev.cumGap;
+      predX.push(x.m.move_date);
+      predY.push(predYVal);
+      predCD.push(x.i);
+      predColors.push(x.m.return_pct < 0 ? '#8c2f2f' : '#0a1d36');
+      const gap = predYVal - actualY;
+      predTxt.push(
+        `<b>${x.m.move_date}</b> · model<br>` +
+        `predicted close $${predYVal.toFixed(2)}<br>` +
+        `actual close $${actualY.toFixed(2)}<br>` +
+        `gap ${gap >= 0 ? '+' : ''}$${gap.toFixed(2)}<br>` +
+        `predicted return ${pct(ev.predicted)}`
+      );
+    }
+    if (predX.length) {
+      traces.push({
+        x: predX, y: predY, customdata: predCD,
+        mode: 'markers',
+        marker: { size: 11, color: predColors,
+                  line: { color: '#c2410c', width: 2 },
+                  symbol: 'diamond-open' },
+        text: predTxt,
+        hovertemplate: '%{text}<extra></extra>',
+        name: 'Predicted',
+      });
+    }
+  }
+
+  // Layout shapes: thin dashed vertical line connecting each event's
+  // actual and predicted markers, drawn only when divergence > 2% so
+  // small gaps don't clutter the chart.
+  const gapShapes = [];
+  if (overlay) {
+    for (const x of visible) {
+      const ev = overlay.eventByDate.get(x.m.move_date);
+      if (!ev || ev.predicted === null || ev.predicted === undefined) continue;
+      const actualY = priceByDate.get(x.m.move_date);
+      if (actualY === undefined) continue;
+      const predYVal = actualY * ev.cumGap;
+      if (Math.abs(predYVal - actualY) / Math.abs(actualY) < 0.02) continue;
+      gapShapes.push({
+        type: 'line',
+        x0: x.m.move_date, x1: x.m.move_date,
+        y0: actualY, y1: predYVal,
+        line: { color: '#c2410c', width: 1, dash: 'dot' },
+        opacity: 0.55,
+        layer: 'below',
+      });
+    }
+  }
+
   const layout = {
     paper_bgcolor: 'rgba(0,0,0,0)',
     plot_bgcolor:  'rgba(0,0,0,0)',
@@ -1898,12 +2141,39 @@ function renderChart(bundle) {
     hoverlabel: { bgcolor: '#fbf6e8', bordercolor: '#cfc7b2', font: { color: '#0d1320', family: 'Source Serif 4, serif' } },
     xaxis: { gridcolor: '#e3dcc8', linecolor: '#cfc7b2', tickcolor: '#cfc7b2', zeroline: false },
     yaxis: { gridcolor: '#e3dcc8', linecolor: '#cfc7b2', tickcolor: '#cfc7b2', zeroline: false, tickprefix: '$' },
-    showlegend: false,
+    shapes: gapShapes,
+    showlegend: true,
+    legend: { orientation: 'h', x: 0, y: 1.02,
+              xanchor: 'left', yanchor: 'bottom',
+              font: { color: '#6a6e7c', size: 10 },
+              bgcolor: 'rgba(0,0,0,0)' },
   };
   Plotly.react('chart', traces, layout, { displaylogo: false, responsive: true, modeBarButtonsToRemove: ['lasso2d','select2d'] });
+
+  // Active-ablation pill in the chart header. Empty selection collapses
+  // to a "no overlay" hint so users know why the line is missing.
+  const pill = document.getElementById('ablation-pill');
+  if (pill) {
+    if (!hasOverlay) {
+      pill.textContent = 'No overlay — enable a source';
+      pill.classList.add('muted');
+    } else {
+      pill.textContent = `Model overlay · ${ablationName}`;
+      pill.classList.remove('muted');
+    }
+  }
+
   const div = document.getElementById('chart');
   if (!div._handlerAttached) {
-    div.on('plotly_click', ev => { const p = ev.points[0]; if (!p || p.curveNumber !== 1) return; selectMove(p.customdata); });
+    // Marker traces all carry customdata=move_idx; line traces (close +
+    // predicted) don't. Trust customdata rather than curveNumber so the
+    // handler is robust to overlay traces appearing/disappearing.
+    div.on('plotly_click', ev => {
+      const p = ev.points[0];
+      if (!p) return;
+      if (p.customdata === undefined || p.customdata === null) return;
+      selectMove(p.customdata);
+    });
     div._handlerAttached = true;
   }
 }
@@ -2603,6 +2873,7 @@ function renderSources(panel) {
     STATE.enabledSources = new Set(
       ALL_IDS.filter(id => (STATE.chunksAvailable[id] || 0) > 0));
     recomputeAttribution();
+    if (STATE.bundle) renderChart(STATE.bundle);
   });
 
   const grid = document.createElement('div');
@@ -2632,6 +2903,9 @@ function renderSources(panel) {
       if (e.target.checked) STATE.enabledSources.add(s.id);
       else STATE.enabledSources.delete(s.id);
       recomputeAttribution();
+      // Re-render chart so the predicted-overlay tracks the active
+      // source set (not just the per-event panel).
+      if (STATE.bundle) renderChart(STATE.bundle);
     });
     grid.appendChild(node);
   }
@@ -2733,6 +3007,120 @@ function renderEvalHarness() {
   }
 }
 
+// ── PnL card ─────────────────────────────────────────────────────────────
+// Renders bundle.pnl — model + 4 baselines run as 5-day trades over every
+// flagged event for the loaded ticker. Closes the loop: attribution →
+// verdict → realized $ P&L. Hidden when the ticker bundle has no pnl block.
+function renderPnl(bundle) {
+  const section = document.getElementById('pnl-card');
+  if (!section) return;
+  const pnl = bundle && bundle.pnl;
+  if (!pnl || !Array.isArray(pnl.strategies) || pnl.strategies.length === 0) {
+    section.hidden = true;
+    return;
+  }
+  section.hidden = false;
+
+  const fmtMoney = (v) => {
+    const sign = v >= 0 ? '+' : '−';
+    const abs = Math.abs(v);
+    const s = abs >= 1000
+      ? abs.toLocaleString(undefined, { maximumFractionDigits: 0 })
+      : abs.toFixed(2);
+    return `${sign}$${s}`;
+  };
+  const colorClass = (v) => v > 0 ? 'pnl-num-pos' : v < 0 ? 'pnl-num-neg' : 'pnl-num-zero';
+
+  // Find the model row for the headline; fall back to first row if missing.
+  const model = pnl.strategies.find(s => s.name === 'model') || pnl.strategies[0];
+
+  const headline = document.getElementById('pnl-headline');
+  const sub = document.getElementById('pnl-sub');
+  const notional = document.getElementById('pnl-notional');
+  const grid = document.getElementById('pnl-grid');
+  const disclaimer = document.getElementById('pnl-disclaimer');
+
+  const total = Number(model.total_pnl_dollars || 0);
+  const cls = colorClass(total);
+  const hr = model.n_trades > 0
+    ? `${(model.hit_rate * 100).toFixed(0)}%`
+    : '—';
+  headline.innerHTML =
+    `<span class="${cls}">${fmtMoney(total)}</span>` +
+    `<span class="eval-of"> · ${model.n_wins}/${model.n_trades} trades won</span>` +
+    `<span class="eval-pct"> · ${hr} hit rate</span>`;
+  sub.textContent =
+    `${bundle.ticker} · ${pnl.n_events} flagged event(s) traded as 5-trading-day ` +
+    `windows. Model row outlined in oxblood; baselines below it.`;
+  notional.textContent = '$' + Number(pnl.notional_per_trade).toLocaleString();
+
+  // ── Bar chart: total PnL per strategy ──
+  const ordered = [...pnl.strategies].sort((a, b) => {
+    if (a.name === 'model') return -1;
+    if (b.name === 'model') return 1;
+    return Number(b.total_pnl_dollars) - Number(a.total_pnl_dollars);
+  });
+  const barLabels = ordered.map(s => s.label);
+  const barVals   = ordered.map(s => Number(s.total_pnl_dollars || 0));
+  const barColors = ordered.map(s => Number(s.total_pnl_dollars || 0) >= 0 ? '#2e6f48' : '#8c2f2f');
+  const barLines  = ordered.map(s => s.name === 'model' ? '#7a1f1f' : '#cfc7b2');
+  const barWidths = ordered.map(s => s.name === 'model' ? 2 : 0.8);
+  const trace = {
+    type: 'bar',
+    orientation: 'h',
+    x: barVals,
+    y: barLabels,
+    marker: { color: barColors, line: { color: barLines, width: barWidths } },
+    text: barVals.map(v => fmtMoney(v)),
+    textposition: 'outside',
+    cliponaxis: false,
+    hovertemplate: '%{y}<br>%{x:$,.0f} over the window<extra></extra>',
+  };
+  const layout = {
+    paper_bgcolor: 'rgba(0,0,0,0)',
+    plot_bgcolor:  'rgba(0,0,0,0)',
+    margin: { l: 220, r: 60, t: 6, b: 28 },
+    height: 36 * ordered.length + 60,
+    font: { family: 'Inter, sans-serif', color: '#6a6e7c', size: 11 },
+    hoverlabel: { bgcolor: '#fbf6e8', bordercolor: '#cfc7b2', font: { color: '#0d1320', family: 'Source Serif 4, serif' } },
+    xaxis: {
+      gridcolor: '#e3dcc8', linecolor: '#cfc7b2', tickcolor: '#cfc7b2',
+      zeroline: true, zerolinecolor: '#0d1320', zerolinewidth: 1,
+      tickprefix: '$', tickformat: ',.0f',
+    },
+    yaxis: { gridcolor: '#e3dcc8', linecolor: '#cfc7b2', tickcolor: '#cfc7b2', zeroline: false, automargin: true },
+    showlegend: false,
+  };
+  Plotly.react('pnl-chart', [trace], layout, {
+    displaylogo: false, responsive: true, displayModeBar: false,
+  });
+
+  // ── Strategy grid (model first, baselines sorted by $ desc) ──
+  grid.innerHTML = '';
+  for (const s of ordered) {
+    const row = document.createElement('div');
+    row.className = 'pnl-row' + (s.name === 'model' ? ' pnl-row-model' : '');
+    const tot = Number(s.total_pnl_dollars || 0);
+    const tcls = colorClass(tot);
+    const hrText = s.n_trades > 0
+      ? `${(s.hit_rate * 100).toFixed(0)}% hit · ${s.n_wins}/${s.n_trades} trades`
+      : 'no trades';
+    const tag = s.name === 'model' ? '<span class="pnl-row-tag">Model</span>' : '';
+    row.innerHTML =
+      `<div class="pnl-row-name">${escapeHtml(s.label)}${tag}</div>` +
+      `<div class="pnl-row-dollars ${tcls}">${fmtMoney(tot)}</div>` +
+      `<div class="pnl-row-stats">${hrText}</div>`;
+    grid.appendChild(row);
+  }
+
+  if (disclaimer) {
+    const flag = pnl.uses_market_neutral ? 'SPY-excess' : 'raw';
+    disclaimer.textContent =
+      `${flag} ${pnl.horizon_days}-day forward returns; $${Number(pnl.notional_per_trade).toLocaleString()} ` +
+      'per trade with constant-size sleeves; no fees or slippage.';
+  }
+}
+
 async function selectTicker(t) {
   STATE.currentTicker = t;
   STATE.selectedMoveIdx = null;
@@ -2744,6 +3132,7 @@ async function selectTicker(t) {
   renderOverview(bundle);
   document.getElementById('filter-bar').hidden = false;
   renderEvalHarness();
+  renderPnl(bundle);
   renderChart(bundle);
   if (bundle.moves.length > 0) {
     let mx = 0, mxAbs = 0;
@@ -2772,6 +3161,10 @@ function selectMove(idx) {
   if (STATE.enabledSources.size > 0) {
     recomputeAttribution();
   }
+  // selectMove resets enabledSources to this move's chunks_available
+  // subset, which changes the count → ablation mapping. Re-render so the
+  // chart-overlay's predicted line follows.
+  if (STATE.bundle) renderChart(STATE.bundle);
 }
 async function recomputeAttribution() {
   if (STATE.selectedMoveIdx == null) return;
