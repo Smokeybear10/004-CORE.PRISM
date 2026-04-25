@@ -2757,18 +2757,6 @@ function renderEvalHarness() {
       ? `<span class="verdict-tag ${c.model_verdict}">${c.model_verdict.toUpperCase()}</span>`
       : '<span style="color:var(--ink-dim);font-size:0.78rem">—</span>';
 
-    const otherStrategiesHtml = (report.strategies || [])
-      .filter(s => s.strategy !== report.primary_strategy)
-      .map(s => {
-        const cell = (s.cases || []).find(x => x.case_id === c.case_id);
-        const v = cell ? (cell.model_verdict || '—') : '—';
-        const cls = (v === 'lean' || v === 'fade' || v === 'neutral') ? v : 'pending';
-        return `<div class="eval-other-strat">` +
-                 `<span class="eval-other-name">${escapeHtml(s.strategy.replace(/_/g, ' '))}</span>` +
-                 `<span class="verdict-tag small ${cls}">${escapeHtml(v.toUpperCase())}</span>` +
-               `</div>`;
-      }).join('');
-
     wrap.innerHTML =
       `<div class="eval-case-head">` +
         `<span class="eval-glyph">${glyph}</span>` +
@@ -2784,17 +2772,15 @@ function renderEvalHarness() {
             `<span class="eval-verdict-label">model</span>${modelHtml}` +
           `</div>` +
         `</div>` +
-      `</div>` +
-      (otherStrategiesHtml ?
-        `<div class="eval-case-body"><div class="eval-other-strats">` +
-          `<span class="eval-other-heading">Other strategies (unscored)</span>` +
-          otherStrategiesHtml +
-        `</div></div>` : ``);
+      `</div>`;
     list.appendChild(wrap);
   }
 
   if (disclaimer) {
-    disclaimer.textContent = report.unscored_explanation || '';
+    disclaimer.textContent =
+      'Only fundamental-vs-non has ground-truth labels in fixtures, so it ' +
+      'is the only strategy scored here. The Verdict Console below lets ' +
+      'you preview the other frameworks.';
   }
 }
 
