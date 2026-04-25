@@ -15,11 +15,11 @@
        accent. Functional tool, not a research note.
        ═══════════════════════════════════════════════════════════ */
     :root {
-      --paper: #f5efe1;
-      --paper-2: #ede6d3;
-      --paper-3: #e3dcc8;
-      --rule: #cfc7b2;
-      --rule-strong: #b9b09a;
+      --paper: #ffffff;
+      --paper-2: #f4f5f7;
+      --paper-3: #e8eaef;
+      --rule: #dee1e7;
+      --rule-strong: #b6bac4;
 
       --navy: #0a1d36;
       --navy-2: #1a2c47;
@@ -75,7 +75,7 @@
       position: sticky;
       top: 0;
       z-index: 10;
-      background: rgba(245, 239, 225, 0.94);
+      background: rgba(255, 255, 255, 0.94);
       backdrop-filter: blur(12px) saturate(150%);
       -webkit-backdrop-filter: blur(12px) saturate(150%);
       border-bottom: 2px solid var(--navy);
@@ -159,31 +159,6 @@
       margin-right: 4px;
       vertical-align: middle;
     }
-    /* ─── Top nav (sits inside the masthead, below the title row) ─── */
-    .topnav {
-      max-width: 1240px;
-      margin: 0 auto;
-      padding: 0 28px;
-      display: flex;
-      gap: 4px;
-      border-top: 1px solid var(--rule);
-    }
-    .topnav a {
-      font: 600 11px var(--mono);
-      color: var(--ink-quiet);
-      letter-spacing: 0.18em;
-      text-transform: uppercase;
-      padding: 12px 18px 11px;
-      text-decoration: none;
-      border-bottom: 2px solid transparent;
-      margin-bottom: -1px;
-      transition: color 140ms, border-color 140ms;
-    }
-    .topnav a:hover { color: var(--ink); }
-    .topnav a.current {
-      color: var(--oxblood);
-      border-bottom-color: var(--oxblood);
-    }
 
     /* ─── Container ─── */
     .container {
@@ -197,7 +172,7 @@
 
     /* ─── Search card (entry point) ─── */
     .search-card {
-      background: #fbf6e8;
+      background: #ffffff;
       border: 1px solid var(--rule);
       border-radius: var(--radius);
       padding: 18px 20px;
@@ -301,7 +276,7 @@
     .ticker-chip:hover { color: var(--ink); border-color: var(--rule-strong); }
     .ticker-chip.active {
       background: var(--navy);
-      color: #fbf6e8;
+      color: #ffffff;
       border-color: var(--navy);
     }
 
@@ -350,7 +325,7 @@
 
     /* ─── Chart ─── */
     .chart-card {
-      background: #fbf6e8;
+      background: #ffffff;
       border: 1px solid var(--rule);
       border-radius: var(--radius);
       padding: 18px 20px;
@@ -379,6 +354,16 @@
       font: italic 500 12px var(--serif);
       color: var(--ink-quiet);
     }
+    /* Sub-pill announcing the active model-overlay ablation. Sits to the
+       right of the existing #chart-meta pill so the chart header reads
+       "ticker · sector · range  |  Model overlay · +sec". */
+    .chart-h .pill.overlay {
+      color: #7a1f1f;            /* oxblood — matches the predicted line */
+      letter-spacing: 0.04em;
+    }
+    .chart-h .pill.overlay.muted {
+      color: var(--ink-quiet);
+    }
     #chart {
       width: 100%;
       height: 280px;
@@ -386,7 +371,7 @@
 
     /* ─── Event card (the meat) ─── */
     .event-card {
-      background: #fbf6e8;
+      background: #ffffff;
       border: 1px solid var(--rule);
       border-radius: var(--radius);
       overflow: hidden;
@@ -638,9 +623,9 @@
     .mock-banner {
       margin: 0 22px 14px;
       padding: 10px 14px;
-      background: var(--gold-soft);
-      border: 1px solid rgba(168, 124, 61, 0.40);
-      border-left: 3px solid var(--gold);
+      background: var(--paper-2);
+      border: 1px solid var(--rule);
+      border-left: 3px solid var(--navy);
       border-radius: var(--radius-sm);
       font: italic 500 12.5px var(--serif);
       color: var(--ink-2);
@@ -648,8 +633,8 @@
     }
     .mock-banner code {
       font: 500 11.5px var(--mono);
-      background: rgba(168, 124, 61, 0.18);
-      color: var(--gold);
+      background: var(--navy-soft);
+      color: var(--navy);
       padding: 1px 5px; border-radius: 3px;
       font-style: normal; letter-spacing: 0;
     }
@@ -1113,17 +1098,17 @@
     }
     .dim-row .dim-rationale code:hover {
       background: var(--oxblood);
-      color: #fbf6e8;
+      color: #ffffff;
     }
     .dim-row .dim-rationale code.open {
       background: var(--oxblood);
-      color: #fbf6e8;
+      color: #ffffff;
     }
     .chunk-preview {
       grid-column: 2 / -1;
       margin: 4px 0 8px;
       padding: 12px 14px;
-      background: #fbf6e8;
+      background: #ffffff;
       border: 1px solid var(--oxblood-line);
       border-left: 3px solid var(--oxblood);
       border-radius: var(--radius-sm);
@@ -1261,7 +1246,7 @@
 
     .kbd-hint-pill {
       position: fixed; bottom: 18px; right: 18px; z-index: 90;
-      background: rgba(245, 239, 225, 0.94);
+      background: rgba(255, 255, 255, 0.94);
       backdrop-filter: blur(8px) saturate(150%);
       -webkit-backdrop-filter: blur(8px) saturate(150%);
       border: 1px solid var(--rule-strong);
@@ -1279,7 +1264,7 @@
 
     /* —— 07 Filter Bar —— */
     .filter-bar {
-      background: #fbf6e8;
+      background: #ffffff;
       border: 1px solid var(--rule);
       border-radius: var(--radius);
       padding: 14px 16px;
@@ -1312,12 +1297,12 @@
     .filter-bar input[type="range"]::-webkit-slider-thumb {
       -webkit-appearance: none; appearance: none;
       width: 14px; height: 14px; border-radius: 50%;
-      background: var(--navy); border: 2px solid #fbf6e8;
+      background: var(--navy); border: 2px solid #ffffff;
       box-shadow: 0 1px 3px rgba(13,19,32,0.3); cursor: pointer;
     }
     .filter-bar input[type="range"]::-moz-range-thumb {
       width: 14px; height: 14px; border-radius: 50%;
-      background: var(--navy); border: 2px solid #fbf6e8;
+      background: var(--navy); border: 2px solid #ffffff;
       box-shadow: 0 1px 3px rgba(13,19,32,0.3); cursor: pointer;
     }
     .filter-bar .chips { display: flex; gap: 4px; flex-wrap: wrap; }
@@ -1329,7 +1314,7 @@
     }
     .filter-bar .chip:hover { color: var(--ink); border-color: var(--rule-strong); }
     .filter-bar .chip.on {
-      background: var(--navy); color: #fbf6e8; border-color: var(--navy);
+      background: var(--navy); color: #ffffff; border-color: var(--navy);
     }
     .filter-bar .reset {
       font: 600 10px var(--mono); letter-spacing: 0.18em; text-transform: uppercase;
@@ -1370,7 +1355,7 @@
 
     /* ─── Eval Harness ─── */
     .eval-harness {
-      background: #fbf6e8;
+      background: var(--paper);
       border: 1px solid var(--rule);
       border-radius: var(--radius);
       padding: 18px 22px 20px;
@@ -1439,6 +1424,23 @@
     .eval-case-pass { border-left: 3px solid var(--up); }
     .eval-case-fail { border-left: 3px solid var(--down); }
     .eval-case-skip { border-left: 3px solid var(--rule-strong); }
+    .eval-case-active {
+      background: var(--paper-2);
+      box-shadow: 0 0 0 2px var(--oxblood-line), 0 6px 16px rgba(122, 31, 31, 0.10);
+    }
+    .eval-active-pill {
+      display: inline-block;
+      margin-left: 8px;
+      padding: 1px 7px 0;
+      border-radius: 3px;
+      background: var(--oxblood-soft);
+      border: 1px solid var(--oxblood-line);
+      color: var(--oxblood);
+      font: 600 0.58rem var(--mono);
+      letter-spacing: 0.18em;
+      text-transform: uppercase;
+      vertical-align: middle;
+    }
     .eval-case-head {
       display: grid; grid-template-columns: 22px minmax(0, 1fr) auto;
       gap: 12px; align-items: center;
@@ -1503,6 +1505,209 @@
       font-style: italic; color: var(--ink-dim);
       font-size: 0.78rem;
     }
+
+    /* ─── Dimension Radar — this event vs ticker peer median ─── */
+    .radar {
+      display: grid;
+      grid-template-columns: minmax(320px, 440px) 1fr;
+      gap: 36px;
+      align-items: center;
+      padding: 26px 22px 28px;
+      border-bottom: 1px solid var(--rule);
+      background: var(--paper);
+    }
+    .radar svg {
+      width: 100%; max-width: 440px; height: auto;
+      display: block;
+    }
+    .radar svg .ring { fill: none; stroke: var(--rule); stroke-width: 0.6; }
+    .radar svg .axis { stroke: var(--rule-strong); stroke-width: 0.4; }
+    .radar svg .axis-label {
+      font: 600 9.5px var(--mono); letter-spacing: 0.18em;
+      fill: var(--ink-quiet); text-transform: uppercase;
+    }
+    .radar svg .me-poly {
+      fill: var(--oxblood); fill-opacity: 0.20;
+      stroke: var(--oxblood); stroke-width: 1.5;
+      transition: fill-opacity 220ms;
+    }
+    .radar svg .peer-poly {
+      fill: var(--navy); fill-opacity: 0.10;
+      stroke: var(--navy); stroke-width: 1.2;
+      stroke-dasharray: 3 3;
+    }
+    .radar svg .me-pt { fill: var(--oxblood); }
+    .radar svg .peer-pt { fill: var(--navy); }
+    .radar .legend { display: flex; flex-direction: column; gap: 14px; }
+    .radar .leg-row {
+      border-left: 3px solid var(--oxblood);
+      padding-left: 14px;
+    }
+    .radar .leg-row.peer { border-left-color: var(--navy); }
+    .radar .leg-row .lab {
+      font: 600 9.5px var(--mono); letter-spacing: 0.20em;
+      color: var(--ink-quiet); text-transform: uppercase;
+      margin: 0 0 3px;
+    }
+    .radar .leg-row .name {
+      font: italic 500 14.5px var(--serif); color: var(--ink); margin: 0;
+      letter-spacing: -0.005em;
+    }
+    .radar .leg-row .name b {
+      font-style: normal; font-weight: 600; color: var(--oxblood);
+      font-family: var(--mono); font-size: 12.5px; letter-spacing: 0;
+    }
+    .radar .leg-row.peer .name b { color: var(--navy); }
+    .radar .leg-row .desc {
+      font: 400 13px var(--serif); color: var(--ink-2);
+      margin: 6px 0 0; line-height: 1.45;
+    }
+    .radar .leg-row .desc em { color: var(--oxblood); font-style: italic; font-weight: 600; }
+    @media (max-width: 760px) {
+      .radar { grid-template-columns: 1fr; gap: 18px; }
+      .radar svg { max-width: 280px; margin: 0 auto; display: block; }
+    }
+
+    /* ─── Ablation Toggle — preset source bundles ─── */
+    .abl-strip {
+      display: flex;
+      gap: 6px;
+      flex-wrap: wrap;
+      align-items: center;
+      padding: 14px 22px 16px;
+      border-bottom: 1px dashed var(--rule);
+      background: var(--paper);
+    }
+    .abl-strip .abl-label {
+      font: 600 9.5px var(--mono);
+      color: var(--ink-quiet);
+      letter-spacing: 0.22em;
+      text-transform: uppercase;
+      margin-right: 8px;
+    }
+    .abl-chip {
+      background: transparent;
+      border: 1px solid var(--rule);
+      border-radius: 999px;
+      padding: 6px 13px 7px;
+      font: 500 11.5px var(--sans);
+      color: var(--ink-2);
+      letter-spacing: -0.005em;
+      cursor: pointer;
+      transition: background 160ms, border-color 160ms, color 160ms;
+      white-space: nowrap;
+    }
+    .abl-chip:hover {
+      color: var(--ink);
+      border-color: var(--rule-strong);
+      background: var(--paper-2);
+    }
+    .abl-chip.active {
+      background: var(--navy);
+      color: #ffffff;
+      border-color: var(--navy);
+    }
+    .abl-chip.disabled,
+    .abl-chip[disabled] {
+      opacity: 0.45;
+      cursor: not-allowed;
+      pointer-events: none;
+    }
+    .abl-strip .abl-foot {
+      margin-left: auto;
+      font: italic 500 11.5px var(--serif);
+      color: var(--ink-quiet);
+    }
+    .abl-strip .abl-foot b {
+      color: var(--oxblood);
+      font-style: normal;
+      font-weight: 600;
+      font-family: var(--mono);
+      font-size: 11px;
+    }
+    @media (max-width: 760px) {
+      .abl-strip .abl-foot { display: none; }
+    }
+
+    /* ── PnL card (closes the loop: attribution → verdict → realized $) ── */
+    .pnl-card {
+      background: var(--paper);
+      border: 1px solid var(--rule);
+      border-radius: var(--radius);
+      padding: 18px 22px 20px;
+      margin-bottom: 16px;
+    }
+    .pnl-card .pnl-head {
+      display: flex; justify-content: space-between;
+      align-items: flex-start; gap: 20px; margin-bottom: 12px;
+    }
+    .pnl-card .kicker {
+      font: 600 10px var(--mono);
+      color: var(--oxblood);
+      letter-spacing: 0.22em; text-transform: uppercase;
+    }
+    .pnl-card h3 {
+      font-family: var(--serif); font-weight: 600;
+      font-size: 1.35rem; color: var(--ink);
+      margin: 4px 0 6px; letter-spacing: -0.005em;
+    }
+    .pnl-card .pnl-sub {
+      font: italic 400 12.5px var(--serif);
+      color: var(--ink-quiet); max-width: 580px; margin: 0;
+    }
+    .pnl-card .pnl-meta {
+      text-align: right; display: flex;
+      flex-direction: column; gap: 3px;
+    }
+    .pnl-card .pnl-meta-label {
+      font: 600 10px var(--mono); color: var(--ink-dim);
+      letter-spacing: 0.18em; text-transform: uppercase;
+    }
+    .pnl-card .pnl-meta-value {
+      font: 500 12px var(--mono); color: var(--ink-quiet);
+    }
+    .pnl-card .pnl-num-pos { color: var(--up); font-variant-numeric: tabular-nums; }
+    .pnl-card .pnl-num-neg { color: var(--down); font-variant-numeric: tabular-nums; }
+    .pnl-card .pnl-num-zero { color: var(--ink-quiet); font-variant-numeric: tabular-nums; }
+    .pnl-card #pnl-chart { margin-top: 10px; }
+    .pnl-grid {
+      display: flex; flex-direction: column; gap: 6px; margin-top: 10px;
+    }
+    .pnl-row {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) auto auto;
+      gap: 14px; align-items: center;
+      border: 1px solid var(--rule); border-radius: 6px;
+      background: var(--paper-2); padding: 10px 14px;
+    }
+    .pnl-row-model { border-left: 3px solid var(--oxblood); }
+    .pnl-row-name {
+      font: 500 0.86rem var(--mono);
+      color: var(--ink); letter-spacing: -0.005em;
+      white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+    }
+    .pnl-row-name .pnl-row-tag {
+      display: inline-block; margin-left: 8px;
+      font: 600 0.58rem var(--mono); letter-spacing: 0.16em;
+      padding: 1px 6px 0; border-radius: 3px;
+      color: var(--oxblood); border: 1px solid currentColor;
+      text-transform: uppercase; vertical-align: 1px;
+    }
+    .pnl-row-dollars {
+      font: 600 0.95rem var(--mono);
+      font-variant-numeric: tabular-nums;
+      text-align: right; min-width: 110px;
+    }
+    .pnl-row-stats {
+      font: 400 0.74rem var(--sans);
+      color: var(--ink-quiet); text-align: right; min-width: 130px;
+    }
+    .pnl-disclaimer {
+      margin: 12px 0 0 0; padding-top: 10px;
+      border-top: 1px solid var(--rule);
+      font-style: italic; color: var(--ink-dim);
+      font-size: 0.78rem;
+    }
   </style>
 </head>
 <body>
@@ -1528,10 +1733,6 @@
       <span>MODEL · CLAUDE-HAIKU-4-5</span>
     </div>
   </div>
-  <nav class="topnav" aria-label="Primary">
-    <a href="/" class="current">Dashboard</a>
-    <a href="/about.html">About</a>
-  </nav>
 </header>
 
 <main class="container">
@@ -1597,21 +1798,17 @@
       <div>
         <h3 style="display:inline">Figure I · Price action</h3>
         <span class="pill" id="chart-meta">—</span>
+        <span class="pill overlay" id="ablation-pill">—</span>
       </div>
       <span class="hint">Step 2 · click any annotated dot</span>
     </div>
     <div id="chart"></div>
   </section>
 
-  <section class="event-card empty" id="event-card">
-    <div class="label">No event selected</div>
-    <div class="body">Pick a ticker above, then click any annotated dot in the chart to load the lean/fade reading and the cited evidence.</div>
-  </section>
-
   <section class="eval-harness" id="eval-harness" hidden>
     <div class="eh-head">
       <div>
-        <span class="kicker">Figure II · Eval harness</span>
+        <span class="kicker">Eval Harness</span>
         <h3 id="eval-headline">—</h3>
         <p class="eh-sub" id="eval-sub">
           Each case has a hand-authored ground-truth verdict. The harness
@@ -1625,6 +1822,34 @@
     </div>
     <div class="eval-cases" id="eval-cases"></div>
     <p class="eval-disclaimer" id="eval-disclaimer">—</p>
+  </section>
+
+  <section class="event-card empty" id="event-card">
+    <div class="label">No event selected</div>
+    <div class="body">Pick a ticker above, then click any annotated dot in the chart to load the lean/fade reading and the cited evidence.</div>
+  </section>
+
+  <section class="pnl-card" id="pnl-card" hidden>
+    <div class="pnl-head">
+      <div>
+        <span class="kicker">Closing the Loop</span>
+        <h3 id="pnl-headline">— · —</h3>
+        <p class="pnl-sub" id="pnl-sub">
+          If we'd traded each flagged event over a 5-trading-day window using
+          the model's verdict, here's the realized dollar P&amp;L vs. the four
+          mandated baselines.
+        </p>
+      </div>
+      <div class="pnl-meta">
+        <span class="pnl-meta-label">Notional / trade</span>
+        <span class="pnl-meta-value" id="pnl-notional">$10,000</span>
+      </div>
+    </div>
+    <div id="pnl-chart"></div>
+    <div class="pnl-grid" id="pnl-grid"></div>
+    <p class="pnl-disclaimer" id="pnl-disclaimer">
+      5-day raw forward returns (not SPY-excess); fixed-size sleeves; no fees or slippage.
+    </p>
   </section>
 
 </main>
@@ -1703,18 +1928,6 @@ const STRATEGIES = [
       'than the news justifies, the price hasn\'t caught up yet — bet on ' +
       'more move in the same direction (<span class="pos">lean</span>). If ' +
       'they roughly agree, the news is already priced in — skip.' },
-  { id: 'dimension_weighted', label: 'Dimension-weighted',
-    blurb: 'fundamental drivers → lean. Macro/sentiment drivers → fade.',
-    description:
-      'Different <em>kinds</em> of price moves have very different staying ' +
-      'power, going back to the post-earnings drift literature. Moves ' +
-      'driven by real <em>demand</em> (units, customers) or <em>pricing</em> ' +
-      '(margins, price hikes) tend to keep paying off for weeks. Moves ' +
-      'driven by <em>macro</em> shocks (Fed, rates, geopolitics) or single ' +
-      'management-credibility hits tend to fully unwind. This strategy ' +
-      'measures how much of the move came from each cause and weights them: ' +
-      'mostly demand or pricing → <span class="pos">lean</span>; mostly ' +
-      'macro or one-off mgmt noise → <span class="neg">fade</span>.' },
   { id: 'hybrid', label: 'Hybrid',
     blurb: 'fundamental check, then overshoot check, then driver sanity check.',
     description:
@@ -1748,9 +1961,9 @@ const DIM_PHRASE_SHORT = {
   management_credibility: 'management credibility (guidance, execution)',
   macro:                  'macro forces (rates, FX, geopolitics)',
 };
-// Mirrors backtest.frameworks.RESEARCH_GROUNDED_PERSISTENCE — used to
-// reproduce strategy_dimension_weighted's score client-side. Keep in sync if
-// the backend priors are recalibrated.
+// Mirrors backtest.frameworks.RESEARCH_GROUNDED_PERSISTENCE — used by the
+// hybrid strategy's dimension-sanity layer. Keep in sync if the backend
+// priors are recalibrated.
 const PERSISTENCE = {
   demand: 0.85,
   pricing: 0.65,
@@ -1763,7 +1976,7 @@ const ARROW = { positive: '↑', negative: '↓', neutral: '·' };
 const STATE = {
   tickers: [], currentTicker: null, bundle: null,
   evalReport: null,
-  selectedMoveIdx: null, selectedStrategy: 'hybrid',
+  selectedMoveIdx: null, selectedStrategy: 'fundamental_vs_nonfundamental',
   enabledSources: new Set(ALL_IDS),
   chunksAvailable: {}, attribution: null, strategies: {}, chunks: [],
   // Pre-baked full-stack reference, frozen at selectMove time so the
@@ -1774,6 +1987,7 @@ const STATE = {
   // —— upgrade pass ——
   filters: { zMin: 0, confMin: 0, characters: new Set(['structural','transient','mixed','unclear']), directions: new Set(['up','down']) },
   visibleMoveIdx: [],
+  evalReport: null,
 };
 const DIM_PERSISTENCE_SIGN = { demand: +1, pricing: +1, competitive: +1, management_credibility: +1, macro: -1 };
 function computeCoherence(attr) {
@@ -1888,6 +2102,58 @@ function passesFilters(m) {
   if (!STATE.filters.directions.has(dir)) return false;
   return true;
 }
+
+// Mirrors demo/server.py:_COUNT_TO_BUNDLE — count of enabled sources →
+// canonical ablation_name baked in build_static.predictions_by_ablation.
+const COUNT_TO_BUNDLE = {
+  0: 'base_news', 1: 'base_news', 2: '+sec', 3: '+earnings',
+  4: '+peer_news', 5: '+sector_news', 6: '+macro', 7: '+positioning',
+};
+function pickAblationName(enabledSet) {
+  const n = enabledSet.size ?? 0;
+  return COUNT_TO_BUNDLE[Math.min(n, 7)] ?? '+positioning';
+}
+
+// Build a "what the model expected" price series from actual closes +
+// each event's predicted_return_pct under the active ablation.
+//
+// Construction (cumulative-gap formulation):
+//   predicted_close[i] = actual_close[i] × ∏ over events e ≤ date[i]
+//                        of (1 + predicted_return(e)) / (1 + actual_return(e))
+//
+// Effect: predicted overlaps actual until the first event, then drifts
+// proportionally to how wrong the model has been so far. Between events
+// the two move in lockstep — meaningful, since the model only makes
+// claims at events. If predicted is null for an event (no chunks of
+// the right type), the gap factor stays unchanged.
+function computePredictedSeries(bundle, ablationName) {
+  const eventByDate = new Map();
+  const eventsSorted = bundle.moves
+    .map((m, idx) => ({ idx, ...m }))
+    .sort((a, b) => a.move_date.localeCompare(b.move_date));
+
+  let cumGap = 1.0;
+  for (const e of eventsSorted) {
+    const pred = e.predictions_by_ablation?.[ablationName];
+    const denom = 1 + e.return_pct;
+    if (pred !== null && pred !== undefined && denom !== 0) {
+      cumGap *= (1 + pred) / denom;
+    }
+    eventByDate.set(e.move_date, { cumGap, idx: e.idx, predicted: pred });
+  }
+
+  let runningGap = 1.0;
+  const dates = [];
+  const predicted = [];
+  for (const p of bundle.prices) {
+    const ev = eventByDate.get(p.date);
+    if (ev) runningGap = ev.cumGap;
+    dates.push(p.date);
+    predicted.push(p.close * runningGap);
+  }
+  return { dates, predicted, eventByDate };
+}
+
 function renderChart(bundle) {
   document.getElementById('chart-card').hidden = false;
   const visible = bundle.moves.map((m, i) => ({ m, i })).filter(x => passesFilters(x.m));
@@ -1901,39 +2167,154 @@ function renderChart(bundle) {
   const moveY = visible.map(x => priceByDate.get(x.m.move_date) ?? null);
   const moveColors = visible.map(x => x.m.return_pct < 0 ? '#8c2f2f' : '#0a1d36');
 
+  // Predicted-overlay derivation. Active ablation is picked by current
+  // STATE.enabledSources count, mapping to the ablations pre-baked in
+  // build_static.predictions_by_ablation. Empty selection hides the
+  // overlay entirely (caption in the pill explains why).
+  const ablationName = pickAblationName(STATE.enabledSources);
+  const hasOverlay = (STATE.enabledSources?.size ?? 0) > 0;
+  const overlay = hasOverlay
+    ? computePredictedSeries(bundle, ablationName)
+    : null;
+
   const traces = [
     {
       x: bundle.prices.map(p => p.date),
       y: bundle.prices.map(p => p.close),
       mode: 'lines',
       line: { color: '#0a1d36', width: 1.4 },
-      name: 'Close',
+      name: 'Close (actual)',
       hovertemplate: '%{x}<br>$%{y:.2f}<extra></extra>',
     },
-    {
-      x: moveX, y: moveY,
-      customdata: visible.map(x => x.i),
-      mode: 'markers',
-      marker: { size: 11, color: moveColors, line: { color: '#fbf6e8', width: 1.8 } },
-      text: visible.map(x => `<b>${x.m.move_date}</b><br>${pct(x.m.return_pct)} · z ${x.m.vol_zscore.toFixed(1)}σ`),
-      hovertemplate: '%{text}<extra></extra>',
-      name: 'Flagged',
-    }
   ];
+
+  if (overlay) {
+    traces.push({
+      x: overlay.dates,
+      y: overlay.predicted,
+      mode: 'lines',
+      line: { color: '#c2410c', width: 1.6, dash: 'dash' },
+      name: `Model prediction (${ablationName})`,
+      hovertemplate: '%{x}<br>predicted $%{y:.2f}<extra></extra>',
+      opacity: 0.92,
+    });
+  }
+
+  // Bolded actual markers — bigger + thicker outer ring so the
+  // "clickable affordance" is obvious.
+  traces.push({
+    x: moveX, y: moveY,
+    customdata: visible.map(x => x.i),
+    mode: 'markers',
+    marker: { size: 10, color: moveColors,
+              line: { color: '#ffffff', width: 2 } },
+    text: visible.map(x => `<b>${x.m.move_date}</b><br>${pct(x.m.return_pct)} · z ${x.m.vol_zscore.toFixed(1)}σ`),
+    hovertemplate: '%{text}<extra></extra>',
+    name: 'Flagged (actual)',
+  });
+
+  // Predicted markers at event dates — same per-direction colors as
+  // actual, hollow diamond shape distinguishes them visually. Click
+  // routes to the same selectMove via customdata.
+  if (overlay) {
+    const predX = [], predY = [], predCD = [], predTxt = [], predColors = [];
+    for (const x of visible) {
+      const ev = overlay.eventByDate.get(x.m.move_date);
+      if (!ev || ev.predicted === null || ev.predicted === undefined) continue;
+      const actualY = priceByDate.get(x.m.move_date);
+      if (actualY === undefined) continue;
+      const predYVal = actualY * ev.cumGap;
+      predX.push(x.m.move_date);
+      predY.push(predYVal);
+      predCD.push(x.i);
+      predColors.push(x.m.return_pct < 0 ? '#8c2f2f' : '#0a1d36');
+      const gap = predYVal - actualY;
+      predTxt.push(
+        `<b>${x.m.move_date}</b> · model<br>` +
+        `predicted close $${predYVal.toFixed(2)}<br>` +
+        `actual close $${actualY.toFixed(2)}<br>` +
+        `gap ${gap >= 0 ? '+' : ''}$${gap.toFixed(2)}<br>` +
+        `predicted return ${pct(ev.predicted)}`
+      );
+    }
+    if (predX.length) {
+      traces.push({
+        x: predX, y: predY, customdata: predCD,
+        mode: 'markers',
+        marker: { size: 11, color: predColors,
+                  line: { color: '#c2410c', width: 2 },
+                  symbol: 'diamond-open' },
+        text: predTxt,
+        hovertemplate: '%{text}<extra></extra>',
+        name: 'Predicted',
+      });
+    }
+  }
+
+  // Layout shapes: thin dashed vertical line connecting each event's
+  // actual and predicted markers, drawn only when divergence > 2% so
+  // small gaps don't clutter the chart.
+  const gapShapes = [];
+  if (overlay) {
+    for (const x of visible) {
+      const ev = overlay.eventByDate.get(x.m.move_date);
+      if (!ev || ev.predicted === null || ev.predicted === undefined) continue;
+      const actualY = priceByDate.get(x.m.move_date);
+      if (actualY === undefined) continue;
+      const predYVal = actualY * ev.cumGap;
+      if (Math.abs(predYVal - actualY) / Math.abs(actualY) < 0.02) continue;
+      gapShapes.push({
+        type: 'line',
+        x0: x.m.move_date, x1: x.m.move_date,
+        y0: actualY, y1: predYVal,
+        line: { color: '#c2410c', width: 1, dash: 'dot' },
+        opacity: 0.55,
+        layer: 'below',
+      });
+    }
+  }
+
   const layout = {
     paper_bgcolor: 'rgba(0,0,0,0)',
     plot_bgcolor:  'rgba(0,0,0,0)',
     margin: { l: 48, r: 12, t: 8, b: 28 },
     font: { family: 'Inter, sans-serif', color: '#6a6e7c', size: 11 },
-    hoverlabel: { bgcolor: '#fbf6e8', bordercolor: '#cfc7b2', font: { color: '#0d1320', family: 'Source Serif 4, serif' } },
-    xaxis: { gridcolor: '#e3dcc8', linecolor: '#cfc7b2', tickcolor: '#cfc7b2', zeroline: false },
-    yaxis: { gridcolor: '#e3dcc8', linecolor: '#cfc7b2', tickcolor: '#cfc7b2', zeroline: false, tickprefix: '$' },
-    showlegend: false,
+    hoverlabel: { bgcolor: '#ffffff', bordercolor: '#dee1e7', font: { color: '#0d1320', family: 'Source Serif 4, serif' } },
+    xaxis: { gridcolor: '#e8eaef', linecolor: '#dee1e7', tickcolor: '#dee1e7', zeroline: false },
+    yaxis: { gridcolor: '#e8eaef', linecolor: '#dee1e7', tickcolor: '#dee1e7', zeroline: false, tickprefix: '$' },
+    shapes: gapShapes,
+    showlegend: true,
+    legend: { orientation: 'h', x: 0, y: 1.02,
+              xanchor: 'left', yanchor: 'bottom',
+              font: { color: '#6a6e7c', size: 10 },
+              bgcolor: 'rgba(0,0,0,0)' },
   };
   Plotly.react('chart', traces, layout, { displaylogo: false, responsive: true, modeBarButtonsToRemove: ['lasso2d','select2d'] });
+
+  // Active-ablation pill in the chart header. Empty selection collapses
+  // to a "no overlay" hint so users know why the line is missing.
+  const pill = document.getElementById('ablation-pill');
+  if (pill) {
+    if (!hasOverlay) {
+      pill.textContent = 'No overlay — enable a source';
+      pill.classList.add('muted');
+    } else {
+      pill.textContent = `Model overlay · ${ablationName}`;
+      pill.classList.remove('muted');
+    }
+  }
+
   const div = document.getElementById('chart');
   if (!div._handlerAttached) {
-    div.on('plotly_click', ev => { const p = ev.points[0]; if (!p || p.curveNumber !== 1) return; selectMove(p.customdata); });
+    // Marker traces all carry customdata=move_idx; line traces (close +
+    // predicted) don't. Trust customdata rather than curveNumber so the
+    // handler is robust to overlay traces appearing/disappearing.
+    div.on('plotly_click', ev => {
+      const p = ev.points[0];
+      if (!p) return;
+      if (p.customdata === undefined || p.customdata === null) return;
+      selectMove(p.customdata);
+    });
     div._handlerAttached = true;
   }
 }
@@ -1977,15 +2358,6 @@ function judgeVerdict(verdict, moveSign, fwdReturn) {
  * reflects the live /api/attribute response (or pre-baked bundle on first
  * paint).
  */
-function _dimWeightedScore(ref) {
-  let score = 0, top = null, topAbs = 0;
-  for (const [k, v] of Object.entries(ref.dimensions || {})) {
-    const c = (PERSISTENCE[k] ?? 0) * (v?.weight ?? 0);
-    score += c;
-    if (Math.abs(c) > topAbs) { topAbs = Math.abs(c); top = k; }
-  }
-  return { score, top };
-}
 function _dominantDimension(ref) {
   let domName = null, domWeight = 0;
   for (const [k, v] of Object.entries(ref.dimensions || {})) {
@@ -2094,90 +2466,49 @@ function buildOutcomeSentence(verdict, ref, bundle, moveDate) {
   return '';
 }
 function buildStrategyReasoning(strategyId, verdict, ref, tag) {
+  // Each framework reads ONE signal; the explanation surfaces THAT signal,
+  // not a generic "so the strategy says X" suffix. Keeps the three reasonings
+  // visibly distinct on the same move.
   if (strategyId === 'fundamental_vs_nonfundamental') {
-    if (ref.character === 'structural') {
-      return `Because the model judged the cause durable rather than narrative, ` +
-             `this strategy says ${tag} — bet the move keeps working.`;
-    }
-    if (ref.character === 'transient') {
-      return `Because the model judged the cause sentiment-driven (a single news ` +
-             `cycle, not a real business change), this strategy says ${tag} — bet ` +
-             `the move unwinds.`;
-    }
-    return `Because the model couldn't cleanly call the cause fundamental or ` +
-           `sentiment, this strategy stays out: ${tag}.`;
+    const c = ref.character || 'unclear';
+    if (c === 'structural') return `Cause read as <b>structural</b> → ${tag}.`;
+    if (c === 'transient')  return `Cause read as <b>transient</b> → ${tag}.`;
+    return `Cause read as <b>${c}</b> → ${tag}.`;
   }
+
   if (strategyId === 'expected_vs_realized') {
-    const realized = ref.realized;
-    const predicted = ref.predicted;
-    const hasPred = predicted !== null && predicted !== undefined;
-    if (!hasPred) {
-      return `With no expected-return baseline to compare against, this strategy is forced to ${tag}.`;
-    }
-    if (predicted === 0) {
-      return `With expected return at zero, there's no magnitude to ratio against — the strategy is forced to ${tag}.`;
-    }
-    if (predicted * realized < 0) {
-      return `Since actual and expected pointed opposite directions, the strategy refuses to call it: ${tag}.`;
-    }
-    const ratio = Math.abs(realized) / Math.abs(predicted);
-    if (ratio >= 1.5) {
-      return `The stock moved roughly <span class="num">${ratio.toFixed(2)}×</span> ` +
-             `more than the news justified — that looks like overreaction, so this ` +
-             `strategy says ${tag} (bet on a pullback).`;
-    }
-    if (ratio <= 0.5) {
-      return `The stock moved only <span class="num">${ratio.toFixed(2)}×</span> ` +
-             `the magnitude the news justified — the price hasn't caught up, so ` +
-             `this strategy says ${tag} (bet on more move in the same direction).`;
-    }
-    return `Realized and expected magnitudes are within the neutral band — the ` +
-           `news already looks priced in, so this strategy says ${tag}.`;
+    const r = ref.realized, p = ref.predicted;
+    if (p === null || p === undefined) return `No predicted return → ${tag}.`;
+    if (p === 0) return `Predicted return = 0, no ratio → ${tag}.`;
+    if (p * r < 0) return `Realized ${pct(r,1)} and predicted ${pct(p,1)} disagree on sign → ${tag}.`;
+    const ratio = Math.abs(r) / Math.abs(p);
+    const tail =
+      ratio >= 1.5 ? 'overshoot' :
+      ratio <= 0.5 ? 'undershoot' :
+      'within band';
+    return `Realized ${pct(r,1)} vs predicted ${pct(p,1)} ` +
+           `(<b>${ratio.toFixed(2)}×</b>, ${tail}) → ${tag}.`;
   }
-  if (strategyId === 'dimension_weighted') {
-    const { score, top } = _dimWeightedScore(ref);
-    const topPhrase = top ? (DIM_PHRASE[top] || top) : '—';
-    if (score >= 0.20) {
-      return `The dominant driver is <span class="num">${topPhrase}</span> — the kind ` +
-             `of cause that historically keeps paying off in the same direction. So ` +
-             `this strategy says ${tag}.`;
-    }
-    if (score <= -0.20) {
-      return `The dominant driver is <span class="num">${topPhrase}</span> — the kind ` +
-             `of cause that historically tends to fully reverse. So this strategy ` +
-             `says ${tag} (bet against the move).`;
-    }
-    return `No single driver dominates this move clearly enough to call — the mix ` +
-           `washes out, so this strategy says ${tag}.`;
-  }
+
   if (strategyId === 'hybrid') {
-    const char = ref.character;
-    const realized = ref.realized;
-    const predicted = ref.predicted;
-    const domName = _dominantDimension(ref);
-    const domPhrase = domName ? (DIM_PHRASE[domName] || domName) : '—';
-    const domPersist = domName ? (PERSISTENCE[domName] ?? 0) : 0;
-    if (char === 'transient') {
-      return `Layer 1 caught it: the cause is sentiment-driven, so this strategy says ${tag} immediately.`;
+    const c = ref.character;
+    const r = ref.realized, p = ref.predicted;
+    if (c === 'transient')              return `L1 stop · transient → ${tag}.`;
+    if (c === 'mixed' || c === 'unclear') return `L1 stop · ${c} → ${tag}.`;
+    const hasPred = p !== null && p !== undefined && p !== 0 && p * r > 0;
+    if (hasPred && Math.abs(r) >= 1.5 * Math.abs(p)) {
+      const ratio = Math.abs(r) / Math.abs(p);
+      return `L1 ✓ structural · L2 stop · overshoot ${ratio.toFixed(2)}× → ${tag}.`;
     }
-    if (char === 'mixed' || char === 'unclear') {
-      return `Layer 1 caught it: the cause is too unclear to act on, so this strategy says ${tag}.`;
-    }
-    const hasPred = predicted !== null && predicted !== undefined && predicted !== 0
-                    && predicted * realized > 0;
-    if (hasPred && Math.abs(realized) >= 1.5 * Math.abs(predicted)) {
-      return `The cause is fundamental, but Layer 2 caught an overshoot — the price ` +
-             `moved well beyond what the news justified. So this strategy says ${tag}.`;
-    }
+    const dom = _dominantDimension(ref);
+    const domLabel = dom ? (DIM_LABEL[dom] || dom) : '—';
+    const domPersist = dom ? (PERSISTENCE[dom] ?? 0) : 0;
     if (domPersist < 0) {
-      return `The cause is fundamental and there's no overshoot, but the strongest ` +
-             `driver was <span class="num">${domPhrase}</span> — historically that ` +
-             `kind of move reverses, so Layer 3 backs off to ${tag}.`;
+      return `L1 ✓ · L2 ✓ · L3 stop · top driver <b>${domLabel}</b> reverts historically → ${tag}.`;
     }
-    return `All three checks passed — fundamental cause, no overshoot, and the ` +
-           `strongest driver (<span class="num">${domPhrase}</span>) has a strong ` +
-           `record of continuing. So this strategy says ${tag}.`;
+    return `L1 ✓ · L2 ✓ · L3 ✓ · top driver <b>${domLabel}</b> persists → ${tag}.`;
   }
+
   return `Strategy concluded ${tag}.`;
 }
 function buildVerdictConclusion(strategyId, verdict, ref, bundle, moveDate) {
@@ -2355,6 +2686,8 @@ function renderEventCard() {
       <div class="date">${dateStr}</div>
     </div>
 
+    <div class="abl-strip" id="abl-strip"></div>
+
     ${notesHtml}
     ${zeroHtml}
 
@@ -2411,6 +2744,8 @@ function renderEventCard() {
       </div>
     </div>
 
+    <div id="radar-slot"></div>
+
     ${fwdStripHtml}
 
     <div class="strat-row" id="strat-row"></div>
@@ -2436,6 +2771,229 @@ function renderEventCard() {
   renderStrategyRow();
   renderTabs();
   renderActiveTab();
+  renderDimensionRadar();
+  renderAblationStrip();
+}
+
+/* ─── Ablation Toggle ───
+ * Mentor's "demo gold": click a chip → preset source bundle is sent to
+ * /api/attribute → the verdict / character / predicted return / radar
+ * polygon all move. The same source toggles in the Sources tab still
+ * work for granular exploration; this strip is for the demo narrative.
+ *
+ * Each preset is the additive-ablation roadmap from CLAUDE.md:
+ *   base_news → +sec → +earnings → +peers → +macro → +positioning
+ */
+const ABLATIONS = [
+  { id: 'base_news',     label: 'News only',
+    sources: ['news'] },
+  { id: '+sec',          label: '+ SEC',
+    sources: ['news', 'sec_10k', 'sec_8k'] },
+  { id: '+earnings',     label: '+ Earnings',
+    sources: ['news', 'sec_10k', 'sec_8k', 'earnings_transcript'] },
+  { id: '+peers',        label: '+ Peers',
+    sources: ['news', 'sec_10k', 'sec_8k', 'earnings_transcript', 'peer_news'] },
+  { id: '+macro',        label: '+ Macro',
+    sources: ['news', 'sec_10k', 'sec_8k', 'earnings_transcript', 'peer_news', 'macro'] },
+  { id: '+positioning',  label: '+ Positioning',
+    sources: ['news', 'sec_10k', 'sec_8k', 'earnings_transcript', 'peer_news', 'macro', 'thirteen_f'] },
+];
+
+function _setEqual(a, b) {
+  if (a.size !== b.size) return false;
+  for (const v of a) if (!b.has(v)) return false;
+  return true;
+}
+
+function _activeAblationId() {
+  // Match current STATE.enabledSources against the FULL preset (not
+  // intersected with chunks_available) so a chip lights up as soon as the
+  // user clicks it, even when some preset sources have zero chunks for
+  // this particular move (e.g. macro for an older date).
+  const enabled = STATE.enabledSources;
+  for (const abl of ABLATIONS) {
+    const presetSet = new Set(abl.sources);
+    if (_setEqual(presetSet, enabled)) return abl.id;
+  }
+  return null;
+}
+
+function renderAblationStrip() {
+  const strip = document.getElementById('abl-strip');
+  if (!strip) return;
+  if (STATE.selectedMoveIdx == null) { strip.innerHTML = ''; return; }
+
+  const activeId = _activeAblationId();
+
+  const label = '<span class="abl-label">Sources</span>';
+  const chips = ABLATIONS.map(abl => {
+    const eligible = abl.sources.filter(s => (STATE.chunksAvailable[s] || 0) > 0);
+    const disabled = eligible.length === 0;
+    const cls = 'abl-chip' +
+      (abl.id === activeId ? ' active' : '') +
+      (disabled ? ' disabled' : '');
+    const title = disabled
+      ? `No chunks available for: ${abl.sources.join(', ')}`
+      : `${abl.label} · ${eligible.length} source${eligible.length === 1 ? '' : 's'}`;
+    return `<button type="button" class="${cls}" data-abl-id="${abl.id}" title="${escapeHtml(title)}"${disabled ? ' disabled' : ''}>${escapeHtml(abl.label)}</button>`;
+  }).join('');
+
+  const foot = activeId
+    ? `<span class="abl-foot">Ablation: <b>${activeId}</b></span>`
+    : `<span class="abl-foot">Custom mix · use chips for preset bundles</span>`;
+
+  strip.innerHTML = label + chips + foot;
+
+  strip.querySelectorAll('.abl-chip').forEach(chip => {
+    chip.addEventListener('click', () => {
+      const id = chip.dataset.ablId;
+      const abl = ABLATIONS.find(a => a.id === id);
+      if (!abl) return;
+      // Send the full preset to the server. The server already filters by
+      // what's available; sending sources with zero chunks is harmless and
+      // means the user's click matches the chip's label exactly (so the
+      // active highlight lands on the chip they clicked).
+      STATE.enabledSources = new Set(abl.sources);
+      recomputeAttribution();
+    });
+  });
+}
+
+/* ─── Dimension Radar — this event vs ticker peer median ───
+ * Five-axis polygon plot. The oxblood polygon is THIS move's dimension
+ * weights; the dashed-navy polygon is the median weight per dimension
+ * across every OTHER flagged move on the same ticker. Where the polygons
+ * diverge is the model's idiosyncratic signal.
+ */
+const RADAR_DIMS = [
+  { key: 'demand',                 label: 'Demand' },
+  { key: 'pricing',                label: 'Pricing' },
+  { key: 'management_credibility', label: 'Mgmt' },
+  { key: 'macro',                  label: 'Macro' },
+  { key: 'competitive',            label: 'Comp.' },
+];
+const RADAR_R_MAX = 120;
+
+function _radarPoint(weight, axisIdx) {
+  const angle = (axisIdx * 72 - 90) * Math.PI / 180;  // first axis points up
+  const r = Math.max(0, Math.min(1, weight)) * RADAR_R_MAX;
+  return [r * Math.cos(angle), r * Math.sin(angle)];
+}
+function _radarPolygonPoints(getWeight) {
+  return RADAR_DIMS.map((d, i) => {
+    const [x, y] = _radarPoint(getWeight(d.key), i);
+    return `${x.toFixed(1)},${y.toFixed(1)}`;
+  }).join(' ');
+}
+function _peerMedianWeights(bundle, excludeIdx) {
+  const buckets = Object.fromEntries(RADAR_DIMS.map(d => [d.key, []]));
+  bundle.moves.forEach((m, i) => {
+    if (i === excludeIdx) return;
+    const dims = m.attribution?.dimensions;
+    if (!dims) return;
+    for (const d of RADAR_DIMS) {
+      const w = dims[d.key]?.weight;
+      if (typeof w === 'number' && Number.isFinite(w)) buckets[d.key].push(w);
+    }
+  });
+  const median = arr => {
+    if (arr.length === 0) return 0;
+    const s = [...arr].sort((a, b) => a - b);
+    const mid = Math.floor(s.length / 2);
+    return s.length % 2 ? s[mid] : (s[mid - 1] + s[mid]) / 2;
+  };
+  return Object.fromEntries(RADAR_DIMS.map(d => [d.key, median(buckets[d.key])]));
+}
+
+function renderDimensionRadar() {
+  const slot = document.getElementById('radar-slot');
+  if (!slot) return;
+  const a = STATE.attribution;
+  if (!a || !STATE.bundle || STATE.selectedMoveIdx == null) {
+    slot.innerHTML = '';
+    return;
+  }
+  const meDims = a.dimensions || {};
+  const meGet = k => (meDims[k]?.weight ?? 0);
+  const peerWeights = _peerMedianWeights(STATE.bundle, STATE.selectedMoveIdx);
+  const peerGet = k => (peerWeights[k] ?? 0);
+
+  const mePoly = _radarPolygonPoints(meGet);
+  const peerPoly = _radarPolygonPoints(peerGet);
+
+  const axes = RADAR_DIMS.map((d, i) => {
+    const [x, y] = _radarPoint(1, i);
+    return `<line class="axis" x1="0" y1="0" x2="${x.toFixed(1)}" y2="${y.toFixed(1)}"/>`;
+  }).join('');
+  const labels = RADAR_DIMS.map((d, i) => {
+    const angle = (i * 72 - 90) * Math.PI / 180;
+    const x = 148 * Math.cos(angle);
+    const y = 148 * Math.sin(angle);
+    let anchor = 'middle';
+    if (x > 8) anchor = 'start';
+    else if (x < -8) anchor = 'end';
+    // Nudge horizontal-side labels a tick further out so the text doesn't
+    // overlap the outermost ring.
+    const dx = x > 8 ? 4 : x < -8 ? -4 : 0;
+    return `<text class="axis-label" x="${(x + dx).toFixed(1)}" y="${(y + 4).toFixed(1)}" text-anchor="${anchor}">${d.label}</text>`;
+  }).join('');
+  const mePts = RADAR_DIMS.map((d, i) => {
+    const [x, y] = _radarPoint(meGet(d.key), i);
+    return `<circle class="me-pt" cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="3.5"/>`;
+  }).join('');
+  const peerPts = RADAR_DIMS.map((d, i) => {
+    const [x, y] = _radarPoint(peerGet(d.key), i);
+    return `<circle class="peer-pt" cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="2.5"/>`;
+  }).join('');
+
+  // Find the dimension that diverges most — that's the sentence-worthy story.
+  let topDim = null, topAbsDelta = 0, topDelta = 0;
+  for (const d of RADAR_DIMS) {
+    const delta = meGet(d.key) - peerGet(d.key);
+    if (Math.abs(delta) > topAbsDelta) {
+      topAbsDelta = Math.abs(delta);
+      topDelta = delta;
+      topDim = d;
+    }
+  }
+  let divergenceDesc;
+  if (!topDim || topAbsDelta < 0.04) {
+    divergenceDesc = 'This event sits inside the peer envelope — the model sees it as a typical move for this ticker.';
+  } else {
+    const dir = topDelta > 0 ? 'pushes well past' : 'sits below';
+    divergenceDesc = `<em>${topDim.label}</em> ${dir} the ticker norm — that's where the model\'s residual signal lives.`;
+  }
+
+  const move = STATE.bundle.moves[STATE.selectedMoveIdx] || {};
+  const ticker = STATE.bundle.ticker || '';
+  const peerCount = (STATE.bundle.moves?.length ?? 1) - 1;
+
+  slot.innerHTML = `
+    <div class="radar">
+      <svg viewBox="-220 -160 440 320">
+        <circle class="ring" cx="0" cy="0" r="40"/>
+        <circle class="ring" cx="0" cy="0" r="80"/>
+        <circle class="ring" cx="0" cy="0" r="120"/>
+        ${axes}
+        ${labels}
+        <polygon class="peer-poly" points="${peerPoly}"/>
+        ${peerPts}
+        <polygon class="me-poly" points="${mePoly}"/>
+        ${mePts}
+      </svg>
+      <div class="legend">
+        <div class="leg-row">
+          <p class="lab">This event</p>
+          <p class="name">${escapeHtml(ticker)} · <b>${escapeHtml(move.move_date || '')}</b></p>
+          <p class="desc">${divergenceDesc}</p>
+        </div>
+        <div class="leg-row peer">
+          <p class="lab">Peer median</p>
+          <p class="name">Other ${escapeHtml(ticker)} flagged moves <b>n=${peerCount}</b></p>
+          <p class="desc">Median dimension weight across the rest of this ticker's flagged events. Where the oxblood polygon escapes the dashed shape is what makes this move idiosyncratic.</p>
+        </div>
+      </div>
+    </div>`;
 }
 
 function renderStrategyRow() {
@@ -2682,17 +3240,19 @@ function renderSources(panel) {
   tools.querySelector('#reset-toggles-btn').addEventListener('click', () => {
     STATE.enabledSources = new Set(
       ALL_IDS.filter(id => (STATE.chunksAvailable[id] || 0) > 0));
-    // Same reason as the toggle change handler — repaint immediately, don't
-    // wait the ~30s for /api/attribute.
-    renderSources(panel);
     recomputeAttribution();
+    if (STATE.bundle) renderChart(STATE.bundle);
   });
 
   const grid = document.createElement('div');
   grid.className = 'src-grid';
   for (const s of SOURCE_TYPES) {
     const count = STATE.chunksAvailable[s.id] ?? 0;
-    const checked = STATE.enabledSources.has(s.id) && count > 0;
+    // `checked` reflects user intent (selected via chip or toggle), independent
+    // of whether this move has chunks for it. `disabled` handles the "no data"
+    // visual. Keeps chip-strip ↔ sources-tab in sync when an ablation includes
+    // a source that has zero chunks for this particular move.
+    const checked = STATE.enabledSources.has(s.id);
     const disabled = count === 0;
     const node = document.createElement('label');
     node.className = 'src-toggle' + (checked ? ' checked' : '') + (disabled ? ' disabled' : '');
@@ -2714,12 +3274,10 @@ function renderSources(panel) {
     input.addEventListener('change', e => {
       if (e.target.checked) STATE.enabledSources.add(s.id);
       else STATE.enabledSources.delete(s.id);
-      // /api/attribute can take 30s+ for the live model — don't wait for it
-      // to update the wrapper's `.checked` class. Without this immediate
-      // re-render, the user clicks a toggle, sees no visual change for half
-      // a minute, and reasonably concludes the toggle is broken.
-      renderSources(panel);
       recomputeAttribution();
+      // Re-render chart so the predicted-overlay tracks the active
+      // source set (not just the per-event panel).
+      if (STATE.bundle) renderChart(STATE.bundle);
     });
     grid.appendChild(node);
   }
@@ -2769,20 +3327,45 @@ function renderEvalHarness() {
     `<span class="eval-den">${n}</span>` +
     `<span class="eval-of">cases correct</span>` +
     `<span class="eval-pct">· ${pct}%</span>`;
-  sub.textContent =
-    `${ticker} · hand-authored fixtures with known causes (${tickerCases.length} ` +
-    `loaded). Other strategies show verdicts but aren't scored — see note below.`;
+
+  // Which chart move is currently selected? If its date matches a fixture,
+  // we'll highlight that row. If not, the harness still scores the same 6
+  // — say so plainly so the user doesn't read "3/6" as "this move scored 3/6".
+  const selMove = (STATE.bundle && STATE.selectedMoveIdx != null)
+    ? STATE.bundle.moves[STATE.selectedMoveIdx] : null;
+  const selDate = selMove ? selMove.move_date : null;
+  const selCaseId = selDate ? `${ticker}_${selDate}` : null;
+  const matchedCase = selCaseId ? tickerCases.find(c => c.case_id === selCaseId) : null;
+
+  if (matchedCase) {
+    const verdictTxt = matchedCase.match === true ? 'matches ground truth'
+                     : matchedCase.match === false ? 'misses ground truth'
+                     : 'is exploration-only';
+    sub.textContent =
+      `${ticker} · ${tickerCases.length} hand-authored cases. ` +
+      `Selected move (${selDate}) is in the harness — model ${verdictTxt}.`;
+  } else if (selDate) {
+    sub.textContent =
+      `${ticker} · ${tickerCases.length} hand-authored cases. ` +
+      `Selected move (${selDate}) is not in the fixture set, so the score ` +
+      `below is the ticker-wide harness, not a per-move result.`;
+  } else {
+    sub.textContent =
+      `${ticker} · ${tickerCases.length} hand-authored cases with known causes. ` +
+      `Click a flagged move on the chart to highlight its case.`;
+  }
 
   if (primaryStrat) primaryStrat.textContent = report.primary_strategy;
 
   list.innerHTML = '';
   for (const c of tickerCases) {
     const wrap = document.createElement('div');
+    const isActive = selCaseId === c.case_id;
     wrap.className = 'eval-case eval-case-' + (
       c.match === true ? 'pass'
       : c.match === false ? 'fail'
       : 'skip'
-    );
+    ) + (isActive ? ' eval-case-active' : '');
     const glyph = c.match === true ? '✓'
                 : c.match === false ? '✗'
                 : '·';
@@ -2794,23 +3377,11 @@ function renderEvalHarness() {
       ? `<span class="verdict-tag ${c.model_verdict}">${c.model_verdict.toUpperCase()}</span>`
       : '<span style="color:var(--ink-dim);font-size:0.78rem">—</span>';
 
-    const otherStrategiesHtml = (report.strategies || [])
-      .filter(s => s.strategy !== report.primary_strategy)
-      .map(s => {
-        const cell = (s.cases || []).find(x => x.case_id === c.case_id);
-        const v = cell ? (cell.model_verdict || '—') : '—';
-        const cls = (v === 'lean' || v === 'fade' || v === 'neutral') ? v : 'pending';
-        return `<div class="eval-other-strat">` +
-                 `<span class="eval-other-name">${escapeHtml(s.strategy.replace(/_/g, ' '))}</span>` +
-                 `<span class="verdict-tag small ${cls}">${escapeHtml(v.toUpperCase())}</span>` +
-               `</div>`;
-      }).join('');
-
     wrap.innerHTML =
       `<div class="eval-case-head">` +
         `<span class="eval-glyph">${glyph}</span>` +
         `<div class="eval-case-id">` +
-          `<span class="eval-case-date">${escapeHtml(c.case_id)}</span>` +
+          `<span class="eval-case-date">${escapeHtml(c.case_id)}${isActive ? ' <span class="eval-active-pill">selected</span>' : ''}</span>` +
           `<span class="eval-case-cause">${escapeHtml(cause)}</span>` +
         `</div>` +
         `<div class="eval-verdicts">` +
@@ -2821,17 +3392,129 @@ function renderEvalHarness() {
             `<span class="eval-verdict-label">model</span>${modelHtml}` +
           `</div>` +
         `</div>` +
-      `</div>` +
-      (otherStrategiesHtml ?
-        `<div class="eval-case-body"><div class="eval-other-strats">` +
-          `<span class="eval-other-heading">Other strategies (unscored)</span>` +
-          otherStrategiesHtml +
-        `</div></div>` : ``);
+      `</div>`;
     list.appendChild(wrap);
   }
 
   if (disclaimer) {
-    disclaimer.textContent = report.unscored_explanation || '';
+    disclaimer.textContent =
+      'Only fundamental-vs-non has ground-truth labels in fixtures, so it ' +
+      'is the only strategy scored here. The Verdict Console below lets ' +
+      'you preview the other frameworks.';
+  }
+}
+
+// ── PnL card ─────────────────────────────────────────────────────────────
+// Renders bundle.pnl — model + 4 baselines run as 5-day trades over every
+// flagged event for the loaded ticker. Closes the loop: attribution →
+// verdict → realized $ P&L. Hidden when the ticker bundle has no pnl block.
+function renderPnl(bundle) {
+  const section = document.getElementById('pnl-card');
+  if (!section) return;
+  const pnl = bundle && bundle.pnl;
+  if (!pnl || !Array.isArray(pnl.strategies) || pnl.strategies.length === 0) {
+    section.hidden = true;
+    return;
+  }
+  section.hidden = false;
+
+  const fmtMoney = (v) => {
+    const sign = v >= 0 ? '+' : '−';
+    const abs = Math.abs(v);
+    const s = abs >= 1000
+      ? abs.toLocaleString(undefined, { maximumFractionDigits: 0 })
+      : abs.toFixed(2);
+    return `${sign}$${s}`;
+  };
+  const colorClass = (v) => v > 0 ? 'pnl-num-pos' : v < 0 ? 'pnl-num-neg' : 'pnl-num-zero';
+
+  // Find the model row for the headline; fall back to first row if missing.
+  const model = pnl.strategies.find(s => s.name === 'model') || pnl.strategies[0];
+
+  const headline = document.getElementById('pnl-headline');
+  const sub = document.getElementById('pnl-sub');
+  const notional = document.getElementById('pnl-notional');
+  const grid = document.getElementById('pnl-grid');
+  const disclaimer = document.getElementById('pnl-disclaimer');
+
+  const total = Number(model.total_pnl_dollars || 0);
+  const cls = colorClass(total);
+  const hr = model.n_trades > 0
+    ? `${(model.hit_rate * 100).toFixed(0)}%`
+    : '—';
+  headline.innerHTML =
+    `<span class="${cls}">${fmtMoney(total)}</span>` +
+    `<span class="eval-of"> · ${model.n_wins}/${model.n_trades} trades won</span>` +
+    `<span class="eval-pct"> · ${hr} hit rate</span>`;
+  sub.textContent =
+    `${bundle.ticker} · ${pnl.n_events} flagged event(s) traded as 5-trading-day ` +
+    `windows. Model row outlined in oxblood; baselines below it.`;
+  notional.textContent = '$' + Number(pnl.notional_per_trade).toLocaleString();
+
+  // ── Bar chart: total PnL per strategy ──
+  const ordered = [...pnl.strategies].sort((a, b) => {
+    if (a.name === 'model') return -1;
+    if (b.name === 'model') return 1;
+    return Number(b.total_pnl_dollars) - Number(a.total_pnl_dollars);
+  });
+  const barLabels = ordered.map(s => s.label);
+  const barVals   = ordered.map(s => Number(s.total_pnl_dollars || 0));
+  const barColors = ordered.map(s => Number(s.total_pnl_dollars || 0) >= 0 ? '#2e6f48' : '#8c2f2f');
+  const barLines  = ordered.map(s => s.name === 'model' ? '#7a1f1f' : '#dee1e7');
+  const barWidths = ordered.map(s => s.name === 'model' ? 2 : 0.8);
+  const trace = {
+    type: 'bar',
+    orientation: 'h',
+    x: barVals,
+    y: barLabels,
+    marker: { color: barColors, line: { color: barLines, width: barWidths } },
+    text: barVals.map(v => fmtMoney(v)),
+    textposition: 'outside',
+    cliponaxis: false,
+    hovertemplate: '%{y}<br>%{x:$,.0f} over the window<extra></extra>',
+  };
+  const layout = {
+    paper_bgcolor: 'rgba(0,0,0,0)',
+    plot_bgcolor:  'rgba(0,0,0,0)',
+    margin: { l: 220, r: 60, t: 6, b: 28 },
+    height: 36 * ordered.length + 60,
+    font: { family: 'Inter, sans-serif', color: '#6a6e7c', size: 11 },
+    hoverlabel: { bgcolor: '#ffffff', bordercolor: '#dee1e7', font: { color: '#0d1320', family: 'Source Serif 4, serif' } },
+    xaxis: {
+      gridcolor: '#e8eaef', linecolor: '#dee1e7', tickcolor: '#dee1e7',
+      zeroline: true, zerolinecolor: '#0d1320', zerolinewidth: 1,
+      tickprefix: '$', tickformat: ',.0f',
+    },
+    yaxis: { gridcolor: '#e8eaef', linecolor: '#dee1e7', tickcolor: '#dee1e7', zeroline: false, automargin: true },
+    showlegend: false,
+  };
+  Plotly.react('pnl-chart', [trace], layout, {
+    displaylogo: false, responsive: true, displayModeBar: false,
+  });
+
+  // ── Strategy grid (model first, baselines sorted by $ desc) ──
+  grid.innerHTML = '';
+  for (const s of ordered) {
+    const row = document.createElement('div');
+    row.className = 'pnl-row' + (s.name === 'model' ? ' pnl-row-model' : '');
+    const tot = Number(s.total_pnl_dollars || 0);
+    const tcls = colorClass(tot);
+    const hrText = s.n_trades > 0
+      ? `${(s.hit_rate * 100).toFixed(0)}% hit · ${s.n_wins}/${s.n_trades} trades`
+      : 'no trades';
+    const tag = s.name === 'model' ? '<span class="pnl-row-tag">Model</span>' : '';
+    row.innerHTML =
+      `<div class="pnl-row-name">${escapeHtml(s.label)}${tag}</div>` +
+      `<div class="pnl-row-dollars ${tcls}">${fmtMoney(tot)}</div>` +
+      `<div class="pnl-row-stats">${hrText}</div>`;
+    grid.appendChild(row);
+  }
+
+  if (disclaimer) {
+    const flag = pnl.uses_market_neutral ? 'SPY-excess' : 'raw';
+    disclaimer.textContent =
+      `${flag} ${pnl.horizon_days}-day forward returns; $${Number(pnl.notional_per_trade).toLocaleString()} ` +
+      'per trade with constant-size sleeves; no fees or slippage.';
   }
 }
 
@@ -2846,6 +3529,7 @@ async function selectTicker(t) {
   renderOverview(bundle);
   document.getElementById('filter-bar').hidden = false;
   renderEvalHarness();
+  renderPnl(bundle);
   renderChart(bundle);
   if (bundle.moves.length > 0) {
     let mx = 0, mxAbs = 0;
@@ -2868,12 +3552,18 @@ function selectMove(idx) {
   STATE.strategies = m.strategies || (STATE.attribution ? deriveStrategies(STATE.attribution) : {});
   STATE.chunks = m.chunks || [];
   renderEventCard();
+  // Re-render the harness so the row matching this move (if any) highlights.
+  renderEvalHarness();
   // Fast first paint from the static bundle, then fire the live /api/attribute
   // call so the per-citation quote + reasoning shape arrives. The live result
   // replaces the placeholder when it lands.
   if (STATE.enabledSources.size > 0) {
     recomputeAttribution();
   }
+  // selectMove resets enabledSources to this move's chunks_available
+  // subset, which changes the count → ablation mapping. Re-render so the
+  // chart-overlay's predicted line follows.
+  if (STATE.bundle) renderChart(STATE.bundle);
 }
 async function recomputeAttribution() {
   if (STATE.selectedMoveIdx == null) return;
@@ -2933,9 +3623,6 @@ function deriveStrategies(attr) {
     const ratio = Math.abs(r) / Math.abs(p);
     if (ratio >= 1.5) exp = 'fade'; else if (ratio <= 0.5) exp = 'lean';
   }
-  let score = 0;
-  for (const [k, coeff] of Object.entries(DIM_PERSISTENCE)) score += ((dims[k] || {}).weight ?? 0) * coeff;
-  const dimW = score >= 0.20 ? 'lean' : score <= -0.20 ? 'fade' : 'neutral';
   let hybrid;
   if (c === 'transient') hybrid = 'fade';
   else if (c === 'mixed' || c === 'unclear') hybrid = 'neutral';
@@ -2948,7 +3635,7 @@ function deriveStrategies(attr) {
     }
     hybrid = domName && (DIM_PERSISTENCE[domName] ?? 0) < 0 ? 'neutral' : 'lean';
   }
-  return { fundamental_vs_nonfundamental: fund, expected_vs_realized: exp, dimension_weighted: dimW, hybrid };
+  return { fundamental_vs_nonfundamental: fund, expected_vs_realized: exp, hybrid };
 }
 
 /* ════════════════════════════════════════════════════════════════

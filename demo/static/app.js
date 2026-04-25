@@ -22,6 +22,19 @@ const SOURCE_TYPES = [
 ];
 const ALL_SOURCE_IDS = SOURCE_TYPES.map(s => s.id);
 
+// Mirrors demo/server.py:_COUNT_TO_BUNDLE — drives the chart-overlay
+// predicted-price line so it matches the per-event panel's API choice.
+// Keys are the count of currently-enabled sources; values are the
+// canonical ablation_name baked in build_static.predictions_by_ablation.
+const COUNT_TO_BUNDLE = {
+  0: 'base_news', 1: 'base_news', 2: '+sec', 3: '+earnings',
+  4: '+peer_news', 5: '+sector_news', 6: '+macro', 7: '+positioning',
+};
+function pickAblationName(enabledSet) {
+  const n = enabledSet.size ?? enabledSet.length ?? 0;
+  return COUNT_TO_BUNDLE[Math.min(n, 7)] ?? '+positioning';
+}
+
 const STATE = {
   tickers: [],          // [{ticker, name, sector, moves}]
   currentTicker: null,  // 'AMD'
@@ -44,10 +57,9 @@ const DIM_LABEL = {
 };
 const ARROW = { positive: '↑', negative: '↓', neutral: '→' };
 
-// Mirror of backtest.frameworks.RESEARCH_GROUNDED_PERSISTENCE — used to
-// reproduce strategy_dimension_weighted's score client-side so the verdict
-// subline can show the actual driver, not a generic blurb. Keep these in
-// sync with backtest/frameworks.py if the priors are recalibrated.
+// Mirror of backtest.frameworks.RESEARCH_GROUNDED_PERSISTENCE — used by
+// the hybrid strategy's dimension-sanity layer. Keep in sync with
+// backtest/frameworks.py if the priors are recalibrated.
 const PERSISTENCE = {
   demand: 0.85,
   pricing: 0.65,
@@ -85,19 +97,6 @@ const STRATEGIES = [
       'than the news justifies, the price hasn\'t caught up yet — bet on ' +
       'more move in the same direction (<span class="pos">lean</span>). If ' +
       'they roughly agree, the news is already priced in — skip.' },
-
-  { id: 'dimension_weighted',            label: 'Dimension-weighted',
-    blurb: 'fundamental drivers → lean. Macro/sentiment drivers → fade.',
-    description:
-      'Different <em>kinds</em> of price moves have very different staying ' +
-      'power, going back to the post-earnings drift literature. Moves ' +
-      'driven by real <em>demand</em> (units, customers) or <em>pricing</em> ' +
-      '(margins, price hikes) tend to keep paying off for weeks. Moves ' +
-      'driven by <em>macro</em> shocks (Fed, rates, geopolitics) or single ' +
-      'management-credibility hits tend to fully unwind. This strategy ' +
-      'measures how much of the move came from each cause and weights them: ' +
-      'mostly demand or pricing → <span class="pos">lean</span>; mostly ' +
-      'macro or one-off mgmt noise → <span class="neg">fade</span>.' },
 
   { id: 'hybrid',                        label: 'Hybrid',
     blurb: 'fundamental check, then overshoot check, then driver sanity check.',
@@ -181,6 +180,50 @@ function renderOverview(bundle) {
 }
 
 // ---------- Chart ----------
+// Build a "what the model expected" price series from the actual close
+// series + each event's predicted_return_pct under the active ablation.
+//
+// Construction (cumulative-gap formulation):
+//   predicted_close[i] = actual_close[i] × cumulative_gap[i]
+//   cumulative_gap[i]  = ∏ over events e with e.date ≤ date[i]
+//                          of (1 + predicted_return(e)) / (1 + actual_return(e))
+//
+// Effect: predicted overlaps actual until the first event, then drifts
+// proportionally to how wrong the model has been so far. Between events
+// the two lines move in lockstep — meaningful, since the model only
+// makes claims at events. If predicted is null for an event (no chunks
+// of the right type), the gap factor stays unchanged (predicted tracks
+// actual through that event).
+function computePredictedSeries(bundle, ablationName) {
+  // Sort events by date once; we walk the price series in order and
+  // bump cumGap as we cross each event date.
+  const eventByDate = new Map();
+  const eventsSorted = bundle.moves
+    .map((m, idx) => ({ idx, ...m }))
+    .sort((a, b) => a.move_date.localeCompare(b.move_date));
+
+  let cumGap = 1.0;
+  for (const e of eventsSorted) {
+    const pred = e.predictions_by_ablation?.[ablationName];
+    const denom = 1 + e.return_pct;
+    if (pred !== null && pred !== undefined && denom !== 0) {
+      cumGap *= (1 + pred) / denom;
+    }
+    eventByDate.set(e.move_date, { cumGap, idx: e.idx, predicted: pred });
+  }
+
+  let runningGap = 1.0;
+  const dates = [];
+  const predicted = [];
+  for (const p of bundle.prices) {
+    const ev = eventByDate.get(p.date);
+    if (ev) runningGap = ev.cumGap;
+    dates.push(p.date);
+    predicted.push(p.close * runningGap);
+  }
+  return { dates, predicted, eventByDate };
+}
+
 function renderChart(bundle) {
   const priceByDate = new Map(bundle.prices.map(p => [p.date, p.close]));
   const hoverText = (m) =>
@@ -192,7 +235,11 @@ function renderChart(bundle) {
   bundle.moves.forEach((m, i) => {
     (m.return_pct < 0 ? selloffIdx : rallyIdx).push(i);
   });
-  const buildMarkerTrace = (idx, color, name) => ({
+
+  // Bolded actual markers — bigger + thicker outer ring so the
+  // "clickable affordance" is obvious. Keep symbol = circle to match the
+  // pre-existing chart's visual language.
+  const buildActualMarkerTrace = (idx, color, name) => ({
     x: idx.map(i => bundle.moves[i].move_date),
     y: idx.map(i => priceByDate.get(bundle.moves[i].move_date) ?? null),
     customdata: idx,
@@ -200,13 +247,80 @@ function renderChart(bundle) {
     hovertemplate: '%{text}<extra></extra>',
     mode: 'markers',
     marker: {
-      size: 10,
+      size: 12,
       color,
-      line: { color: COLOR.surface, width: 1.5 },
+      line: { color: COLOR.text, width: 2.5 },
       symbol: 'circle',
     },
     name,
   });
+
+  const ablationName = pickAblationName(STATE.enabledSources);
+  const hasOverlay = (STATE.enabledSources.size ?? 0) > 0;
+  const overlay = hasOverlay
+    ? computePredictedSeries(bundle, ablationName)
+    : null;
+
+  // Predicted markers at event dates, placed at predicted-y so the line
+  // and dots line up. Hollow diamond distinguishes from the solid actual
+  // circles. customdata routes click → selectMove(idx).
+  const buildPredictedMarkerTrace = (idx, color, name) => {
+    const xs = [], ys = [], cd = [], txt = [];
+    for (const i of idx) {
+      const m = bundle.moves[i];
+      const ev = overlay?.eventByDate.get(m.move_date);
+      if (!ev || ev.predicted === null || ev.predicted === undefined) continue;
+      const actualY = priceByDate.get(m.move_date);
+      if (actualY === undefined) continue;
+      const predY = actualY * ev.cumGap;
+      xs.push(m.move_date);
+      ys.push(predY);
+      cd.push(i);
+      const gap = predY - actualY;
+      txt.push(
+        `<b>${m.move_date}</b> · model<br>` +
+        `predicted close $${predY.toFixed(2)}<br>` +
+        `actual close $${actualY.toFixed(2)}<br>` +
+        `gap ${gap >= 0 ? '+' : ''}$${gap.toFixed(2)}<br>` +
+        `predicted return ${pct(ev.predicted)}`
+      );
+    }
+    return {
+      x: xs, y: ys, customdata: cd, text: txt,
+      hovertemplate: '%{text}<extra></extra>',
+      mode: 'markers',
+      marker: {
+        size: 12,
+        color,
+        line: { color: COLOR.text, width: 2 },
+        symbol: 'diamond-open',
+      },
+      name,
+    };
+  };
+
+  // Layout shapes: a thin dashed vertical line connecting actual and
+  // predicted markers when divergence > 2% — under that, it's noise and
+  // would just clutter the chart.
+  const gapShapes = [];
+  if (overlay) {
+    for (let i = 0; i < bundle.moves.length; i++) {
+      const m = bundle.moves[i];
+      const ev = overlay.eventByDate.get(m.move_date);
+      if (!ev || ev.predicted === null || ev.predicted === undefined) continue;
+      const actualY = priceByDate.get(m.move_date);
+      if (actualY === undefined) continue;
+      const predY = actualY * ev.cumGap;
+      if (Math.abs(predY - actualY) / Math.abs(actualY) < 0.02) continue;
+      gapShapes.push({
+        type: 'line',
+        x0: m.move_date, x1: m.move_date,
+        y0: actualY, y1: predY,
+        line: { color: COLOR.muted, width: 1, dash: 'dot' },
+        layer: 'below',
+      });
+    }
+  }
 
   const traces = [
     {
@@ -214,12 +328,31 @@ function renderChart(bundle) {
       y: bundle.prices.map(p => p.close),
       mode: 'lines',
       line: { color: COLOR.accent, width: 1.4 },
-      name: 'Close',
+      name: 'Close (actual)',
       hovertemplate: '%{x}<br>$%{y:.2f}<extra></extra>',
     },
-    buildMarkerTrace(rallyIdx, COLOR.positive, 'Rally (up move)'),
-    buildMarkerTrace(selloffIdx, COLOR.negative, 'Selloff (down move)'),
   ];
+
+  if (overlay) {
+    traces.push({
+      x: overlay.dates,
+      y: overlay.predicted,
+      mode: 'lines',
+      line: { color: '#d97a4f', width: 1.4, dash: 'dash' },
+      name: `Model prediction (${ablationName})`,
+      hovertemplate: '%{x}<br>predicted $%{y:.2f}<extra></extra>',
+      opacity: 0.85,
+    });
+  }
+
+  traces.push(buildActualMarkerTrace(rallyIdx, COLOR.positive, 'Rally (up move)'));
+  traces.push(buildActualMarkerTrace(selloffIdx, COLOR.negative, 'Selloff (down move)'));
+  if (overlay) {
+    traces.push(buildPredictedMarkerTrace(rallyIdx, COLOR.positive,
+      'Predicted (up move)'));
+    traces.push(buildPredictedMarkerTrace(selloffIdx, COLOR.negative,
+      'Predicted (down move)'));
+  }
 
   const layout = {
     paper_bgcolor: 'rgba(0,0,0,0)',
@@ -245,6 +378,7 @@ function renderChart(bundle) {
       zeroline: false,
       tickprefix: '$',
     },
+    shapes: gapShapes,
     showlegend: true,
     legend: {
       orientation: 'h',
@@ -259,12 +393,33 @@ function renderChart(bundle) {
 
   Plotly.react('chart', traces, layout, config);
 
-  // Click handler: attach once. Reads current STATE so it works across ticker switches.
+  // Update the small "ablation name · chunk caption" pill near the chart
+  // header so the active source set is always legible without reading the
+  // legend. Empty selection collapses to a "no overlay" hint.
+  const pill = document.getElementById('ablation-pill');
+  if (pill) {
+    if (!hasOverlay) {
+      pill.textContent = 'No overlay — enable a source below';
+      pill.classList.add('muted');
+    } else {
+      pill.textContent = `Model overlay · ${ablationName}`;
+      pill.classList.remove('muted');
+    }
+  }
+
+  // Click handler: attach once. Reads current STATE so it works across
+  // ticker switches. Curve 0 = actual close line, curve 1 = predicted
+  // line (when present) — both are line traces with no per-point meaning,
+  // so skip clicks on them. Marker traces all carry customdata=move_idx.
   const chartDiv = document.getElementById('chart');
   if (!chartDiv._clickHandlerAttached) {
     chartDiv.on('plotly_click', (ev) => {
       const pt = ev.points[0];
-      if (!pt || pt.curveNumber === 0) return;   // skip the close-price line
+      if (!pt) return;
+      // Marker traces always have customdata; line traces don't. Trust
+      // that, rather than hard-coding curveNumber indices that shift as
+      // overlay traces appear/disappear.
+      if (pt.customdata === undefined || pt.customdata === null) return;
       selectMove(pt.customdata);
     });
     chartDiv._clickHandlerAttached = true;
@@ -307,6 +462,9 @@ function renderToggleRow(availableCounts) {
       else STATE.enabledSources.delete(src.id);
       renderToggleRow(availableCounts);
       recomputeAttribution();
+      // Re-render chart so the predicted-overlay line and divergence
+      // shapes track the active source set, not just the per-event panel.
+      if (STATE.bundle) renderChart(STATE.bundle);
     });
 
     const box = document.createElement('span');
@@ -385,16 +543,6 @@ function renderStrategyVerdict() {
 }
 
 // Helpers for strategy-specific computations the subline + explainer share.
-function _dimWeightedScore(ref) {
-  let score = 0, top = null, topAbs = 0;
-  for (const [k, v] of Object.entries(ref.dimensions || {})) {
-    const c = (PERSISTENCE[k] ?? 0) * (v.weight ?? 0);
-    score += c;
-    if (Math.abs(c) > topAbs) { topAbs = Math.abs(c); top = k; }
-  }
-  return { score, top };
-}
-
 function _dominantDimension(ref) {
   let domName = null, domWeight = 0;
   for (const [k, v] of Object.entries(ref.dimensions || {})) {
@@ -443,13 +591,6 @@ function buildVerdictSubline(strategyId, verdict) {
                    `predicted <span class="num">${pct(predicted)}</span>${SEP}` +
                    `ratio <span class="num">${ratio.toFixed(2)}×</span>`;
     }
-  } else if (strategyId === 'dimension_weighted') {
-    const { score, top } = _dimWeightedScore(ref);
-    const scoreSign = score >= 0 ? '+' : '';
-    const scoreCls = score >= 0.20 ? 'delta-up' : score <= -0.20 ? 'delta-down' : '';
-    const topLabel = top ? (DIM_LABEL[top] || top) : '—';
-    driverHtml = `score <span class="num ${scoreCls}">${scoreSign}${score.toFixed(2)}</span>${SEP}` +
-                 `top driver <span class="num">${topLabel}</span>`;
   } else if (strategyId === 'hybrid') {
     const domName = _dominantDimension(ref);
     const domLabel = domName ? (DIM_LABEL[domName] || domName) : '—';
@@ -650,23 +791,6 @@ function buildStrategyReasoning(strategyId, verdict, ref, tag) {
     }
     return `Realized and expected magnitudes are within the neutral band — the ` +
            `news already looks priced in, so this strategy says ${tag}.`;
-  }
-
-  if (strategyId === 'dimension_weighted') {
-    const { score, top } = _dimWeightedScore(ref);
-    const topPhrase = top ? (DIM_PHRASE[top] || top) : '—';
-    if (score >= 0.20) {
-      return `The dominant driver is <span class="num">${topPhrase}</span> — the kind ` +
-             `of cause that historically keeps paying off in the same direction. So ` +
-             `this strategy says ${tag}.`;
-    }
-    if (score <= -0.20) {
-      return `The dominant driver is <span class="num">${topPhrase}</span> — the kind ` +
-             `of cause that historically tends to fully reverse. So this strategy ` +
-             `says ${tag} (bet against the move).`;
-    }
-    return `No single driver dominates this move clearly enough to call — the mix ` +
-           `washes out, so this strategy says ${tag}.`;
   }
 
   if (strategyId === 'hybrid') {
@@ -1219,6 +1343,9 @@ function selectMove(idx) {
   if (STATE.enabledSources.size > 0) {
     recomputeAttribution();
   }
+  // selectMove can change enabledSources (different chunks_available per
+  // move), so the chart's predicted overlay needs to refresh too.
+  renderChart(STATE.bundle);
 }
 
 function resetToggles() {
@@ -1230,6 +1357,7 @@ function resetToggles() {
   );
   renderToggleRow(counts);
   renderAttribution(STATE.bundle, STATE.selectedMoveIdx);
+  if (STATE.bundle) renderChart(STATE.bundle);
 }
 
 // ---------- HTML escape ----------

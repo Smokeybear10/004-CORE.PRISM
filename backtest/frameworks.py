@@ -420,6 +420,5 @@ def calibrate_persistence(
 # both resolve.
 FRAMEWORK_STRATEGIES = {
     "expected_vs_realized": strategy_expected_vs_realized,
-    "dimension_weighted": strategy_dimension_weighted,
     "hybrid": strategy_hybrid,
 }

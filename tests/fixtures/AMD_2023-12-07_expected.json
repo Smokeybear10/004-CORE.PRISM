@@ -1,0 +1,13 @@
+{
+  "ticker": "AMD",
+  "move_date": "2023-12-07",
+  "known_cause": "FUNDAMENTAL (up): AMD shares rose 9.9% to close at $128.37 — best day since May — the day after AMD launched the Instinct MI300X AI accelerator and disclosed Microsoft and Meta as named hyperscaler customers. Fundamental — named hyperscaler commitments converted a speculative AI roadmap into contracted data-center revenue and forced upward revisions to forward Instinct sales models.",
+  "expected": {
+    "dominant_dimension": ["demand", "competitive"],
+    "direction": "positive",
+    "move_character": "structural",
+    "fade_or_lean": "lean",
+    "must_cite_source_type": ["news"],
+    "must_not_be_dominant": ["macro", "management_credibility"]
+  }
+}
