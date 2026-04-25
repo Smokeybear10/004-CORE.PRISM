@@ -1478,6 +1478,68 @@
       font-style: italic; color: var(--ink-dim);
       font-size: 0.78rem;
     }
+
+    /* ─── Dimension Radar — this event vs ticker peer median ─── */
+    .radar {
+      display: grid;
+      grid-template-columns: minmax(320px, 440px) 1fr;
+      gap: 36px;
+      align-items: center;
+      padding: 26px 22px 28px;
+      border-bottom: 1px solid var(--rule);
+      background: var(--paper);
+    }
+    .radar svg {
+      width: 100%; max-width: 440px; height: auto;
+      display: block;
+    }
+    .radar svg .ring { fill: none; stroke: var(--rule); stroke-width: 0.6; }
+    .radar svg .axis { stroke: var(--rule-strong); stroke-width: 0.4; }
+    .radar svg .axis-label {
+      font: 600 9.5px var(--mono); letter-spacing: 0.18em;
+      fill: var(--ink-quiet); text-transform: uppercase;
+    }
+    .radar svg .me-poly {
+      fill: var(--oxblood); fill-opacity: 0.20;
+      stroke: var(--oxblood); stroke-width: 1.5;
+      transition: fill-opacity 220ms;
+    }
+    .radar svg .peer-poly {
+      fill: var(--navy); fill-opacity: 0.10;
+      stroke: var(--navy); stroke-width: 1.2;
+      stroke-dasharray: 3 3;
+    }
+    .radar svg .me-pt { fill: var(--oxblood); }
+    .radar svg .peer-pt { fill: var(--navy); }
+    .radar .legend { display: flex; flex-direction: column; gap: 14px; }
+    .radar .leg-row {
+      border-left: 3px solid var(--oxblood);
+      padding-left: 14px;
+    }
+    .radar .leg-row.peer { border-left-color: var(--navy); }
+    .radar .leg-row .lab {
+      font: 600 9.5px var(--mono); letter-spacing: 0.20em;
+      color: var(--ink-quiet); text-transform: uppercase;
+      margin: 0 0 3px;
+    }
+    .radar .leg-row .name {
+      font: italic 500 14.5px var(--serif); color: var(--ink); margin: 0;
+      letter-spacing: -0.005em;
+    }
+    .radar .leg-row .name b {
+      font-style: normal; font-weight: 600; color: var(--oxblood);
+      font-family: var(--mono); font-size: 12.5px; letter-spacing: 0;
+    }
+    .radar .leg-row.peer .name b { color: var(--navy); }
+    .radar .leg-row .desc {
+      font: 400 13px var(--serif); color: var(--ink-2);
+      margin: 6px 0 0; line-height: 1.45;
+    }
+    .radar .leg-row .desc em { color: var(--oxblood); font-style: italic; font-weight: 600; }
+    @media (max-width: 760px) {
+      .radar { grid-template-columns: 1fr; gap: 18px; }
+      .radar svg { max-width: 280px; margin: 0 auto; display: block; }
+    }
   </style>
 </head>
 <body>
@@ -2382,6 +2444,8 @@ function renderEventCard() {
       </div>
     </div>
 
+    <div id="radar-slot"></div>
+
     ${fwdStripHtml}
 
     <div class="strat-row" id="strat-row"></div>
@@ -2407,6 +2471,144 @@ function renderEventCard() {
   renderStrategyRow();
   renderTabs();
   renderActiveTab();
+  renderDimensionRadar();
+}
+
+/* ─── Dimension Radar — this event vs ticker peer median ───
+ * Five-axis polygon plot. The oxblood polygon is THIS move's dimension
+ * weights; the dashed-navy polygon is the median weight per dimension
+ * across every OTHER flagged move on the same ticker. Where the polygons
+ * diverge is the model's idiosyncratic signal.
+ */
+const RADAR_DIMS = [
+  { key: 'demand',                 label: 'Demand' },
+  { key: 'pricing',                label: 'Pricing' },
+  { key: 'management_credibility', label: 'Mgmt' },
+  { key: 'macro',                  label: 'Macro' },
+  { key: 'competitive',            label: 'Comp.' },
+];
+const RADAR_R_MAX = 120;
+
+function _radarPoint(weight, axisIdx) {
+  const angle = (axisIdx * 72 - 90) * Math.PI / 180;  // first axis points up
+  const r = Math.max(0, Math.min(1, weight)) * RADAR_R_MAX;
+  return [r * Math.cos(angle), r * Math.sin(angle)];
+}
+function _radarPolygonPoints(getWeight) {
+  return RADAR_DIMS.map((d, i) => {
+    const [x, y] = _radarPoint(getWeight(d.key), i);
+    return `${x.toFixed(1)},${y.toFixed(1)}`;
+  }).join(' ');
+}
+function _peerMedianWeights(bundle, excludeIdx) {
+  const buckets = Object.fromEntries(RADAR_DIMS.map(d => [d.key, []]));
+  bundle.moves.forEach((m, i) => {
+    if (i === excludeIdx) return;
+    const dims = m.attribution?.dimensions;
+    if (!dims) return;
+    for (const d of RADAR_DIMS) {
+      const w = dims[d.key]?.weight;
+      if (typeof w === 'number' && Number.isFinite(w)) buckets[d.key].push(w);
+    }
+  });
+  const median = arr => {
+    if (arr.length === 0) return 0;
+    const s = [...arr].sort((a, b) => a - b);
+    const mid = Math.floor(s.length / 2);
+    return s.length % 2 ? s[mid] : (s[mid - 1] + s[mid]) / 2;
+  };
+  return Object.fromEntries(RADAR_DIMS.map(d => [d.key, median(buckets[d.key])]));
+}
+
+function renderDimensionRadar() {
+  const slot = document.getElementById('radar-slot');
+  if (!slot) return;
+  const a = STATE.attribution;
+  if (!a || !STATE.bundle || STATE.selectedMoveIdx == null) {
+    slot.innerHTML = '';
+    return;
+  }
+  const meDims = a.dimensions || {};
+  const meGet = k => (meDims[k]?.weight ?? 0);
+  const peerWeights = _peerMedianWeights(STATE.bundle, STATE.selectedMoveIdx);
+  const peerGet = k => (peerWeights[k] ?? 0);
+
+  const mePoly = _radarPolygonPoints(meGet);
+  const peerPoly = _radarPolygonPoints(peerGet);
+
+  const axes = RADAR_DIMS.map((d, i) => {
+    const [x, y] = _radarPoint(1, i);
+    return `<line class="axis" x1="0" y1="0" x2="${x.toFixed(1)}" y2="${y.toFixed(1)}"/>`;
+  }).join('');
+  const labels = RADAR_DIMS.map((d, i) => {
+    const angle = (i * 72 - 90) * Math.PI / 180;
+    const x = 148 * Math.cos(angle);
+    const y = 148 * Math.sin(angle);
+    let anchor = 'middle';
+    if (x > 8) anchor = 'start';
+    else if (x < -8) anchor = 'end';
+    // Nudge horizontal-side labels a tick further out so the text doesn't
+    // overlap the outermost ring.
+    const dx = x > 8 ? 4 : x < -8 ? -4 : 0;
+    return `<text class="axis-label" x="${(x + dx).toFixed(1)}" y="${(y + 4).toFixed(1)}" text-anchor="${anchor}">${d.label}</text>`;
+  }).join('');
+  const mePts = RADAR_DIMS.map((d, i) => {
+    const [x, y] = _radarPoint(meGet(d.key), i);
+    return `<circle class="me-pt" cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="3.5"/>`;
+  }).join('');
+  const peerPts = RADAR_DIMS.map((d, i) => {
+    const [x, y] = _radarPoint(peerGet(d.key), i);
+    return `<circle class="peer-pt" cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="2.5"/>`;
+  }).join('');
+
+  // Find the dimension that diverges most — that's the sentence-worthy story.
+  let topDim = null, topAbsDelta = 0, topDelta = 0;
+  for (const d of RADAR_DIMS) {
+    const delta = meGet(d.key) - peerGet(d.key);
+    if (Math.abs(delta) > topAbsDelta) {
+      topAbsDelta = Math.abs(delta);
+      topDelta = delta;
+      topDim = d;
+    }
+  }
+  let divergenceDesc;
+  if (!topDim || topAbsDelta < 0.04) {
+    divergenceDesc = 'This event sits inside the peer envelope — the model sees it as a typical move for this ticker.';
+  } else {
+    const dir = topDelta > 0 ? 'pushes well past' : 'sits below';
+    divergenceDesc = `<em>${topDim.label}</em> ${dir} the ticker norm — that's where the model\'s residual signal lives.`;
+  }
+
+  const move = STATE.bundle.moves[STATE.selectedMoveIdx] || {};
+  const ticker = STATE.bundle.ticker || '';
+  const peerCount = (STATE.bundle.moves?.length ?? 1) - 1;
+
+  slot.innerHTML = `
+    <div class="radar">
+      <svg viewBox="-220 -160 440 320">
+        <circle class="ring" cx="0" cy="0" r="40"/>
+        <circle class="ring" cx="0" cy="0" r="80"/>
+        <circle class="ring" cx="0" cy="0" r="120"/>
+        ${axes}
+        ${labels}
+        <polygon class="peer-poly" points="${peerPoly}"/>
+        ${peerPts}
+        <polygon class="me-poly" points="${mePoly}"/>
+        ${mePts}
+      </svg>
+      <div class="legend">
+        <div class="leg-row">
+          <p class="lab">This event</p>
+          <p class="name">${escapeHtml(ticker)} · <b>${escapeHtml(move.move_date || '')}</b></p>
+          <p class="desc">${divergenceDesc}</p>
+        </div>
+        <div class="leg-row peer">
+          <p class="lab">Peer median</p>
+          <p class="name">Other ${escapeHtml(ticker)} flagged moves <b>n=${peerCount}</b></p>
+          <p class="desc">Median dimension weight across the rest of this ticker's flagged events. Where the oxblood polygon escapes the dashed shape is what makes this move idiosyncratic.</p>
+        </div>
+      </div>
+    </div>`;
 }
 
 function renderStrategyRow() {
