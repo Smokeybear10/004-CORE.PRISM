@@ -333,6 +333,31 @@ def _verdict_from_strategy(attr: Attribution, strategy: str) -> Optional[str]:
         return None
 
 
+def _force_decision(verdict: Optional[str], attr: Attribution) -> Optional[str]:
+    """Eval-only forcing rule: ground truth is binary (lean or fade), so the
+    model has to commit on benchmark cases — no neutral skips. Tiebreaker
+    rule walks the model's own attribution:
+
+        structural / mixed → lean   (treat fundamental component as the call)
+        transient / unclear → fade  (no clear fundamental signal → noise → revert)
+
+    Lives ONLY in the harness path. Production strategies in
+    backtest.signal / backtest.frameworks still emit "neutral" — this
+    just refuses to score "skip" as an answer when ground truth is
+    lean-or-fade.
+    """
+    if verdict in ("lean", "fade"):
+        return verdict
+    if verdict is None:
+        return None
+    # verdict == "neutral": tiebreak using the model's character read.
+    char = attr.move_character
+    if char in ("structural", "mixed"):
+        return "lean"
+    # transient / unclear (and any unexpected character) → fade
+    return "fade"
+
+
 def _dominant_dimension(attr: Attribution) -> Optional[str]:
     dims = {
         "demand": attr.demand.weight,
@@ -369,7 +394,10 @@ def score_one_case(
             error="no attribution available for this (ticker, move_date)",
         )
 
-    model_verdict = _verdict_from_strategy(attr, strategy)
+    raw_verdict = _verdict_from_strategy(attr, strategy)
+    # Force a decision on benchmarks: ground truth is binary, the model
+    # doesn't get to skip. See _force_decision for the tiebreaker rule.
+    model_verdict = _force_decision(raw_verdict, attr)
     match = (model_verdict == expected) if (is_scored and model_verdict is not None) else None
 
     return CaseAccuracy(

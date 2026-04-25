@@ -138,6 +138,21 @@ def _to_chunk(
     )
 
 
+def _monthly_windows(start: date, end: date) -> list[tuple[date, date]]:
+    """Slice [start, end] into ~30-day windows. Finnhub silently truncates
+    long-window requests on the free tier (a 5-year request comes back as
+    just the last 8 days), so we fetch in monthly slices and union the
+    results to actually cover the full ~12-month free-tier reach."""
+    from datetime import timedelta
+    windows: list[tuple[date, date]] = []
+    cursor = start
+    while cursor <= end:
+        win_end = min(cursor + timedelta(days=29), end)
+        windows.append((cursor, win_end))
+        cursor = win_end + timedelta(days=1)
+    return windows
+
+
 def fetch_finnhub_news(
     tickers: Iterable[str],
     start_date: date,
@@ -150,13 +165,18 @@ def fetch_finnhub_news(
 ) -> list[TextChunk]:
     """Pull news from Finnhub for `tickers` in [start_date, end_date].
 
+    Internally requests one month at a time because Finnhub's free tier
+    silently truncates wide-window requests to the last few days; monthly
+    slices each return their full content (within the ~12-month free-tier
+    reach). Cache is keyed per (ticker, monthly window) so subsequent
+    starts are instant.
+
     When `out_ticker` is set, every emitted chunk is tagged with that
     ticker (used for peer news where we want chunks attributed to the
     focal ticker but sourced from the peer's news feed). `via_focal=True`
     additionally records the source-ticker in the section_name.
 
-    Returns [] silently when FINNHUB_API_KEY isn't set — caller code
-    doesn't have to special-case the no-key path.
+    Returns [] silently when FINNHUB_API_KEY isn't set.
     """
     api_key = os.environ.get(_API_KEY_ENV, "").strip()
     if not api_key or end_date < start_date:
@@ -164,23 +184,32 @@ def fetch_finnhub_news(
 
     out: list[TextChunk] = []
     seen_urls: set[str] = set()
+    seen_ids: set[int] = set()
+    windows = _monthly_windows(start_date, end_date)
     for sym in tickers:
         sym_upper = sym.upper()
-        records = _fetch_one(sym_upper, start_date, end_date, api_key=api_key)
-        for item in records:
-            url = (item.get("url") or "").strip()
-            if url and url in seen_urls:
-                continue
-            if url:
-                seen_urls.add(url)
-            chunk = _to_chunk(
-                item,
-                ticker=out_ticker or sym_upper,
-                source_type=source_type,
-                chunk_prefix=chunk_prefix,
-                chunk_seq=len(out) + 1,
-                via_symbol=sym_upper if via_focal else None,
-            )
-            if chunk is not None:
-                out.append(chunk)
+        for win_start, win_end in windows:
+            records = _fetch_one(sym_upper, win_start, win_end, api_key=api_key)
+            for item in records:
+                # Dedup across overlapping windows + repeated articles.
+                rid = item.get("id")
+                if isinstance(rid, int) and rid in seen_ids:
+                    continue
+                if isinstance(rid, int):
+                    seen_ids.add(rid)
+                url = (item.get("url") or "").strip()
+                if url and url in seen_urls:
+                    continue
+                if url:
+                    seen_urls.add(url)
+                chunk = _to_chunk(
+                    item,
+                    ticker=out_ticker or sym_upper,
+                    source_type=source_type,
+                    chunk_prefix=chunk_prefix,
+                    chunk_seq=len(out) + 1,
+                    via_symbol=sym_upper if via_focal else None,
+                )
+                if chunk is not None:
+                    out.append(chunk)
     return out
