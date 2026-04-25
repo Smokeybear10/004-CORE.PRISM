@@ -734,6 +734,24 @@ code {
   color: var(--ink);
   white-space: pre-wrap;
 }
+.citation-quote {
+  margin: 6px 0 8px 0;
+  padding: 6px 12px;
+  border-left: 2px solid var(--accent-line);
+  font-family: 'Newsreader', Georgia, serif;
+  font-style: italic;
+  font-size: 0.95rem;
+  line-height: 1.55;
+  color: var(--ink);
+}
+.citation-quote::before { content: '"'; opacity: 0.6; margin-right: 1px; }
+.citation-quote::after  { content: '"'; opacity: 0.6; margin-left: 1px; }
+.citation-reasoning {
+  font-size: 0.85rem;
+  line-height: 1.5;
+  color: var(--ink-muted);
+  margin-bottom: 4px;
+}
 .citation-link {
   display: inline-block;
   margin-top: 8px;

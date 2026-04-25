@@ -88,12 +88,28 @@ class AblationConfig(BaseModel):
 
 # ---------- Attribution (Step 3 + 4 output) ----------
 
+class CitedEvidence(BaseModel):
+    """One piece of evidence the model cited for a single dimension.
+
+    Captures both the verbatim excerpt from the chunk that mattered AND
+    the model's per-citation reasoning — so the UI can show "this quote
+    drove the score because…" instead of pasting the entire chunk text.
+    """
+    chunk_id: str                          # MUST resolve to a real chunk in the evidence pool
+    quote: str = ""                         # short verbatim excerpt from the chunk
+    reasoning: str = ""                     # 1-2 sentences on how this evidence shaped the dim
+
+
 class DimensionScore(BaseModel):
     """One of the 5 dimensions, with how much it drove this move."""
     weight: float = Field(ge=0.0, le=1.0)  # normalized weight across all dimensions
     direction: Literal["positive", "negative", "neutral"]
     rationale: str                          # one sentence, model's reasoning
     evidence_chunk_ids: list[str]           # MUST be non-empty and reference real chunks
+    # Per-citation reasoning. Populated by the live attribution path; falls
+    # back to [] when not provided (e.g. placeholder attributions). Order is
+    # parallel to evidence_chunk_ids when both are present.
+    cited_evidence: list[CitedEvidence] = Field(default_factory=list)
 
 
 class Attribution(BaseModel):
