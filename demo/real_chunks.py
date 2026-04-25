@@ -310,7 +310,7 @@ def preload_earnings_transcripts(tickers: list[str]) -> None:
                     source_type=SourceType.EARNINGS_TRANSCRIPT,
                     publication_date=pub_date,
                     period_end=None,
-                    source_url=None,
+                    source_url=f"https://finance.yahoo.com/quote/{ticker}/history/",
                     section_name=section_name,
                     text=chunk_body,
                     token_count=tok_count,
