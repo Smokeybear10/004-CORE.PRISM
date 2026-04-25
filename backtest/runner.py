@@ -105,11 +105,28 @@ def run_all(events_df: pd.DataFrame, horizon: int = 5, use_excess: bool = True,
     return results
 
 
-def results_to_frame(results: list[BacktestResult]) -> pd.DataFrame:
-    return pd.DataFrame([r.model_dump() for r in results])[
+def results_to_frame(
+    results: list[BacktestResult],
+    dollars_by_strategy: Optional[dict[str, float]] = None,
+) -> pd.DataFrame:
+    """Standard result columns; if dollars_by_strategy is passed, append a
+    `total_dollars` column joined on the same key shape used by report.py:
+    `{strategy_name}__{ablation_name}` for structured runs, `{strategy_name}`
+    for baselines."""
+    df = pd.DataFrame([r.model_dump() for r in results])[
         ["strategy_name", "ablation_name", "n_trades", "sharpe",
          "hit_rate", "avg_return", "max_drawdown", "notes"]
     ]
+    if dollars_by_strategy is not None:
+        def _key(row):
+            if str(row["strategy_name"]).startswith("struct_") and pd.notna(row["ablation_name"]):
+                return f"{row['strategy_name']}__{row['ablation_name']}"
+            return row["strategy_name"]
+        df["total_dollars"] = df.apply(
+            lambda r: round(float(dollars_by_strategy.get(_key(r), 0.0)), 2),
+            axis=1,
+        )
+    return df
 
 
 def main(argv: Optional[list[str]] = None):
@@ -126,6 +143,10 @@ def main(argv: Optional[list[str]] = None):
                    help="use raw forward returns (default: SPY-excess)")
     p.add_argument("--write-csv", default=None)
     p.add_argument("--seed",      type=int, default=0)
+    p.add_argument("--with-dollars", action="store_true",
+                   help="Append a total_dollars column (per-trade notional × cumulative return)")
+    p.add_argument("--notional", type=float, default=100_000.0,
+                   help="Notional per trade in dollars when --with-dollars is set")
     args = p.parse_args(argv)
 
     events_df = _load_events(args.events, args.universe, seed=args.seed)
@@ -134,18 +155,38 @@ def main(argv: Optional[list[str]] = None):
 
     use_excess = not args.raw
     results: list[BacktestResult] = []
+    pnl_dfs: dict[str, pd.DataFrame] = {}
+
+    def _key(r: BacktestResult) -> str:
+        if r.strategy_name.startswith("struct_") and r.ablation_name:
+            return f"{r.strategy_name}__{r.ablation_name}"
+        return r.strategy_name
+
+    def _record(r: BacktestResult, pnl_df: pd.DataFrame) -> None:
+        results.append(r)
+        pnl_dfs[_key(r)] = pnl_df
 
     if args.ablation:
-        r, _ = run_ablation(events_df, args.ablation, horizon=args.horizon,
-                            use_excess=use_excess, seed=args.seed)
-        results.append(r)
+        _record(*run_ablation(events_df, args.ablation, horizon=args.horizon,
+                              use_excess=use_excess, seed=args.seed))
     if args.baseline:
-        r, _ = run_baseline(events_df, args.baseline, horizon=args.horizon, use_excess=use_excess)
-        results.append(r)
+        _record(*run_baseline(events_df, args.baseline, horizon=args.horizon,
+                              use_excess=use_excess))
     if not args.ablation and not args.baseline:
-        results = run_all(events_df, horizon=args.horizon, use_excess=use_excess, seed=args.seed)
+        for name in ABLATION_BUNDLES:
+            _record(*run_ablation(events_df, name, horizon=args.horizon,
+                                  use_excess=use_excess, seed=args.seed))
+        for name in BASELINES:
+            _record(*run_baseline(events_df, name, horizon=args.horizon,
+                                  use_excess=use_excess))
 
-    frame = results_to_frame(results)
+    if args.with_dollars:
+        from backtest.pnl import total_pnl
+        dollars_by = {k: total_pnl(df, args.notional) for k, df in pnl_dfs.items()}
+        frame = results_to_frame(results, dollars_by_strategy=dollars_by)
+    else:
+        frame = results_to_frame(results)
+
     print()
     print(frame.to_string(index=False))
 
