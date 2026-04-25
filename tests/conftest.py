@@ -26,6 +26,15 @@ from __future__ import annotations
 import os
 from pathlib import Path
 
+# Snapshot the SHELL env BEFORE we touch .env. Only shell-side opt-ins count
+# as explicit live-mode requests; otherwise loading .env (which contains
+# BW_USE_LIVE_ATTRIBUTION=1 for the demo) would cause every test to hit the
+# real Anthropic API.
+_SHELL_LIVE_OPT_IN = (
+    os.environ.get("RUN_LIVE_API") == "1"
+    or os.environ.get("BW_USE_LIVE_ATTRIBUTION") == "1"
+)
+
 # Load repo-root .env BEFORE anything else imports anthropic / model.attribution.
 # .env is gitignored.
 try:
@@ -46,12 +55,13 @@ from ingestion.prices import hf_loader as yahoo_loader
 def _disable_live_attribution_for_tests():
     """Force model.attribute() into placeholder mode for the whole session,
     unless the developer explicitly opted into live mode via RUN_LIVE_API=1
-    or BW_USE_LIVE_ATTRIBUTION=1 in the shell. The opt-in escape lets
-    targeted live tests (e.g. test_attribution.py::test_live_api_*) still
-    hit the real API."""
-    if (os.environ.get("RUN_LIVE_API") == "1"
-            or os.environ.get("BW_USE_LIVE_ATTRIBUTION") == "1"):
-        # Explicit opt-in — leave env as the developer set it.
+    or BW_USE_LIVE_ATTRIBUTION=1 *in the shell*. We deliberately ignore
+    .env's BW_USE_LIVE_ATTRIBUTION so the demo's `.env` doesn't make every
+    test hit the real Anthropic API. The opt-in escape lets targeted live
+    tests (e.g. test_attribution.py::test_live_api_*) still hit the API
+    when invoked from a shell that exports the env var."""
+    if _SHELL_LIVE_OPT_IN:
+        # Explicit shell opt-in — leave env as the developer set it.
         yield
         return
     prior_live = os.environ.pop("BW_USE_LIVE_ATTRIBUTION", None)

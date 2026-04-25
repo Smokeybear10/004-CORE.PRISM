@@ -347,3 +347,160 @@ def test_non_rate_limit_errors_do_not_retry(monkeypatch):
     assert attr.model_notes.startswith(model.PLACEHOLDER_NOTE_PREFIX)
     assert call_count["n"] == 1
     assert sleeps == []
+
+
+# ---------- Hallucinated-chunk sanitizer ----------
+
+
+def _evidence_for(move, chunks):
+    """Bridge helper: build a JoinedEvidence consistent with model._build_evidence."""
+    return model._build_evidence(move, chunks)
+
+
+def _attr_with_citations(citations: dict[str, list[str]]):
+    """Hand-build an Attribution where each dim cites whatever IDs the test wants
+    (real or hallucinated)."""
+    move = _move()
+    dim = lambda cids: DimensionScore(
+        weight=0.2, direction="negative",
+        rationale="stub", evidence_chunk_ids=list(cids),
+    )
+    return Attribution(
+        ticker=move.ticker,
+        move_date=move.move_date,
+        return_pct=move.return_pct,
+        predicted_return_pct=move.return_pct,
+        demand=dim(citations.get("demand", [])),
+        pricing=dim(citations.get("pricing", [])),
+        competitive=dim(citations.get("competitive", [])),
+        management_credibility=dim(citations.get("management_credibility", [])),
+        macro=dim(citations.get("macro", [])),
+        move_character="structural", confidence=0.8,
+        ablation_name="test", sources_used=[SourceType.NEWS],
+        chunks_considered=2,
+    )
+
+
+def test_sanitize_drops_hallucinated_ids_and_keeps_real_ones():
+    chunks = _chunks(2)
+    real_ids = [c.chunk_id for c in chunks]
+    evidence = _evidence_for(_move(), chunks)
+    attr = _attr_with_citations({
+        "demand":                  [real_ids[0], "sec_8k_AMD_2025_fake_003"],
+        "pricing":                 [real_ids[1]],
+        "competitive":             ["sec_8k_AMD_2025_fake_004", real_ids[0]],
+        "management_credibility":  ["completely_made_up"],
+        "macro":                   real_ids,
+    })
+    dropped = model._sanitize_chunk_citations(attr, evidence)
+    assert dropped == 3  # 1 + 0 + 1 + 1 + 0
+    assert attr.demand.evidence_chunk_ids == [real_ids[0]]
+    assert attr.pricing.evidence_chunk_ids == [real_ids[1]]
+    assert attr.competitive.evidence_chunk_ids == [real_ids[0]]
+    # management_credibility had only fake — should fall back to first real chunk
+    assert attr.management_credibility.evidence_chunk_ids == [real_ids[0]]
+    assert attr.macro.evidence_chunk_ids == real_ids
+
+
+def test_sanitize_returns_zero_when_all_ids_real():
+    chunks = _chunks(2)
+    real_ids = [c.chunk_id for c in chunks]
+    evidence = _evidence_for(_move(), chunks)
+    attr = _attr_with_citations({name: [real_ids[0]] for name in (
+        "demand","pricing","competitive","management_credibility","macro"
+    )})
+    dropped = model._sanitize_chunk_citations(attr, evidence)
+    assert dropped == 0
+
+
+def test_sanitize_handles_zero_chunks_gracefully():
+    """If evidence is empty there's no fallback — preserve current (empty) IDs
+    rather than crash."""
+    move = _move()
+    evidence = _evidence_for(move, [])
+    attr = _attr_with_citations({"demand": ["fake_id"]})
+    dropped = model._sanitize_chunk_citations(attr, evidence)
+    assert dropped == 1
+    # All hallucinated stripped, no fallback available -> empty list
+    assert attr.demand.evidence_chunk_ids == []
+
+
+def test_live_path_runs_sanitizer_and_notes_dropped(monkeypatch):
+    """End-to-end: live runner returns hallucinated IDs; bridge scrubs them
+    and appends a count to model_notes."""
+    monkeypatch.setenv(model.LIVE_ENV_VAR, "1")
+    monkeypatch.setenv("ANTHROPIC_API_KEY", "sk-doesnotmatter")
+
+    chunks_in = _chunks(2)
+    real_ids = [c.chunk_id for c in chunks_in]
+
+    def stub_run_attribution(evidence, ablation_name="full", **kwargs):
+        # Model invents 2 hallucinated IDs across the 5 dims.
+        dim = lambda cids: DimensionScore(
+            weight=0.2, direction="negative", rationale="stub",
+            evidence_chunk_ids=list(cids),
+        )
+        return Attribution(
+            ticker=evidence.move.ticker,
+            move_date=evidence.move.move_date,
+            return_pct=evidence.move.return_pct,
+            predicted_return_pct=evidence.move.return_pct,
+            demand=dim([real_ids[0], "fake_id_001"]),  # 1 hallucinated
+            pricing=dim([real_ids[1]]),                # clean
+            competitive=dim([real_ids[0]]),            # clean
+            management_credibility=dim(["fake_id_002"]),  # 1 hallucinated -> falls back
+            macro=dim([real_ids[1]]),                  # clean
+            move_character="structural", confidence=0.8,
+            ablation_name=ablation_name,
+            sources_used=[SourceType.NEWS],
+            chunks_considered=len(evidence.text_chunks),
+        )
+
+    import model.attribution as ma
+    monkeypatch.setattr(ma, "run_attribution", stub_run_attribution)
+
+    attr = model.attribute(_move(), chunks_in, _config())
+    # Live path tagged
+    assert attr.model_notes.startswith(model.LIVE_NOTE_PREFIX)
+    # Sanitizer note appended
+    assert "scrubbed 2 hallucinated chunk_id" in attr.model_notes
+    # No dim has invalid citations anymore
+    for name in ("demand","pricing","competitive","management_credibility","macro"):
+        for cid in getattr(attr, name).evidence_chunk_ids:
+            assert cid in real_ids
+    # The fully-hallucinated dim got the fallback
+    assert attr.management_credibility.evidence_chunk_ids == [real_ids[0]]
+
+
+def test_live_path_no_notes_when_nothing_dropped(monkeypatch):
+    """If the model returns clean citations, model_notes shouldn't accuse the
+    model of hallucinating."""
+    monkeypatch.setenv(model.LIVE_ENV_VAR, "1")
+    monkeypatch.setenv("ANTHROPIC_API_KEY", "sk-doesnotmatter")
+
+    chunks_in = _chunks(2)
+    real_ids = [c.chunk_id for c in chunks_in]
+
+    def clean_run(evidence, ablation_name="full", **kwargs):
+        dim = lambda: DimensionScore(
+            weight=0.2, direction="negative", rationale="stub",
+            evidence_chunk_ids=[real_ids[0]],
+        )
+        return Attribution(
+            ticker=evidence.move.ticker,
+            move_date=evidence.move.move_date,
+            return_pct=evidence.move.return_pct,
+            predicted_return_pct=evidence.move.return_pct,
+            demand=dim(), pricing=dim(), competitive=dim(),
+            management_credibility=dim(), macro=dim(),
+            move_character="structural", confidence=0.8,
+            ablation_name=ablation_name,
+            sources_used=[SourceType.NEWS],
+            chunks_considered=len(evidence.text_chunks),
+        )
+
+    import model.attribution as ma
+    monkeypatch.setattr(ma, "run_attribution", clean_run)
+
+    attr = model.attribute(_move(), chunks_in, _config())
+    assert "hallucinated" not in (attr.model_notes or "")

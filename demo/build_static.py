@@ -123,6 +123,26 @@ def build_for_ticker(ticker: str, meta: dict, end_date: date) -> dict:
                 strategies[sname] = sfn(attr)
             except Exception:
                 strategies[sname] = "neutral"
+
+        # Bundle's `chunks` field must include every chunk_id the attribution
+        # cites, otherwise the UI flags valid citations as "Missing chunk".
+        # `chunks_for_real` returns chunks in stratified round-robin order;
+        # `model.attribute` reorders by relevance and cites the top-5 of that
+        # ranking, which often includes chunks ranked 11+ in the round-robin
+        # order. Collect citations from each dim and union with the top-10.
+        cited_ids: set[str] = set()
+        for dim in (attr.demand, attr.pricing, attr.competitive,
+                    attr.management_credibility, attr.macro):
+            for cid in dim.evidence_chunk_ids:
+                cited_ids.add(cid)
+        chunk_by_id = {c.chunk_id: c for c in chunks}
+        bundle_chunks: dict[str, "TextChunk"] = {}
+        for c in chunks[:10]:
+            bundle_chunks[c.chunk_id] = c
+        for cid in cited_ids:
+            if cid in chunk_by_id:
+                bundle_chunks[cid] = chunk_by_id[cid]
+
         moves_payload.append({
             "move_date": m.move_date.isoformat(),
             "return_pct": round(float(m.return_pct), 6),
@@ -146,10 +166,10 @@ def build_for_ticker(ticker: str, meta: dict, end_date: date) -> dict:
                 },
                 "model_notes": attr.model_notes,
             },
-            # Only pre-bake the first 10 chunks (model.attribute uses [:5] for
-            # evidence; 10 is a buffer). Keeps each ticker's JSON ~300 KB
-            # instead of exploding to tens of MB when news is dense.
-            "chunks": [_chunk_dict(c) for c in chunks[:10]],
+            # Bundle the union of (top-10 by round-robin order) + (every
+            # chunk_id cited in the attribution). Keeps the bundle small but
+            # guarantees the UI can resolve every citation.
+            "chunks": [_chunk_dict(c) for c in bundle_chunks.values()],
             "chunks_available": available_counts,
             "chunks_total": len(chunks),
             "strategies": strategies,
