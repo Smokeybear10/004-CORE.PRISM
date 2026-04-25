@@ -1272,11 +1272,16 @@
       display: grid;
       grid-template-columns: 1fr 1fr 1fr 1.2fr auto;
       gap: 22px;
-      align-items: center;
+      align-items: stretch;
     }
     .filter-bar .grp {
       display: flex; flex-direction: column; gap: 6px;
       min-width: 0;
+      /* Stretch every column to the tallest (Character, which wraps to
+         two rows) so the four filter blocks sit on a flat bottom edge.
+         Slider columns get extra empty space below — pin label/value to
+         the top so visual alignment stays at the top of each column. */
+      justify-content: flex-start;
     }
     .filter-bar .grp .lbl {
       font: 600 9.5px var(--mono); letter-spacing: 0.20em; color: var(--ink-quiet);
@@ -1805,10 +1810,15 @@
     <div id="chart"></div>
   </section>
 
+  <section class="event-card empty" id="event-card">
+    <div class="label">No event selected</div>
+    <div class="body">Pick a ticker above, then click any annotated dot in the chart to load the lean/fade reading and the cited evidence.</div>
+  </section>
+
   <section class="eval-harness" id="eval-harness" hidden>
     <div class="eh-head">
       <div>
-        <span class="kicker">Eval Harness</span>
+        <span class="kicker">Figure II · Eval harness</span>
         <h3 id="eval-headline">—</h3>
         <p class="eh-sub" id="eval-sub">
           Each case has a hand-authored ground-truth verdict. The harness
@@ -1824,15 +1834,10 @@
     <p class="eval-disclaimer" id="eval-disclaimer">—</p>
   </section>
 
-  <section class="event-card empty" id="event-card">
-    <div class="label">No event selected</div>
-    <div class="body">Pick a ticker above, then click any annotated dot in the chart to load the lean/fade reading and the cited evidence.</div>
-  </section>
-
   <section class="pnl-card" id="pnl-card" hidden>
     <div class="pnl-head">
       <div>
-        <span class="kicker">Closing the Loop</span>
+        <span class="kicker">Figure III · Closing the loop</span>
         <h3 id="pnl-headline">— · —</h3>
         <p class="pnl-sub" id="pnl-sub">
           If we'd traded each flagged event over a 5-trading-day window using
@@ -2206,8 +2211,8 @@ function renderChart(bundle) {
     x: moveX, y: moveY,
     customdata: visible.map(x => x.i),
     mode: 'markers',
-    marker: { size: 10, color: moveColors,
-              line: { color: '#ffffff', width: 2 } },
+    marker: { size: 13, color: moveColors,
+              line: { color: '#ffffff', width: 2.2 } },
     text: visible.map(x => `<b>${x.m.move_date}</b><br>${pct(x.m.return_pct)} · z ${x.m.vol_zscore.toFixed(1)}σ`),
     hovertemplate: '%{text}<extra></extra>',
     name: 'Flagged (actual)',
@@ -2241,8 +2246,8 @@ function renderChart(bundle) {
       traces.push({
         x: predX, y: predY, customdata: predCD,
         mode: 'markers',
-        marker: { size: 11, color: predColors,
-                  line: { color: '#c2410c', width: 2 },
+        marker: { size: 13, color: predColors,
+                  line: { color: '#c2410c', width: 2.2 },
                   symbol: 'diamond-open' },
         text: predTxt,
         hovertemplate: '%{text}<extra></extra>',
@@ -2573,7 +2578,7 @@ function renderEventCard() {
 
   const dateStr = formatDate(move.move_date);
   const retCls = move.return_pct >= 0 ? 'up' : 'down';
-  const caseNo = `Case ${String((STATE.selectedMoveIdx ?? 0) + 1).padStart(2, '0')}`;
+  const caseNo = 'Event summary';
 
   let bylineText = 'Pick a strategy above to see the verdict.';
   if (hasAttr) {
@@ -3186,6 +3191,25 @@ function bindHighlight(chunkIds, on) {
   });
 }
 
+/* Trim a long chunk to ~2 sentences (~280 chars) so the Evidence tab
+ * stays scannable. Filings + earnings transcripts often run multiple
+ * paragraphs per chunk and crowd the panel; the first 1–2 sentences
+ * already convey the gist for a click-through. The full text is still
+ * available in the underlying chunk_id (we just don't render it). */
+function condenseChunkText(raw) {
+  if (!raw) return '';
+  const text = String(raw).replace(/\s+/g, ' ').trim();
+  const MAX = 280;
+  if (text.length <= MAX) return text;
+  // Prefer cutting at a sentence boundary inside the budget; fall back
+  // to a word boundary so we never break mid-word.
+  const window = text.slice(0, MAX);
+  const lastSent = Math.max(window.lastIndexOf('. '), window.lastIndexOf('? '), window.lastIndexOf('! '));
+  if (lastSent >= 120) return text.slice(0, lastSent + 1) + ' …';
+  const lastSpace = window.lastIndexOf(' ');
+  return (lastSpace > 0 ? text.slice(0, lastSpace) : window) + '…';
+}
+
 function renderEvidence(panel) {
   panel.innerHTML = '';
   if (!STATE.chunks || STATE.chunks.length === 0) {
@@ -3203,7 +3227,7 @@ function renderEvidence(panel) {
       `<span>${c.publication_date}</span>`,
       c.section_name ? `<span style="font-style:italic">${escapeHtml(c.section_name)}</span>` : '',
     ].filter(Boolean).join(' · ');
-    row.innerHTML = `<div class="ev-meta">${meta}</div><div class="ev-text">${escapeHtml(c.text || '')}</div>`;
+    row.innerHTML = `<div class="ev-meta">${meta}</div><div class="ev-text">${escapeHtml(condenseChunkText(c.text))}</div>`;
     row.addEventListener('mouseenter', () => bindHighlight([c.chunk_id], true));
     row.addEventListener('mouseleave', () => bindHighlight([c.chunk_id], false));
     panel.appendChild(row);
@@ -3240,6 +3264,9 @@ function renderSources(panel) {
   tools.querySelector('#reset-toggles-btn').addEventListener('click', () => {
     STATE.enabledSources = new Set(
       ALL_IDS.filter(id => (STATE.chunksAvailable[id] || 0) > 0));
+    // Same reason as the per-toggle change handler — repaint immediately
+    // so the user sees feedback without waiting on /api/attribute.
+    renderSources(panel);
     recomputeAttribution();
     if (STATE.bundle) renderChart(STATE.bundle);
   });
@@ -3274,6 +3301,11 @@ function renderSources(panel) {
     input.addEventListener('change', e => {
       if (e.target.checked) STATE.enabledSources.add(s.id);
       else STATE.enabledSources.delete(s.id);
+      // /api/attribute can take 30s+ for the live model — repaint the
+      // toggles synchronously so the wrapper's `.checked` class flips
+      // immediately. Without this the click looks broken until the API
+      // response lands and renderEventCard rebuilds the panel.
+      renderSources(panel);
       recomputeAttribution();
       // Re-render chart so the predicted-overlay tracks the active
       // source set (not just the per-event panel).
