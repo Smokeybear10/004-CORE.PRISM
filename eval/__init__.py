@@ -21,6 +21,9 @@ from eval.calibration import (
     CalibrationReport,
     FloorCheck,
     FLOOR_BASELINES,
+    FrameworkComparison,
+    FrameworkReport,
+    compare_frameworks,
     compare_to_baselines,
 )
 from eval.config import ScorerConfig
@@ -74,6 +77,9 @@ __all__ = [
     "CalibrationReport",
     "FloorCheck",
     "FLOOR_BASELINES",
+    "FrameworkComparison",
+    "FrameworkReport",
+    "compare_frameworks",
     "compare_to_baselines",
     # Layer (c) — perturbation
     "DeterminismResult",

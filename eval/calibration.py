@@ -25,6 +25,7 @@ from pydantic import BaseModel, Field
 from backtest.baselines import BASELINES
 from backtest.fixtures import ABLATION_BUNDLES
 from backtest.runner import run_ablation, run_baseline
+from backtest.signal import STRATEGY_REGISTRY
 from schema import BacktestResult
 
 
@@ -101,11 +102,15 @@ def compare_to_baselines(
     horizon: int = 5,
     use_excess: bool = True,
     seed: int = 0,
+    strategy: str = "fundamental_vs_nonfundamental",
 ) -> CalibrationReport:
     """
     Run each structured ablation and each floor baseline on `events_df`, then
     compare structured vs. baseline on `metric`. A structured run PASSES a
     floor check when `structured_metric - baseline_metric >= margin_required`.
+
+    `strategy` selects the fade-or-follow framework for structured ablations
+    (see backtest.signal.STRATEGY_REGISTRY). Baselines are framework-independent.
 
     Tip: for hackathon MVP, `metric="sharpe"` with `margin_required=0.0` is
     the right contract. Tighten the margin once the universe is stable.
@@ -114,7 +119,8 @@ def compare_to_baselines(
 
     ablation_results: list[BacktestResult] = []
     for name in ablation_names:
-        res, _ = run_ablation(events_df, name, horizon=horizon, use_excess=use_excess, seed=seed)
+        res, _ = run_ablation(events_df, name, horizon=horizon, use_excess=use_excess,
+                              strategy=strategy, seed=seed)
         ablation_results.append(res)
 
     baseline_results: list[BacktestResult] = []
@@ -158,4 +164,88 @@ def compare_to_baselines(
         ablation_results=ablation_results,
         baseline_results=baseline_results,
         floor_checks=floor_checks,
+    )
+
+
+# ---------- Framework comparison ----------
+
+class FrameworkComparison(BaseModel):
+    """Per-strategy backtest result on the same events + ablation."""
+    strategy: str
+    metric: CalibrationMetric
+    metric_value: float
+    sharpe: float
+    hit_rate: float
+    avg_return: float
+    n_trades: int
+    backtest: BacktestResult
+
+
+class FrameworkReport(BaseModel):
+    """Aggregate of every framework's result on identical inputs."""
+    timestamp: datetime
+    ablation_name: str
+    metric: CalibrationMetric
+    comparisons: list[FrameworkComparison] = Field(default_factory=list)
+
+    @property
+    def best(self) -> Optional[FrameworkComparison]:
+        if not self.comparisons:
+            return None
+        return max(self.comparisons, key=lambda c: c.metric_value)
+
+    @property
+    def worst(self) -> Optional[FrameworkComparison]:
+        if not self.comparisons:
+            return None
+        return min(self.comparisons, key=lambda c: c.metric_value)
+
+
+def compare_frameworks(
+    events_df: pd.DataFrame,
+    *,
+    frameworks: Optional[list[str]] = None,
+    ablation_name: str = "+macro",
+    metric: CalibrationMetric = "sharpe",
+    horizon: int = 5,
+    use_excess: bool = True,
+    seed: int = 0,
+) -> FrameworkReport:
+    """
+    Run every framework in `frameworks` on the same `events_df` + `ablation_name`
+    and report each one's BacktestResult.
+
+    Defaults to running every framework registered in STRATEGY_REGISTRY so the
+    demo can answer "which fade-or-follow framework wins on this universe?"
+    in one call.
+    """
+    names = list(frameworks) if frameworks is not None else list(STRATEGY_REGISTRY)
+    unknown = [n for n in names if n not in STRATEGY_REGISTRY]
+    if unknown:
+        raise ValueError(
+            f"unknown framework(s): {unknown}; known: {sorted(STRATEGY_REGISTRY)}"
+        )
+
+    comparisons: list[FrameworkComparison] = []
+    for strat in names:
+        res, _ = run_ablation(
+            events_df, ablation_name,
+            horizon=horizon, use_excess=use_excess,
+            strategy=strat, seed=seed,
+        )
+        comparisons.append(FrameworkComparison(
+            strategy=strat,
+            metric=metric,
+            metric_value=_metric_of(res, metric),
+            sharpe=res.sharpe,
+            hit_rate=res.hit_rate,
+            avg_return=res.avg_return,
+            n_trades=res.n_trades,
+            backtest=res,
+        ))
+    return FrameworkReport(
+        timestamp=datetime.now(),
+        ablation_name=ablation_name,
+        metric=metric,
+        comparisons=comparisons,
     )
