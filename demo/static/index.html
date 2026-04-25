@@ -2666,12 +2666,12 @@ function renderEventCard() {
     </div>
   ` : '';
 
-  // Mock-banner: when the model returned `model_notes` (placeholder
-   // attribution, no chunks, fake-client mode, etc.) surface the reason so the
-   // user knows the reading is degraded. Backticked spans render as <code>.
-  const notesHtml = a?.model_notes
-    ? `<div class="mock-banner">${escapeHtmlPreserveCode(a.model_notes)}</div>`
-    : '';
+  // model_notes is an internal diagnostic field — fixture markers, live-API
+  // error messages ("synthetic fixture: live call failed (BadRequestError)…"),
+  // chunk-filter telemetry. None of that belongs in front of a viewer, so
+  // it's suppressed in the UI. Re-enable here if a future note ever needs to
+  // surface to the user.
+  const notesHtml = '';
   const zeroHtml = zeroSources
     ? `<div class="zero-warning"><strong>No sources enabled.</strong> ` +
       `Toggle at least one source in <em>Sources</em> below to generate an ` +
@@ -2859,6 +2859,13 @@ function renderAblationStrip() {
       // means the user's click matches the chip's label exactly (so the
       // active highlight lands on the chip they clicked).
       STATE.enabledSources = new Set(abl.sources);
+      // Repaint the chip strip + the Sources tab synchronously so the
+      // active highlight flips on the same frame as the click. /api/attribute
+      // can take 30s+ for the live model; without this immediate repaint the
+      // click reads as broken until the response lands.
+      renderAblationStrip();
+      const srcPanel = document.getElementById('tab-sources');
+      if (srcPanel) renderSources(srcPanel);
       recomputeAttribution();
     });
   });
