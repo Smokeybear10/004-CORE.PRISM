@@ -1424,6 +1424,23 @@
     .eval-case-pass { border-left: 3px solid var(--up); }
     .eval-case-fail { border-left: 3px solid var(--down); }
     .eval-case-skip { border-left: 3px solid var(--rule-strong); }
+    .eval-case-active {
+      background: #fffbe9;
+      box-shadow: 0 0 0 2px var(--oxblood-line), 0 6px 16px rgba(122, 31, 31, 0.10);
+    }
+    .eval-active-pill {
+      display: inline-block;
+      margin-left: 8px;
+      padding: 1px 7px 0;
+      border-radius: 3px;
+      background: var(--oxblood-soft);
+      border: 1px solid var(--oxblood-line);
+      color: var(--oxblood);
+      font: 600 0.58rem var(--mono);
+      letter-spacing: 0.18em;
+      text-transform: uppercase;
+      vertical-align: middle;
+    }
     .eval-case-head {
       display: grid; grid-template-columns: 22px minmax(0, 1fr) auto;
       gap: 12px; align-items: center;
@@ -2955,20 +2972,45 @@ function renderEvalHarness() {
     `<span class="eval-den">${n}</span>` +
     `<span class="eval-of">cases correct</span>` +
     `<span class="eval-pct">· ${pct}%</span>`;
-  sub.textContent =
-    `${ticker} · hand-authored fixtures with known causes (${tickerCases.length} ` +
-    `loaded). Other strategies show verdicts but aren't scored — see note below.`;
+
+  // Which chart move is currently selected? If its date matches a fixture,
+  // we'll highlight that row. If not, the harness still scores the same 6
+  // — say so plainly so the user doesn't read "3/6" as "this move scored 3/6".
+  const selMove = (STATE.bundle && STATE.selectedMoveIdx != null)
+    ? STATE.bundle.moves[STATE.selectedMoveIdx] : null;
+  const selDate = selMove ? selMove.move_date : null;
+  const selCaseId = selDate ? `${ticker}_${selDate}` : null;
+  const matchedCase = selCaseId ? tickerCases.find(c => c.case_id === selCaseId) : null;
+
+  if (matchedCase) {
+    const verdictTxt = matchedCase.match === true ? 'matches ground truth'
+                     : matchedCase.match === false ? 'misses ground truth'
+                     : 'is exploration-only';
+    sub.textContent =
+      `${ticker} · ${tickerCases.length} hand-authored cases. ` +
+      `Selected move (${selDate}) is in the harness — model ${verdictTxt}.`;
+  } else if (selDate) {
+    sub.textContent =
+      `${ticker} · ${tickerCases.length} hand-authored cases. ` +
+      `Selected move (${selDate}) is not in the fixture set, so the score ` +
+      `below is the ticker-wide harness, not a per-move result.`;
+  } else {
+    sub.textContent =
+      `${ticker} · ${tickerCases.length} hand-authored cases with known causes. ` +
+      `Click a flagged move on the chart to highlight its case.`;
+  }
 
   if (primaryStrat) primaryStrat.textContent = report.primary_strategy;
 
   list.innerHTML = '';
   for (const c of tickerCases) {
     const wrap = document.createElement('div');
+    const isActive = selCaseId === c.case_id;
     wrap.className = 'eval-case eval-case-' + (
       c.match === true ? 'pass'
       : c.match === false ? 'fail'
       : 'skip'
-    );
+    ) + (isActive ? ' eval-case-active' : '');
     const glyph = c.match === true ? '✓'
                 : c.match === false ? '✗'
                 : '·';
@@ -2984,7 +3026,7 @@ function renderEvalHarness() {
       `<div class="eval-case-head">` +
         `<span class="eval-glyph">${glyph}</span>` +
         `<div class="eval-case-id">` +
-          `<span class="eval-case-date">${escapeHtml(c.case_id)}</span>` +
+          `<span class="eval-case-date">${escapeHtml(c.case_id)}${isActive ? ' <span class="eval-active-pill">selected</span>' : ''}</span>` +
           `<span class="eval-case-cause">${escapeHtml(cause)}</span>` +
         `</div>` +
         `<div class="eval-verdicts">` +
@@ -3155,6 +3197,8 @@ function selectMove(idx) {
   STATE.strategies = m.strategies || (STATE.attribution ? deriveStrategies(STATE.attribution) : {});
   STATE.chunks = m.chunks || [];
   renderEventCard();
+  // Re-render the harness so the row matching this move (if any) highlights.
+  renderEvalHarness();
   // Fast first paint from the static bundle, then fire the live /api/attribute
   // call so the per-citation quote + reasoning shape arrives. The live result
   // replaces the placeholder when it lands.
