@@ -213,6 +213,14 @@ def attribute(
     Attribute `move` across the 5 dimensions using `chunks` (already filtered
     to source types in config.sources and to publication_date <= move.move_date).
 
+    PRE-LLM WEIGHTING (mentor ask):
+        Before any attribution path runs, chunks are scored by source quality
+        + recency decay + ticker alignment (see model.relevance). The bottom
+        tier is dropped; the survivors are re-ranked and get an
+        `[EVIDENCE_WEIGHT ...]` tag prepended to their text so the LLM sees
+        which evidence to trust most. Set BW_DISABLE_CHUNK_FILTER=1 to run
+        the unfiltered baseline for ablation.
+
     LIVE PATH (default OFF; enable with BW_USE_LIVE_ATTRIBUTION=1):
         Builds a JoinedEvidence and calls model.attribution.run_attribution,
         which hits the Anthropic API via the schema's tool_use contract and
@@ -226,21 +234,38 @@ def attribute(
     Either way, attribution.model_notes carries a short tag explaining which
     path produced the result. Downstream reports should surface that tag.
     """
-    use_live, skip_reason = _should_use_live(chunks)
+    from model.relevance import annotate_with_weights, filter_and_rank
+
+    raw_count = len(chunks)
+    scored = filter_and_rank(chunks, move)
+    annotated = annotate_with_weights(scored)
+    filter_note = (
+        None if len(annotated) == raw_count
+        else f"filtered to top {len(annotated)} of {raw_count} chunks by relevance"
+    )
+
+    use_live, skip_reason = _should_use_live(annotated)
     if use_live:
         try:
-            return _live_attribute(move, chunks, config)
+            attr = _live_attribute(move, annotated, config)
         except Exception as e:  # noqa: BLE001 — fall back on any live error
             log.warning(
                 "live attribute failed for %s %s (%s: %s); using placeholder",
                 move.ticker, move.move_date, type(e).__name__, e,
             )
-            return _placeholder_attribute(
-                move, chunks, config,
+            attr = _placeholder_attribute(
+                move, annotated, config,
                 note_suffix=f"live call failed ({type(e).__name__})",
             )
+    else:
+        attr = _placeholder_attribute(move, annotated, config, note_suffix=skip_reason)
 
-    return _placeholder_attribute(move, chunks, config, note_suffix=skip_reason)
+    if filter_note:
+        attr.model_notes = (
+            f"{attr.model_notes}; {filter_note}"
+            if attr.model_notes else filter_note
+        )
+    return attr
 
 
 def predict_expected_return(move: PriceMove, chunks: list[TextChunk]) -> float:
