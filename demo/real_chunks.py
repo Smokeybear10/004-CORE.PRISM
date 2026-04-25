@@ -258,10 +258,15 @@ def preload_finnhub_news(
     """Pull Finnhub historical news for each focal + its peers, indexed for
     fast per-move slicing. No-op when FINNHUB_API_KEY isn't set.
 
-    Defaults to fetching the last 5 years up to today, which fills the
-    pre-2025 gap in the bundled Yahoo parquet without overshooting the
-    free-tier rate limit (one request per ticker, deduped to focals + peers).
+    Default window is the last 13 months — the practical reach of Finnhub's
+    free tier (`/company-news` returns 0 for windows older than ~12 months
+    on the free plan, regardless of the `from` parameter). The fetcher
+    issues monthly chunks because Finnhub silently truncates wide-window
+    requests on the free tier. Disk-cached per monthly window so
+    subsequent starts are instant.
     """
+    from datetime import timedelta as _td
+
     from ingestion.earnings_news.finnhub import (
         fetch_finnhub_news,
         is_finnhub_available,
@@ -272,7 +277,9 @@ def preload_finnhub_news(
 
     today = date.today()
     end = end_date or today
-    start = start_date or date(today.year - 5, today.month, today.day)
+    # ~13 months back. Older windows return 0 on the free tier; asking for
+    # them just wastes rate-limit budget.
+    start = start_date or (today - _td(days=395))
 
     for focal in focal_tickers:
         focal_upper = focal.upper()
