@@ -109,14 +109,30 @@ function renderOverview(bundle) {
 // ---------- Chart ----------
 function renderChart(bundle) {
   const priceByDate = new Map(bundle.prices.map(p => [p.date, p.close]));
-  const moveX = bundle.moves.map(m => m.move_date);
-  const moveY = bundle.moves.map(m => priceByDate.get(m.move_date) ?? null);
-  const moveColors = bundle.moves.map(m => m.return_pct < 0 ? COLOR.negative : COLOR.positive);
-  const moveText = bundle.moves.map(m =>
+  const hoverText = (m) =>
     `<b>${m.move_date}</b><br>close $${priceByDate.get(m.move_date)?.toFixed(2) ?? '—'}` +
-    `<br>return ${pct(m.return_pct)}<br>vol z ${signed(m.vol_zscore)}`
-  );
-  const moveCustom = bundle.moves.map((m, i) => i);
+    `<br>return ${pct(m.return_pct)}<br>vol z ${signed(m.vol_zscore)}`;
+
+  const rallyIdx = [];
+  const selloffIdx = [];
+  bundle.moves.forEach((m, i) => {
+    (m.return_pct < 0 ? selloffIdx : rallyIdx).push(i);
+  });
+  const buildMarkerTrace = (idx, color, name) => ({
+    x: idx.map(i => bundle.moves[i].move_date),
+    y: idx.map(i => priceByDate.get(bundle.moves[i].move_date) ?? null),
+    customdata: idx,
+    text: idx.map(i => hoverText(bundle.moves[i])),
+    hovertemplate: '%{text}<extra></extra>',
+    mode: 'markers',
+    marker: {
+      size: 10,
+      color,
+      line: { color: COLOR.surface, width: 1.5 },
+      symbol: 'circle',
+    },
+    name,
+  });
 
   const traces = [
     {
@@ -127,21 +143,8 @@ function renderChart(bundle) {
       name: 'Close',
       hovertemplate: '%{x}<br>$%{y:.2f}<extra></extra>',
     },
-    {
-      x: moveX,
-      y: moveY,
-      customdata: moveCustom,
-      text: moveText,
-      hovertemplate: '%{text}<extra></extra>',
-      mode: 'markers',
-      marker: {
-        size: 10,
-        color: moveColors,
-        line: { color: COLOR.surface, width: 1.5 },
-        symbol: 'circle',
-      },
-      name: 'Flagged move',
-    }
+    buildMarkerTrace(rallyIdx, COLOR.positive, 'Rally (up move)'),
+    buildMarkerTrace(selloffIdx, COLOR.negative, 'Selloff (down move)'),
   ];
 
   const layout = {
@@ -187,7 +190,7 @@ function renderChart(bundle) {
   if (!chartDiv._clickHandlerAttached) {
     chartDiv.on('plotly_click', (ev) => {
       const pt = ev.points[0];
-      if (!pt || pt.curveNumber !== 1) return;   // only flagged-move scatter
+      if (!pt || pt.curveNumber === 0) return;   // skip the close-price line
       selectMove(pt.customdata);
     });
     chartDiv._clickHandlerAttached = true;
