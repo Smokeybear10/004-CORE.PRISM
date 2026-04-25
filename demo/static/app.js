@@ -62,50 +62,65 @@ const PERSISTENCE = {
 // is UI metadata only (labels + blurbs); IDs MUST match Python registry keys.
 const STRATEGIES = [
   { id: 'fundamental_vs_nonfundamental', label: 'Fundamental vs Non',
-    blurb: 'structural → lean, transient → fade.',
+    blurb: 'fundamental cause → lean, sentiment-driven → fade.',
     description:
-      'Reads the model\'s <span class="num">move_character</span> tag. ' +
-      'A <em>structural</em> move (durable cause — real demand shift, pricing ' +
-      'change, competitive event) gets a <span class="pos">lean</span> — trade ' +
-      'with the move. A <em>transient</em> move (narrative, sentiment, attention) ' +
-      'gets a <span class="neg">fade</span> — bet it reverts. ' +
-      '<em>Mixed</em> or <em>unclear</em> → skip.' },
+      'Asks one question: did the move come from something <em>real and ' +
+      'durable</em> — a genuine earnings beat, customer growth, pricing ' +
+      'power, a competitive shift — or from something <em>soft</em> like a ' +
+      'fear cycle, hype, or a single news headline? If the cause looks ' +
+      'fundamental, <span class="pos">lean</span> with the move (fundamentals ' +
+      'tend to keep paying off). If it looks like a sentiment reaction, ' +
+      '<span class="neg">fade</span> it (those moves usually unwind). When ' +
+      'the model can\'t tell, sit it out.' },
 
   { id: 'expected_vs_realized',          label: 'Expected vs Realized',
-    blurb: 'realized overshoots predicted → fade. Undershoots → lean.',
+    blurb: 'market overreacted → fade. Underreacted → lean.',
     description:
-      'Compares realized magnitude to the model\'s predicted magnitude. ' +
-      'If realized is <span class="num">≥1.5×</span> predicted, the market ' +
-      'overreacted relative to the evidence → <span class="neg">fade</span>. ' +
-      'If realized is <span class="num">≤0.5×</span> predicted, the move has ' +
-      'room left → <span class="pos">lean</span>. Inside the band, or when ' +
-      'predicted is null / opposite-sign, → skip.' },
+      'The model reads the news and filings around the move and estimates ' +
+      'how much the stock <em>should</em> have moved given that evidence. ' +
+      'We compare to what actually happened. If the stock moved <em>much ' +
+      'more</em> than the news justifies, the market overreacted — bet on a ' +
+      'pullback (<span class="neg">fade</span>). If it moved <em>less</em> ' +
+      'than the news justifies, the price hasn\'t caught up yet — bet on ' +
+      'more move in the same direction (<span class="pos">lean</span>). If ' +
+      'they roughly agree, the news is already priced in — skip.' },
 
   { id: 'dimension_weighted',            label: 'Dimension-weighted',
-    blurb: 'weighted by per-dim persistence (demand+, macro−).',
+    blurb: 'fundamental drivers → lean. Macro/sentiment drivers → fade.',
     description:
-      'Multiplies each of the 5 dimension weights by a historical ' +
-      '<em>persistence</em> prior — Demand <span class="pos">+0.85</span>, ' +
-      'Pricing <span class="pos">+0.65</span>, Competitive ' +
-      '<span class="pos">+0.45</span>, Mgmt credibility ' +
-      '<span class="neg">−0.15</span>, Macro <span class="neg">−0.75</span> ' +
-      '— then sums. Score above <span class="num">+0.20</span> means ' +
-      'durable drivers dominate → <span class="pos">lean</span>. Below ' +
-      '<span class="num">−0.20</span> means mean-reverting drivers dominate ' +
-      '→ <span class="neg">fade</span>.' },
+      'Different <em>kinds</em> of price moves have very different staying ' +
+      'power, going back to the post-earnings drift literature. Moves ' +
+      'driven by real <em>demand</em> (units, customers) or <em>pricing</em> ' +
+      '(margins, price hikes) tend to keep paying off for weeks. Moves ' +
+      'driven by <em>macro</em> shocks (Fed, rates, geopolitics) or single ' +
+      'management-credibility hits tend to fully unwind. This strategy ' +
+      'measures how much of the move came from each cause and weights them: ' +
+      'mostly demand or pricing → <span class="pos">lean</span>; mostly ' +
+      'macro or one-off mgmt noise → <span class="neg">fade</span>.' },
 
   { id: 'hybrid',                        label: 'Hybrid',
-    blurb: 'fundamentality gate → expected/realized → dim sanity.',
+    blurb: 'fundamental check, then overshoot check, then driver sanity check.',
     description:
-      'Three layered gates: ' +
-      '<em>(1)</em> character first — transient → ' +
-      '<span class="neg">fade</span>, mixed/unclear → skip. ' +
-      '<em>(2)</em> for structural moves, the overshoot check — realized ' +
-      '<span class="num">≥1.5×</span> predicted → <span class="neg">fade</span>. ' +
-      '<em>(3)</em> dimension sanity — if the dominant dimension has negative ' +
-      'persistence, downgrade <span class="pos">lean</span> → skip. ' +
-      'Otherwise → <span class="pos">lean</span>.' },
+      'Stacks the other three checks in order. <em>First,</em> is the move ' +
+      'fundamental or just narrative? Narrative → ' +
+      '<span class="neg">fade</span>; unclear → skip. <em>Second,</em> for ' +
+      'fundamental moves, did the price still overshoot what the news ' +
+      'justified? If yes → <span class="neg">fade</span> the overshoot. ' +
+      '<em>Third,</em> sanity-check the strongest cause — if the move was ' +
+      'driven mostly by something that historically reverses (like a macro ' +
+      'shock), back off to skip; otherwise <span class="pos">lean</span>.' },
 ];
+
+// Plain-English labels for the 5 attribution dimensions, used in the
+// "What the model concluded" text. Keep these reader-friendly — they're
+// the only place a non-engineer sees a dimension name.
+const DIM_PHRASE = {
+  demand:                 'real demand growth (units, customers, market share)',
+  pricing:                'pricing power (margins, price hikes, mix)',
+  competitive:            'competitive dynamics (market share, rivals, moats)',
+  management_credibility: 'management credibility (guidance, execution, leadership)',
+  macro:                  'macro forces (rates, FX, commodities, geopolitics)',
+};
 
 // ---------- Fetch helpers ----------
 async function fetchJSON(path) {
