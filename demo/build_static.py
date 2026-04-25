@@ -26,6 +26,7 @@ from demo.mock_data import FOCAL_TICKERS
 from demo.real_chunks import (
     chunks_for_real,
     preload_earnings_transcripts,
+    preload_finnhub_news,
     preload_news,
     preload_peer_and_sector_news,
     preload_thirteen_f,
@@ -239,6 +240,9 @@ def main() -> None:
     preload_peer_and_sector_news(ticker_order)
     preload_thirteen_f()
     preload_earnings_transcripts(ticker_order)
+    # Optional Finnhub historical news (fills the pre-2025 gap in the
+    # bundled Yahoo parquet). No-op without FINNHUB_API_KEY.
+    preload_finnhub_news(ticker_order)
 
     # When BW_TICKER_ORDER is set, preserve other tickers' index entries by
     # seeding from the existing index.json. We only overwrite entries for
