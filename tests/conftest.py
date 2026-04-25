@@ -5,8 +5,21 @@ The `patched_loader` fixture monkeypatches `ingestion.prices.hf_loader` so
 tests never touch HuggingFace and never pollute the real data/cache
 directory. The fake `_read_hf_parquet` reads local fixture parquets while
 honoring pyarrow pushdown filters — same code path as production.
+
+Also loads .env at the repo root so live-API tests (RUN_LIVE_API=1) can
+see ANTHROPIC_API_KEY. .env is gitignored.
 """
 from __future__ import annotations
+
+# Load repo-root .env before anything imports anthropic/etc.
+try:
+    from dotenv import load_dotenv
+    from pathlib import Path as _Path
+    _env_path = _Path(__file__).resolve().parent.parent / ".env"
+    if _env_path.exists():
+        load_dotenv(_env_path)
+except ImportError:
+    pass  # python-dotenv not installed — env stays whatever the shell set
 
 from pathlib import Path
 
