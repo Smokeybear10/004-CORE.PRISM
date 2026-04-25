@@ -1,0 +1,36 @@
+{
+  "generated_at": "2026-04-24",
+  "window_years": 5,
+  "tickers": [
+    {
+      "ticker": "ABT",
+      "name": "Abbott Laboratories",
+      "sector": "Healthcare",
+      "moves": 20
+    },
+    {
+      "ticker": "ACU",
+      "name": "Acme United Corporation",
+      "sector": "Consumer Defensive",
+      "moves": 13
+    },
+    {
+      "ticker": "AIR",
+      "name": "AAR Corp",
+      "sector": "Industrials",
+      "moves": 18
+    },
+    {
+      "ticker": "AMD",
+      "name": "Advanced Micro Devices",
+      "sector": "Technology",
+      "moves": 16
+    },
+    {
+      "ticker": "APD",
+      "name": "Air Products and Chemicals",
+      "sector": "Basic Materials",
+      "moves": 23
+    }
+  ]
+}

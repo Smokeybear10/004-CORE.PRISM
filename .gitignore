@@ -35,7 +35,20 @@ datasets/
 .idea/
 *.swp
 
-# Local data / caches (HF pulls, parquet caches, etc. — never commit raw bulk data)
-data/
+# Local data / caches (HF pulls, parquet caches, etc. — never commit raw bulk data).
+# Ignore everything under top-level data/ EXCEPT the small focal_chunks.jsonl
+# the demo's 13F preloader reads at startup. (gitignore can't re-include files
+# whose parent directory is excluded, so we must use data/* not data/.)
+data/*
+!data/thirteen_f/
+data/thirteen_f/*
+!data/thirteen_f/focal_chunks.jsonl
+
+# demo/static/data/ holds the pre-baked per-ticker JSON bundles (~1 MB total).
+# Without these a fresh clone shows "Error loading data" on the demo page
+# until `python demo/build_static.py` is run.
+!demo/static/data/
+!demo/static/data/*.json
 # Generated backtest outputs
 out/
+.gstack/
