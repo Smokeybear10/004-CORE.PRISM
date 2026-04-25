@@ -15,11 +15,11 @@
        accent. Functional tool, not a research note.
        ═══════════════════════════════════════════════════════════ */
     :root {
-      --paper: #f5efe1;
-      --paper-2: #ede6d3;
-      --paper-3: #e3dcc8;
-      --rule: #cfc7b2;
-      --rule-strong: #b9b09a;
+      --paper: #ffffff;
+      --paper-2: #f4f5f7;
+      --paper-3: #e8eaef;
+      --rule: #dee1e7;
+      --rule-strong: #b6bac4;
 
       --navy: #0a1d36;
       --navy-2: #1a2c47;
@@ -75,7 +75,7 @@
       position: sticky;
       top: 0;
       z-index: 10;
-      background: rgba(245, 239, 225, 0.94);
+      background: rgba(255, 255, 255, 0.94);
       backdrop-filter: blur(12px) saturate(150%);
       -webkit-backdrop-filter: blur(12px) saturate(150%);
       border-bottom: 2px solid var(--navy);
@@ -172,7 +172,7 @@
 
     /* ─── Search card (entry point) ─── */
     .search-card {
-      background: #fbf6e8;
+      background: #ffffff;
       border: 1px solid var(--rule);
       border-radius: var(--radius);
       padding: 18px 20px;
@@ -276,7 +276,7 @@
     .ticker-chip:hover { color: var(--ink); border-color: var(--rule-strong); }
     .ticker-chip.active {
       background: var(--navy);
-      color: #fbf6e8;
+      color: #ffffff;
       border-color: var(--navy);
     }
 
@@ -325,7 +325,7 @@
 
     /* ─── Chart ─── */
     .chart-card {
-      background: #fbf6e8;
+      background: #ffffff;
       border: 1px solid var(--rule);
       border-radius: var(--radius);
       padding: 18px 20px;
@@ -361,7 +361,7 @@
 
     /* ─── Event card (the meat) ─── */
     .event-card {
-      background: #fbf6e8;
+      background: #ffffff;
       border: 1px solid var(--rule);
       border-radius: var(--radius);
       overflow: hidden;
@@ -613,9 +613,9 @@
     .mock-banner {
       margin: 0 22px 14px;
       padding: 10px 14px;
-      background: var(--gold-soft);
-      border: 1px solid rgba(168, 124, 61, 0.40);
-      border-left: 3px solid var(--gold);
+      background: var(--paper-2);
+      border: 1px solid var(--rule);
+      border-left: 3px solid var(--navy);
       border-radius: var(--radius-sm);
       font: italic 500 12.5px var(--serif);
       color: var(--ink-2);
@@ -623,8 +623,8 @@
     }
     .mock-banner code {
       font: 500 11.5px var(--mono);
-      background: rgba(168, 124, 61, 0.18);
-      color: var(--gold);
+      background: var(--navy-soft);
+      color: var(--navy);
       padding: 1px 5px; border-radius: 3px;
       font-style: normal; letter-spacing: 0;
     }
@@ -1088,17 +1088,17 @@
     }
     .dim-row .dim-rationale code:hover {
       background: var(--oxblood);
-      color: #fbf6e8;
+      color: #ffffff;
     }
     .dim-row .dim-rationale code.open {
       background: var(--oxblood);
-      color: #fbf6e8;
+      color: #ffffff;
     }
     .chunk-preview {
       grid-column: 2 / -1;
       margin: 4px 0 8px;
       padding: 12px 14px;
-      background: #fbf6e8;
+      background: #ffffff;
       border: 1px solid var(--oxblood-line);
       border-left: 3px solid var(--oxblood);
       border-radius: var(--radius-sm);
@@ -1236,7 +1236,7 @@
 
     .kbd-hint-pill {
       position: fixed; bottom: 18px; right: 18px; z-index: 90;
-      background: rgba(245, 239, 225, 0.94);
+      background: rgba(255, 255, 255, 0.94);
       backdrop-filter: blur(8px) saturate(150%);
       -webkit-backdrop-filter: blur(8px) saturate(150%);
       border: 1px solid var(--rule-strong);
@@ -1254,7 +1254,7 @@
 
     /* —— 07 Filter Bar —— */
     .filter-bar {
-      background: #fbf6e8;
+      background: #ffffff;
       border: 1px solid var(--rule);
       border-radius: var(--radius);
       padding: 14px 16px;
@@ -1287,12 +1287,12 @@
     .filter-bar input[type="range"]::-webkit-slider-thumb {
       -webkit-appearance: none; appearance: none;
       width: 14px; height: 14px; border-radius: 50%;
-      background: var(--navy); border: 2px solid #fbf6e8;
+      background: var(--navy); border: 2px solid #ffffff;
       box-shadow: 0 1px 3px rgba(13,19,32,0.3); cursor: pointer;
     }
     .filter-bar input[type="range"]::-moz-range-thumb {
       width: 14px; height: 14px; border-radius: 50%;
-      background: var(--navy); border: 2px solid #fbf6e8;
+      background: var(--navy); border: 2px solid #ffffff;
       box-shadow: 0 1px 3px rgba(13,19,32,0.3); cursor: pointer;
     }
     .filter-bar .chips { display: flex; gap: 4px; flex-wrap: wrap; }
@@ -1304,7 +1304,7 @@
     }
     .filter-bar .chip:hover { color: var(--ink); border-color: var(--rule-strong); }
     .filter-bar .chip.on {
-      background: var(--navy); color: #fbf6e8; border-color: var(--navy);
+      background: var(--navy); color: #ffffff; border-color: var(--navy);
     }
     .filter-bar .reset {
       font: 600 10px var(--mono); letter-spacing: 0.18em; text-transform: uppercase;
@@ -1341,6 +1341,142 @@
         border-bottom: 1px solid var(--rule); padding-bottom: 14px;
       }
       .filter-bar { grid-template-columns: 1fr; }
+    }
+
+    /* ─── Eval Harness ─── */
+    .eval-harness {
+      background: var(--paper);
+      border: 1px solid var(--rule);
+      border-radius: var(--radius);
+      padding: 18px 22px 20px;
+      margin-bottom: 16px;
+    }
+    .eval-harness .eh-head {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      gap: 20px;
+      margin-bottom: 12px;
+    }
+    .eval-harness .kicker {
+      font: 600 10px var(--mono);
+      color: var(--oxblood);
+      letter-spacing: 0.22em;
+      text-transform: uppercase;
+    }
+    .eval-harness h3 {
+      font-family: var(--serif);
+      font-weight: 600;
+      font-size: 1.35rem;
+      color: var(--ink);
+      margin: 4px 0 6px;
+      letter-spacing: -0.005em;
+    }
+    .eval-harness .eh-sub {
+      font: italic 400 12.5px var(--serif);
+      color: var(--ink-quiet);
+      max-width: 580px;
+      margin: 0;
+    }
+    .eval-harness .eh-meta {
+      text-align: right;
+      display: flex;
+      flex-direction: column;
+      gap: 3px;
+    }
+    .eval-harness .eh-meta-label {
+      font: 600 10px var(--mono);
+      color: var(--ink-dim);
+      letter-spacing: 0.18em;
+      text-transform: uppercase;
+    }
+    .eval-harness .eh-meta-value {
+      font: 500 12px var(--mono);
+      color: var(--ink-quiet);
+    }
+    .eval-harness .eval-num { color: var(--oxblood); font-variant-numeric: tabular-nums; }
+    .eval-harness .eval-slash, .eval-harness .eval-den {
+      color: var(--ink); font-variant-numeric: tabular-nums;
+    }
+    .eval-harness .eval-of {
+      color: var(--ink-quiet); font-family: var(--sans);
+      font-size: 0.92rem; font-weight: 400; margin-left: 6px;
+    }
+    .eval-harness .eval-pct {
+      color: var(--ink-dim); font-family: var(--mono);
+      font-size: 0.78rem; margin-left: 6px;
+    }
+    .eval-cases { display: flex; flex-direction: column; gap: 6px; margin-top: 8px; }
+    .eval-case {
+      border: 1px solid var(--rule); border-radius: 6px;
+      background: var(--paper-2); padding: 10px 14px;
+    }
+    .eval-case-pass { border-left: 3px solid var(--up); }
+    .eval-case-fail { border-left: 3px solid var(--down); }
+    .eval-case-skip { border-left: 3px solid var(--rule-strong); }
+    .eval-case-head {
+      display: grid; grid-template-columns: 22px minmax(0, 1fr) auto;
+      gap: 12px; align-items: center;
+    }
+    .eval-glyph {
+      font-family: var(--mono); font-size: 1rem;
+      text-align: center; color: var(--ink-quiet);
+    }
+    .eval-case-pass .eval-glyph { color: var(--up); }
+    .eval-case-fail .eval-glyph { color: var(--down); }
+    .eval-case-skip .eval-glyph { color: var(--ink-dim); }
+    .eval-case-id { display: flex; flex-direction: column; gap: 1px; min-width: 0; }
+    .eval-case-date {
+      font: 500 0.86rem var(--mono); color: var(--ink); letter-spacing: -0.005em;
+    }
+    .eval-case-cause {
+      font: 400 0.74rem var(--sans); color: var(--ink-quiet);
+      white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+    }
+    .eval-verdicts { display: flex; gap: 12px; align-items: center; }
+    .eval-verdict-pair {
+      display: flex; flex-direction: column; align-items: flex-end; gap: 3px;
+    }
+    .eval-verdict-label {
+      font: 600 0.58rem var(--mono); letter-spacing: 0.18em;
+      color: var(--ink-dim); text-transform: uppercase;
+    }
+    .verdict-tag {
+      display: inline-block; font: 600 0.66rem var(--mono);
+      letter-spacing: 0.16em; padding: 2px 7px 1px; border-radius: 3px;
+      border: 1px solid currentColor; text-transform: uppercase;
+    }
+    .verdict-tag.lean    { color: var(--up);    background: var(--up-soft); }
+    .verdict-tag.fade    { color: var(--down);  background: var(--down-soft); }
+    .verdict-tag.neutral { color: var(--ink-quiet); background: rgba(0,0,0,0.02); }
+    .verdict-tag.pending { color: var(--ink-dim); background: transparent; }
+    .verdict-tag.small {
+      font-size: 0.58rem; padding: 1px 5px 0; letter-spacing: 0.14em;
+    }
+    .eval-case-body {
+      margin-top: 8px; padding-top: 8px; border-top: 1px dashed var(--rule);
+    }
+    .eval-other-strats {
+      display: grid; grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 6px 12px; align-items: center;
+    }
+    .eval-other-heading {
+      grid-column: 1 / -1; font: 600 0.58rem var(--mono);
+      letter-spacing: 0.18em; color: var(--ink-dim);
+      text-transform: uppercase; margin-bottom: 1px;
+    }
+    .eval-other-strat {
+      display: flex; align-items: center; justify-content: space-between;
+      gap: 6px; font-size: 0.74rem; color: var(--ink-quiet);
+    }
+    .eval-other-name {
+      white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+    }
+    .eval-disclaimer {
+      margin: 12px 0 0 0; padding-top: 10px;
+      border-top: 1px solid var(--rule);
+      font-style: italic; color: var(--ink-dim);
+      font-size: 0.78rem;
     }
   </style>
 </head>
@@ -1436,6 +1572,25 @@
       <span class="hint">Step 2 · click any annotated dot</span>
     </div>
     <div id="chart"></div>
+  </section>
+
+  <section class="eval-harness" id="eval-harness" hidden>
+    <div class="eh-head">
+      <div>
+        <span class="kicker">Eval Harness</span>
+        <h3 id="eval-headline">—</h3>
+        <p class="eh-sub" id="eval-sub">
+          Each case has a hand-authored ground-truth verdict. The harness
+          calls the model, compares to the answer, prints X/N.
+        </p>
+      </div>
+      <div class="eh-meta">
+        <span class="eh-meta-label">Primary strategy</span>
+        <span class="eh-meta-value" id="eval-primary-strategy">fundamental_vs_nonfundamental</span>
+      </div>
+    </div>
+    <div class="eval-cases" id="eval-cases"></div>
+    <p class="eval-disclaimer" id="eval-disclaimer">—</p>
   </section>
 
   <section class="event-card empty" id="event-card">
@@ -1589,6 +1744,7 @@ const STATE = {
   // —— upgrade pass ——
   filters: { zMin: 0, confMin: 0, characters: new Set(['structural','transient','mixed','unclear']), directions: new Set(['up','down']) },
   visibleMoveIdx: [],
+  evalReport: null,
 };
 const DIM_PERSISTENCE_SIGN = { demand: +1, pricing: +1, competitive: +1, management_credibility: +1, macro: -1 };
 function computeCoherence(attr) {
@@ -1729,7 +1885,7 @@ function renderChart(bundle) {
       x: moveX, y: moveY,
       customdata: visible.map(x => x.i),
       mode: 'markers',
-      marker: { size: 7, color: moveColors, line: { color: '#fbf6e8', width: 1.4 } },
+      marker: { size: 7, color: moveColors, line: { color: '#ffffff', width: 1.4 } },
       text: visible.map(x => `<b>${x.m.move_date}</b><br>${pct(x.m.return_pct)} · z ${x.m.vol_zscore.toFixed(1)}σ`),
       hovertemplate: '%{text}<extra></extra>',
       name: 'Flagged',
@@ -1740,9 +1896,9 @@ function renderChart(bundle) {
     plot_bgcolor:  'rgba(0,0,0,0)',
     margin: { l: 48, r: 12, t: 8, b: 28 },
     font: { family: 'Inter, sans-serif', color: '#6a6e7c', size: 11 },
-    hoverlabel: { bgcolor: '#fbf6e8', bordercolor: '#cfc7b2', font: { color: '#0d1320', family: 'Source Serif 4, serif' } },
-    xaxis: { gridcolor: '#e3dcc8', linecolor: '#cfc7b2', tickcolor: '#cfc7b2', zeroline: false },
-    yaxis: { gridcolor: '#e3dcc8', linecolor: '#cfc7b2', tickcolor: '#cfc7b2', zeroline: false, tickprefix: '$' },
+    hoverlabel: { bgcolor: '#ffffff', bordercolor: '#dee1e7', font: { color: '#0d1320', family: 'Source Serif 4, serif' } },
+    xaxis: { gridcolor: '#e8eaef', linecolor: '#dee1e7', tickcolor: '#dee1e7', zeroline: false },
+    yaxis: { gridcolor: '#e8eaef', linecolor: '#dee1e7', tickcolor: '#dee1e7', zeroline: false, tickprefix: '$' },
     showlegend: false,
   };
   Plotly.react('chart', traces, layout, { displaylogo: false, responsive: true, modeBarButtonsToRemove: ['lasso2d','select2d'] });
@@ -2540,6 +2696,108 @@ function renderSources(panel) {
   panel.appendChild(cap);
 }
 
+// Renders eval_report.json — the X/N "did the model get the test cases
+// right?" output of `python -m eval`. Filtered to the currently selected
+// ticker so the panel stays relevant when the user flips between symbols.
+function renderEvalHarness() {
+  const section = document.getElementById('eval-harness');
+  if (!section) return;
+  if (!STATE.evalReport) { section.hidden = true; return; }
+
+  const report = STATE.evalReport;
+  const ticker = STATE.currentTicker;
+  const primary = (report.strategies || []).find(
+    s => s.strategy === report.primary_strategy
+  );
+  const allCases = primary ? primary.cases : [];
+  const tickerCases = ticker
+    ? allCases.filter(c => c.ticker === ticker)
+    : allCases;
+
+  if (tickerCases.length === 0) { section.hidden = true; return; }
+  section.hidden = false;
+
+  const headline = document.getElementById('eval-headline');
+  const sub = document.getElementById('eval-sub');
+  const list = document.getElementById('eval-cases');
+  const disclaimer = document.getElementById('eval-disclaimer');
+  const primaryStrat = document.getElementById('eval-primary-strategy');
+
+  const n = tickerCases.filter(c => c.scored).length;
+  const k = tickerCases.filter(c => c.match === true).length;
+  const pct = n > 0 ? Math.round((k / n) * 100) : 0;
+  headline.innerHTML =
+    `<span class="eval-num">${k}</span>` +
+    `<span class="eval-slash"> / </span>` +
+    `<span class="eval-den">${n}</span>` +
+    `<span class="eval-of">cases correct</span>` +
+    `<span class="eval-pct">· ${pct}%</span>`;
+  sub.textContent =
+    `${ticker} · hand-authored fixtures with known causes (${tickerCases.length} ` +
+    `loaded). Other strategies show verdicts but aren't scored — see note below.`;
+
+  if (primaryStrat) primaryStrat.textContent = report.primary_strategy;
+
+  list.innerHTML = '';
+  for (const c of tickerCases) {
+    const wrap = document.createElement('div');
+    wrap.className = 'eval-case eval-case-' + (
+      c.match === true ? 'pass'
+      : c.match === false ? 'fail'
+      : 'skip'
+    );
+    const glyph = c.match === true ? '✓'
+                : c.match === false ? '✗'
+                : '·';
+    const cause = (c.known_cause || '').split(':', 1)[0];
+    const expectedHtml = c.expected_verdict
+      ? `<span class="verdict-tag ${c.expected_verdict}">${c.expected_verdict.toUpperCase()}</span>`
+      : '<span style="color:var(--ink-dim);font-size:0.78rem">—</span>';
+    const modelHtml = c.model_verdict
+      ? `<span class="verdict-tag ${c.model_verdict}">${c.model_verdict.toUpperCase()}</span>`
+      : '<span style="color:var(--ink-dim);font-size:0.78rem">—</span>';
+
+    const otherStrategiesHtml = (report.strategies || [])
+      .filter(s => s.strategy !== report.primary_strategy)
+      .map(s => {
+        const cell = (s.cases || []).find(x => x.case_id === c.case_id);
+        const v = cell ? (cell.model_verdict || '—') : '—';
+        const cls = (v === 'lean' || v === 'fade' || v === 'neutral') ? v : 'pending';
+        return `<div class="eval-other-strat">` +
+                 `<span class="eval-other-name">${escapeHtml(s.strategy.replace(/_/g, ' '))}</span>` +
+                 `<span class="verdict-tag small ${cls}">${escapeHtml(v.toUpperCase())}</span>` +
+               `</div>`;
+      }).join('');
+
+    wrap.innerHTML =
+      `<div class="eval-case-head">` +
+        `<span class="eval-glyph">${glyph}</span>` +
+        `<div class="eval-case-id">` +
+          `<span class="eval-case-date">${escapeHtml(c.case_id)}</span>` +
+          `<span class="eval-case-cause">${escapeHtml(cause)}</span>` +
+        `</div>` +
+        `<div class="eval-verdicts">` +
+          `<div class="eval-verdict-pair">` +
+            `<span class="eval-verdict-label">expected</span>${expectedHtml}` +
+          `</div>` +
+          `<div class="eval-verdict-pair">` +
+            `<span class="eval-verdict-label">model</span>${modelHtml}` +
+          `</div>` +
+        `</div>` +
+      `</div>` +
+      (otherStrategiesHtml ?
+        `<div class="eval-case-body"><div class="eval-other-strats">` +
+          `<span class="eval-other-heading">Other strategies (unscored)</span>` +
+          otherStrategiesHtml +
+        `</div></div>` : ``);
+    list.appendChild(wrap);
+  }
+
+  if (disclaimer) {
+    disclaimer.textContent = report.unscored_explanation || '';
+  }
+}
+
 async function selectTicker(t) {
   STATE.currentTicker = t;
   STATE.selectedMoveIdx = null;
@@ -2550,6 +2808,7 @@ async function selectTicker(t) {
   STATE.bundle = bundle;
   renderOverview(bundle);
   document.getElementById('filter-bar').hidden = false;
+  renderEvalHarness();
   renderChart(bundle);
   if (bundle.moves.length > 0) {
     let mx = 0, mxAbs = 0;
@@ -2790,6 +3049,11 @@ document.addEventListener('keydown', (e) => {
     const idx = await fetchJSON('data/index.json');
     STATE.tickers = idx.tickers;
     renderTickerStrip();
+    try {
+      STATE.evalReport = await fetchJSON('data/eval_report.json');
+    } catch (e) {
+      console.info('eval_report.json not present — harness panel disabled.');
+    }
     const initial = idx.tickers.find(t => t.ticker === 'AMD')?.ticker || idx.tickers[0]?.ticker;
     if (initial) await selectTicker(initial);
   } catch (err) { console.error(err); }

@@ -296,13 +296,21 @@ def _assemble_attribution(
         {c.source_type for c in evidence.text_chunks},
         key=lambda s: s.value,
     )
+    # Haiku occasionally wraps Literal-typed fields in stray whitespace
+    # (e.g. "\nmixed\n"); strip before Pydantic's exact-match enum check
+    # so we don't fall through to the placeholder on a cosmetic glitch.
+    move_character_raw = tool_input.get("move_character") or "unclear"
+    if isinstance(move_character_raw, str):
+        move_character_raw = move_character_raw.strip()
+    if move_character_raw not in ("structural", "transient", "mixed", "unclear"):
+        move_character_raw = "unclear"
     return Attribution(
         ticker=evidence.move.ticker,
         move_date=evidence.move.move_date,
         return_pct=evidence.move.return_pct,
         predicted_return_pct=tool_input.get("predicted_return_pct"),
         **dims,
-        move_character=tool_input.get("move_character", "unclear"),
+        move_character=move_character_raw,
         confidence=float(tool_input.get("confidence", 0.5)),
         ablation_name=ablation_name,
         sources_used=list(sources_used),
