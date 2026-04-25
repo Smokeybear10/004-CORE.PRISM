@@ -131,10 +131,10 @@ def test_request_uses_emit_coherence_check_tool():
     check_coherence(attr, evidence, client=client)
 
     call = client.calls[0]
-    assert call["model"] == "claude-opus-4-7"
+    assert call["model"] == "claude-haiku-4-5-20251001"
     assert call["tool_choice"] == {"type": "tool", "name": "emit_coherence_check"}
     assert call["tools"][0]["name"] == "emit_coherence_check"
-    # Sampling params must not be sent (Opus 4.7 rejects them)
+    # Sampling params must not be sent
     for banned in ("temperature", "top_p", "top_k"):
         assert banned not in call
 

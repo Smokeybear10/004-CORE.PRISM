@@ -283,6 +283,37 @@ def main() -> None:
     }, indent=2))
     print(f"\nDone. {len(rebuilt)} ticker(s) rebuilt; index has {len(index_out)} total.")
 
+    # Write the eval-harness report alongside the bundles so the static UI
+    # has fresh accuracy numbers without a separate manual step. We score
+    # the just-baked attributions (loader=bundled), so the harness panel
+    # reflects what the page is actually showing.
+    try:
+        from eval.accuracy import (
+            bundled_attribution_loader,
+            run_accuracy,
+            write_report,
+        )
+        from eval.cases import load_cases
+        cases = load_cases()
+        if cases:
+            report = run_accuracy(
+                cases,
+                attribution_loader=bundled_attribution_loader(OUT_DIR),
+                prompt_version="build_static",
+                loader_name="bundled",
+            )
+            report_path = OUT_DIR / "eval_report.json"
+            write_report(report, report_path)
+            print(
+                f"  → {report_path.name}  "
+                f"({report.primary_n_correct}/{report.primary_n_scored} "
+                f"primary cases correct)"
+            )
+        else:
+            print("  no fixtures loaded — eval_report.json skipped")
+    except Exception as e:
+        print(f"  WARN: eval_report.json build failed: {e}")
+
 
 if __name__ == "__main__":
     main()

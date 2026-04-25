@@ -156,7 +156,7 @@ def test_request_uses_correct_model_and_forces_tool_choice():
     assert len(client.calls) == 1
     call = client.calls[0]
     assert call["model"] == "claude-opus-4-7"
-    assert call["max_tokens"] == 2048
+    assert call["max_tokens"] == 4096
     assert call["tool_choice"] == {"type": "tool", "name": "emit_attribution"}
     # Sampling parameters must NOT be present (Opus 4.7 rejects them)
     for banned in ("temperature", "top_p", "top_k"):
