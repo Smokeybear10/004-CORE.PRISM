@@ -136,18 +136,62 @@ def _retry_delay_for(err: "Exception", attempt: int) -> float:
     return min(RATE_LIMIT_BASE_DELAY_S * (2 ** attempt), RATE_LIMIT_MAX_DELAY_S)
 
 
+_DIM_FIELDS = (
+    "demand",
+    "pricing",
+    "competitive",
+    "management_credibility",
+    "macro",
+)
+
+
+def _sanitize_chunk_citations(
+    attr: Attribution,
+    evidence: JoinedEvidence,
+) -> int:
+    """Drop hallucinated chunk_ids from each DimensionScore.
+
+    Mid-sized Claude models sometimes pattern-complete chunk_ids — they see
+    `..._article_002` is valid and emit `..._article_003` / `_004` that
+    don't exist. We can't run the full validator on the live path because
+    it would also fail weight-sum drift, so this is a targeted defense:
+    keep only IDs that resolve to a real chunk. If a dimension ends up
+    with no valid citations, fall back to the first (highest-relevance,
+    by virtue of model.relevance ordering) chunk so the citation contract
+    stays satisfied. Returns the count of citations dropped, for logging.
+    """
+    valid_ids = {c.chunk_id for c in evidence.text_chunks}
+    fallback = (
+        evidence.text_chunks[0].chunk_id if evidence.text_chunks else None
+    )
+    dropped = 0
+    for name in _DIM_FIELDS:
+        dim = getattr(attr, name)
+        original = list(dim.evidence_chunk_ids)
+        kept = [cid for cid in original if cid in valid_ids]
+        dropped += len(original) - len(kept)
+        if not kept and fallback is not None:
+            kept = [fallback]
+        dim.evidence_chunk_ids = kept
+    return dropped
+
+
 def _live_attribute(
     move: PriceMove,
     chunks: list[TextChunk],
     config: AblationConfig,
 ) -> Attribution:
-    """Wrap run_attribution, retry on 429s, and pin contract fields the
-    demo / runner expect.
+    """Wrap run_attribution, retry on 429s, sanitize hallucinated chunk_ids,
+    and pin contract fields the demo / runner expect.
 
     On `anthropic.RateLimitError` we sleep (Retry-After header if present,
     else exponential backoff) and retry up to RATE_LIMIT_MAX_RETRIES times.
     On the final attempt the error propagates and the outer `attribute()`
     falls back to the placeholder with an honest model_notes tag.
+
+    After a successful call we run `_sanitize_chunk_citations` to strip any
+    hallucinated chunk_ids the model may have invented (validate=False is
+    needed for weight-sum drift, so we can't lean on the validator for this).
     """
     import anthropic
 
@@ -175,12 +219,23 @@ def _live_attribute(
 
     assert attr is not None  # loop either set it or raised
 
+    dropped = _sanitize_chunk_citations(attr, evidence)
+    if dropped:
+        log.info(
+            "scrubbed %d hallucinated chunk_id(s) from %s %s",
+            dropped, move.ticker, move.move_date,
+        )
+
     attr.ablation_name = config.name
     attr.sources_used = list(config.sources)
     attr.chunks_considered = len(chunks)
     attr.model_notes = (attr.model_notes or LIVE_NOTE_PREFIX)
     if not attr.model_notes.startswith(LIVE_NOTE_PREFIX):
         attr.model_notes = f"{LIVE_NOTE_PREFIX}: {attr.model_notes}"
+    if dropped:
+        attr.model_notes = (
+            f"{attr.model_notes}; scrubbed {dropped} hallucinated chunk_id(s)"
+        )
     return attr
 
 
