@@ -17,7 +17,87 @@ Public API (stable):
     - score                 (scorer.py)
 """
 
+from eval.calibration import (
+    CalibrationReport,
+    FloorCheck,
+    FLOOR_BASELINES,
+    FrameworkComparison,
+    FrameworkReport,
+    compare_frameworks,
+    compare_to_baselines,
+)
 from eval.config import ScorerConfig
+from eval.distribution import (
+    BucketStats,
+    CharacterDistribution,
+    DistributionReport,
+    SanityFlag,
+    breakdown_by_direction,
+    breakdown_by_quarter,
+    breakdown_by_ticker,
+    character_distribution,
+    check_distribution,
+)
+from eval.frozen import (
+    FROZEN_PATH,
+    FrozenAnchorReport,
+    FrozenDiff,
+    FrozenRunnerOptions,
+    diff_case,
+    load_frozen_cases,
+    run_frozen_anchor,
+)
+from eval.perturbation import (
+    DeterminismResult,
+    JunkInjectionResult,
+    PerturbationReport,
+    ShuffleResult,
+    check_determinism,
+    check_junk_injection,
+    check_shuffle_stability,
+    run_perturbation_suite,
+)
 from eval.scorer import ExpectedAttribution, ScoreResult, score
 
-__all__ = ["ScorerConfig", "ExpectedAttribution", "ScoreResult", "score"]
+__all__ = [
+    # Scoring primitives
+    "ScorerConfig",
+    "ExpectedAttribution",
+    "ScoreResult",
+    "score",
+    # Layer (a) — frozen anchor
+    "FROZEN_PATH",
+    "FrozenAnchorReport",
+    "FrozenDiff",
+    "FrozenRunnerOptions",
+    "diff_case",
+    "load_frozen_cases",
+    "run_frozen_anchor",
+    # Layer (b) — calibration floor
+    "CalibrationReport",
+    "FloorCheck",
+    "FLOOR_BASELINES",
+    "FrameworkComparison",
+    "FrameworkReport",
+    "compare_frameworks",
+    "compare_to_baselines",
+    # Layer (c) — perturbation
+    "DeterminismResult",
+    "JunkInjectionResult",
+    "PerturbationReport",
+    "ShuffleResult",
+    "check_determinism",
+    "check_junk_injection",
+    "check_shuffle_stability",
+    "run_perturbation_suite",
+    # Layer (d) — distributional sanity
+    "BucketStats",
+    "CharacterDistribution",
+    "DistributionReport",
+    "SanityFlag",
+    "breakdown_by_direction",
+    "breakdown_by_quarter",
+    "breakdown_by_ticker",
+    "character_distribution",
+    "check_distribution",
+]

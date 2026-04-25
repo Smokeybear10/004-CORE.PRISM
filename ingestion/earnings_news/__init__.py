@@ -10,14 +10,18 @@ paragraph-level body text, publisher, timestamp, and source link.
 Public API:
     fetch_news(tickers, start_date, end_date, source_type=NEWS) -> list[TextChunk]
     get_news_as_of(ticker, as_of) -> list[TextChunk]
-    fetch_earnings_transcripts(ticker, start_date, end_date) -> list[TextChunk]  # stub
+    get_peer_news_as_of(ticker, as_of, peers=None) -> list[TextChunk]
+    fetch_earnings_transcripts(ticker, start_date, end_date) -> list[TextChunk]
+    get_peers(ticker) -> list[str]
 
 `fetch_news` accepts a LIST of tickers so the same function powers both the
 company-news and peer-news ablation runs. Pass source_type=PEER_NEWS when
-fetching peer/sector chunks to keep the ablation clean.
+fetching peer/sector chunks to keep the ablation clean. `get_peer_news_as_of`
+wraps that flow with the focal universe's curated peer map.
 
 Foreknowledge firewall:
-    get_news_as_of MUST filter publication_date <= as_of. CLAUDE.md rule #1.
+    get_news_as_of and get_peer_news_as_of MUST filter publication_date <=
+    as_of. CLAUDE.md rule #1.
 """
 
 from __future__ import annotations
@@ -277,6 +281,63 @@ def get_news_as_of(ticker: str, as_of: date) -> list[TextChunk]:
         [ticker],
         start_date=date(1900, 1, 1),
         end_date=as_of,
+    )
+    return [c for c in chunks if c.publication_date <= as_of]
+
+
+# ---------- Peer resolution + peer-news API ----------
+#
+# Mentor framing: "Apple's family companies — suppliers, partners,
+# competitors". For the focal universe we hand-curate sector / business-model
+# peers; broader-universe coverage can ship later. Each list is intentionally
+# tight (5 names) so peer-news doesn't drown the company-news signal in noise.
+
+_PEER_MAP: dict[str, list[str]] = {
+    # Healthcare / medical devices / diagnostics
+    "ABT": ["JNJ", "MDT", "TMO", "DHR", "BDX"],
+    # Hand tools + consumer-defensive small caps
+    "ACU": ["SWK", "MAS", "NWL", "WSM", "TUP"],
+    # Aerospace aftermarket + airline-services peers
+    "AIR": ["BA", "GE", "HEI", "RTX", "TDG"],
+    # AI-cycle semiconductors
+    "AMD": ["NVDA", "INTC", "QCOM", "AVGO", "MU"],
+    # Industrial gases / specialty chemicals
+    "APD": ["LIN", "ECL", "SHW", "DD", "PPG"],
+}
+
+
+def get_peers(ticker: str) -> list[str]:
+    """Return the curated peer list for `ticker`, or [] if unmapped.
+
+    The focal universe (ABT, ACU, AIR, AMD, APD) is fully mapped. For tickers
+    outside that set, callers should fall back to a sector-based heuristic
+    (not implemented) or simply skip the peer-news ablation.
+    """
+    return list(_PEER_MAP.get(ticker.upper(), []))
+
+
+def get_peer_news_as_of(
+    ticker: str,
+    as_of: date,
+    peers: list[str] | None = None,
+) -> list[TextChunk]:
+    """All peer-tagged news chunks for `ticker` with publication_date <= as_of.
+
+    Resolves peers via `get_peers` unless an explicit list is passed. Returns
+    chunks tagged `source_type=PEER_NEWS`; the per-chunk `ticker` field is the
+    peer that the article was about (not the focal ticker). The focal ticker
+    is recoverable from the chunk_id prefix if a downstream consumer needs it.
+
+    Foreknowledge firewall: `publication_date <= as_of`.
+    """
+    resolved = peers if peers is not None else get_peers(ticker)
+    if not resolved:
+        return []
+    chunks = fetch_news(
+        list(resolved),
+        start_date=date(1900, 1, 1),
+        end_date=as_of,
+        source_type=SourceType.PEER_NEWS,
     )
     return [c for c in chunks if c.publication_date <= as_of]
 

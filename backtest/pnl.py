@@ -133,3 +133,59 @@ def summarize(
         max_drawdown=max_dd,
         notes=f"horizon_days={horizon_days}",
     )
+
+
+# ── Dollar P&L + equity curve (the "did we win money" layer) ────────────────
+
+DEFAULT_NOTIONAL = 100_000.0
+
+
+def total_pnl(pnl_df: pd.DataFrame, notional: float = DEFAULT_NOTIONAL) -> float:
+    """Cumulative dollar P&L for one strategy across all its trades.
+
+    Each trade puts `notional × trade.size` of capital to work; realized P&L
+    is `direction × notional_slice × forward_return`. No compounding inside
+    the event window, no transaction costs. Constant-size sleeves so a
+    strategy that takes 2x as many trades doesn't get 2x the leverage —
+    capital reuse is implicit (one event closes before the next opens).
+    """
+    if pnl_df.empty:
+        return 0.0
+    return float((pnl_df["pnl"] * notional).sum())
+
+
+def equity_curve(
+    pnl_df: pd.DataFrame,
+    notional: float = DEFAULT_NOTIONAL,
+    events_df: Optional[pd.DataFrame] = None,
+) -> pd.DataFrame:
+    """Per-event cumulative dollar series for one strategy.
+
+    Returns a DataFrame with columns:
+        event_id, entry_date, pnl_dollars, cumulative_dollars, equity
+
+    `equity` starts at `notional` and accumulates `pnl_dollars` event by
+    event. If `events_df` is passed (with columns `event_id` + `reaction_end`),
+    the curve is sorted chronologically by entry_date — that's what the
+    line chart wants. Otherwise rows stay in the order `pnl_df` arrived in.
+    """
+    if pnl_df.empty:
+        return pd.DataFrame(
+            columns=["event_id", "entry_date", "pnl_dollars",
+                     "cumulative_dollars", "equity"],
+        )
+
+    df = pnl_df[["event_id", "pnl"]].copy()
+    df["pnl_dollars"] = df["pnl"] * notional
+
+    if events_df is not None and "reaction_end" in events_df.columns:
+        date_lookup = events_df.set_index("event_id")["reaction_end"]
+        df["entry_date"] = df["event_id"].map(date_lookup)
+        df = df.sort_values("entry_date", kind="stable").reset_index(drop=True)
+    else:
+        df["entry_date"] = pd.NaT
+
+    df["cumulative_dollars"] = df["pnl_dollars"].cumsum()
+    df["equity"] = notional + df["cumulative_dollars"]
+    return df[["event_id", "entry_date", "pnl_dollars",
+               "cumulative_dollars", "equity"]]
