@@ -22,7 +22,7 @@ if str(_ROOT) not in sys.path:
     sys.path.insert(0, str(_ROOT))
 
 from demo.mock_data import FOCAL_TICKERS
-from demo.real_chunks import chunks_for_real, preload_news
+from demo.real_chunks import chunks_for_real, preload_news, preload_thirteen_f
 from ingestion.prices import detect_significant_moves, load_prices
 from model import attribute as model_attribute
 from schema import AblationConfig, PriceMove, SourceType
@@ -35,6 +35,7 @@ FULL_STACK_SOURCES = [
     SourceType.EARNINGS_TRANSCRIPT,
     SourceType.PEER_NEWS,
     SourceType.MACRO,
+    SourceType.THIRTEEN_F,
 ]
 
 OUT_DIR = _ROOT / "demo" / "static" / "data"
@@ -85,6 +86,12 @@ def build_for_ticker(ticker: str, meta: dict, end_date: date) -> dict:
     moves_payload: list[dict] = []
     for m in sorted(moves_in_window, key=lambda x: x.move_date):
         chunks = chunks_for_real(ticker, m.move_date)
+        # Truthful counts over the FULL chunk pool (not just top-10) so the
+        # UI toggle row can show accurate chunk counts on initial render.
+        available_counts: dict[str, int] = {}
+        for c in chunks:
+            available_counts[c.source_type.value] = \
+                available_counts.get(c.source_type.value, 0) + 1
         # "+macro" is the lowest-noise bundle in backtest.fixtures and matches
         # the 6-source full stack we pre-bake.
         config = AblationConfig(
@@ -120,6 +127,8 @@ def build_for_ticker(ticker: str, meta: dict, end_date: date) -> dict:
             # evidence; 10 is a buffer). Keeps each ticker's JSON ~300 KB
             # instead of exploding to tens of MB when news is dense.
             "chunks": [_chunk_dict(c) for c in chunks[:10]],
+            "chunks_available": available_counts,
+            "chunks_total": len(chunks),
         })
 
     return {
@@ -139,6 +148,7 @@ def main() -> None:
 
     print("Preloading news parquet (one-time ~30-60s)…", flush=True)
     preload_news(list(FOCAL_TICKERS.keys()))
+    preload_thirteen_f()
 
     index: list[dict] = []
     for ticker, meta in FOCAL_TICKERS.items():

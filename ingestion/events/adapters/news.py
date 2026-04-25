@@ -50,7 +50,10 @@ def to_events(records: list[dict[str, Any]]) -> list[Event]:
             continue
 
         for ticker in _tickers_from(row):
-            for p in row.get("news") or []:
+            paragraphs = row.get("news")
+            if paragraphs is None:
+                paragraphs = []
+            for p in paragraphs:
                 pn = p.get("paragraph_number")
                 if pn is None:
                     continue
@@ -86,7 +89,10 @@ def to_chunks(records: list[dict[str, Any]]) -> list[TextChunk]:
         link = row.get("link")
 
         for ticker in _tickers_from(row):
-            for p in row.get("news") or []:
+            paragraphs = row.get("news")
+            if paragraphs is None:
+                paragraphs = []
+            for p in paragraphs:
                 pn = p.get("paragraph_number")
                 if pn is None:
                     continue

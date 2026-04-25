@@ -53,6 +53,7 @@ from ingestion.events.adapters import (
     fda,
     index_changes,
     news,
+    sec,
     short_interest,
     short_reports,
     thirteen_f,
@@ -93,6 +94,9 @@ def build_events_parquet(
     events.extend(nw_events)
     chunks.extend(nw_chunks)
     events.extend(_run_earnings(data_dir))
+    sec_events, sec_chunks = _run_sec(data_dir)
+    events.extend(sec_events)
+    chunks.extend(sec_chunks)
 
     # No-foreknowledge filter (CLAUDE.md rule 1).
     events = [e for e in events if e.event_date <= as_of]
@@ -204,6 +208,22 @@ def _run_earnings(data_dir: Path) -> list[Event]:
         df = pd.read_parquet(f)
         rows.extend(df.to_dict(orient="records"))
     return earnings.to_events(rows)
+
+
+def _run_sec(data_dir: Path) -> tuple[list[Event], list[TextChunk]]:
+    """Load pre-built SEC Events and TextChunks written by
+    `ingestion.sec.filings.run_sec_pipeline`. Unlike the other adapters,
+    SEC does NOT re-derive from a raw source at aggregation time."""
+    event_files = sorted((data_dir / "sec").glob("events_*.parquet"))
+    chunk_files = sorted((data_dir / "sec").glob("chunks_*.jsonl"))
+    event_rows: list[dict[str, Any]] = []
+    for f in event_files:
+        df = pd.read_parquet(f)
+        event_rows.extend(df.to_dict(orient="records"))
+    chunk_rows: list[dict[str, Any]] = []
+    for f in chunk_files:
+        chunk_rows.extend(sec.load_chunks_from_jsonl(f))
+    return sec.to_events(event_rows), sec.to_chunks(chunk_rows)
 
 
 # ---------- serialization ----------
