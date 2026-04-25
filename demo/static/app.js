@@ -122,6 +122,16 @@ const DIM_PHRASE = {
   macro:                  'macro forces (rates, FX, commodities, geopolitics)',
 };
 
+// Shorter inline form for the "model read" sentence — avoids stuffing the
+// long parenthetical into a paragraph that already lists three dims.
+const DIM_PHRASE_SHORT = {
+  demand:                 'demand growth (units, customers)',
+  pricing:                'pricing power (margins, price hikes)',
+  competitive:            'competitive dynamics (rivals, market share)',
+  management_credibility: 'management credibility (guidance, execution)',
+  macro:                  'macro forces (rates, FX, geopolitics)',
+};
+
 // ---------- Fetch helpers ----------
 async function fetchJSON(path) {
   const res = await fetch(path);
@@ -461,10 +471,238 @@ function buildVerdictSubline(strategyId, verdict) {
   return `${driverHtml}${SEP}${confHtml}`;
 }
 
-// "What the model concluded" — a strategy-specific paragraph that walks
-// through the inputs that produced THIS verdict. Reads the same numbers the
-// subline shows, but in plain English so the reader can reason about whether
-// the call is sound.
+// ---------- Helpers for the conclusion paragraph ----------
+
+// Forward N-trading-day return from move_date, computed from the prices
+// array on the bundle. Returns null if move_date isn't in prices or there
+// aren't N more bars after it.
+function getForwardReturn(bundle, moveDate, n) {
+  if (!bundle || !Array.isArray(bundle.prices)) return null;
+  const idx = bundle.prices.findIndex(p => p.date === moveDate);
+  if (idx < 0 || idx + n >= bundle.prices.length) return null;
+  const px0 = bundle.prices[idx].close;
+  const pxN = bundle.prices[idx + n].close;
+  if (!px0) return null;
+  return (pxN - px0) / px0;
+}
+
+// Top-N dimensions sorted by weight (descending), zero-weight rows dropped.
+// Returns objects {key, weight, direction} for use in the model-read sentence.
+function topDimsByWeight(ref, n) {
+  return Object.entries(ref.dimensions || {})
+    .map(([k, v]) => ({ key: k, weight: v.weight ?? 0, direction: v.direction || 'neutral' }))
+    .filter(d => d.weight > 0)
+    .sort((a, b) => b.weight - a.weight)
+    .slice(0, n);
+}
+
+function _dirCls(direction) {
+  if (direction === 'positive') return 'pos';
+  if (direction === 'negative') return 'neg';
+  return 'muted';
+}
+
+function _dirWord(direction) {
+  if (direction === 'positive') return 'positive';
+  if (direction === 'negative') return 'negative';
+  return 'neutral';
+}
+
+// "The model attributed this move primarily to demand growth (positive,
+// 26%) and management credibility (positive, 26%), with competitive
+// dynamics (negative, 13%). It expected +5.32%; the stock actually moved
+// +7.58%."
+function buildModelReadSentence(ref) {
+  const top = topDimsByWeight(ref, 3);
+  if (top.length === 0) {
+    return `The model couldn\'t attribute this move to any dimension above zero weight.`;
+  }
+  const parts = top.map(d => {
+    const phrase = DIM_PHRASE_SHORT[d.key] || d.key;
+    const cls = _dirCls(d.direction);
+    const wpct = Math.round(d.weight * 100);
+    return `<span class="${cls}">${phrase}</span> (${_dirWord(d.direction)}, ${wpct}%)`;
+  });
+  let lead;
+  if (parts.length === 1) {
+    lead = `The model attributed this move primarily to ${parts[0]}.`;
+  } else if (parts.length === 2) {
+    lead = `The model attributed this move primarily to ${parts[0]} and ${parts[1]}.`;
+  } else {
+    lead = `The model attributed this move primarily to ${parts[0]} and ${parts[1]}, ` +
+           `with ${parts[2]}.`;
+  }
+  const realized = ref.realized;
+  const predicted = ref.predicted;
+  const hasPred = predicted !== null && predicted !== undefined;
+  let tail;
+  if (hasPred) {
+    const directionMatch = (predicted * realized > 0)
+                        || (predicted === 0 && realized === 0);
+    const directionNote = directionMatch
+      ? `the model got the direction right`
+      : `<span class="neg">the model got the direction wrong</span>`;
+    tail = ` It expected the move to be about <span class="num">${pct(predicted)}</span>; ` +
+           `the stock actually moved <span class="num">${pct(realized)}</span> — ` +
+           `${directionNote}.`;
+  } else {
+    tail = ` It saw the actual <span class="num">${pct(realized)}</span> move but the ` +
+           `evidence was too thin to ground a precise expected magnitude.`;
+  }
+  return lead + tail;
+}
+
+// "Over the next 5 trading days the stock continued (+21.28%) — the LEAN
+// paid off." Or, when SKIP, just reports what the stock did.
+function buildOutcomeSentence(verdict, ref, bundle, moveDate) {
+  const fwd = getForwardReturn(bundle, moveDate, 5);
+  if (fwd === null) {
+    return `Not enough price history after this move to score the call against ` +
+           `5-day forward returns.`;
+  }
+  const realized = ref.realized;
+  const moveSign = realized > 0 ? 1 : realized < 0 ? -1 : 0;
+  const fwdSign  = fwd > 0 ? 1 : fwd < 0 ? -1 : 0;
+  const fwdHtml = `<span class="num">${pct(fwd)}</span>`;
+
+  if (verdict === 'neutral') {
+    if (fwdSign === 0) {
+      return `Over the next 5 trading days the stock was roughly flat (${fwdHtml}); ` +
+             `<span class="muted">staying out was harmless</span>.`;
+    }
+    // Whether SKIP was correct depends on the move's direction:
+    // a continuation rewards LEAN, a reversal rewards FADE.
+    const wouldHaveBeen = moveSign === fwdSign ? 'a LEAN' : 'a FADE';
+    return `Over the next 5 trading days the stock moved ${fwdHtml}. ` +
+           `<span class="muted">SKIP avoided a position; ${wouldHaveBeen} would have been ` +
+           `the right call in hindsight.</span>`;
+  }
+
+  if (verdict === 'lean') {
+    if (moveSign === fwdSign && fwdSign !== 0) {
+      return `Over the next 5 trading days the stock continued in the same direction ` +
+             `(${fwdHtml}) — the <span class="pos">LEAN paid off</span>.`;
+    }
+    return `Over the next 5 trading days the stock reversed to ${fwdHtml} — ` +
+           `the <span class="neg">LEAN was wrong</span>; the original move didn\'t have legs.`;
+  }
+
+  if (verdict === 'fade') {
+    if (moveSign !== fwdSign && fwdSign !== 0) {
+      return `Over the next 5 trading days the stock pulled back against the move ` +
+             `(${fwdHtml}) — the <span class="pos">FADE paid off</span>.`;
+    }
+    return `Over the next 5 trading days the stock kept moving the same way ` +
+           `(${fwdHtml}) — the <span class="neg">FADE was wrong</span>; the original move ` +
+           `had more juice than the model thought.`;
+  }
+  return '';
+}
+
+// "What the model concluded" — model's specific read + strategy reasoning +
+// 5-day forward-return assessment. Three short sentences so the reader can
+// follow what the model thought, why the strategy called it, and whether
+// the call worked.
+// Per-strategy "why this verdict" sentence — the middle paragraph in the
+// conclusion. Plain-English chain of reasoning specific to the strategy.
+function buildStrategyReasoning(strategyId, verdict, ref, tag) {
+  if (strategyId === 'fundamental_vs_nonfundamental') {
+    if (ref.character === 'structural') {
+      return `Because the model judged the cause durable rather than narrative, ` +
+             `this strategy says ${tag} — bet the move keeps working.`;
+    }
+    if (ref.character === 'transient') {
+      return `Because the model judged the cause sentiment-driven (a single news ` +
+             `cycle, not a real business change), this strategy says ${tag} — bet ` +
+             `the move unwinds.`;
+    }
+    return `Because the model couldn\'t cleanly call the cause fundamental or ` +
+           `sentiment, this strategy stays out: ${tag}.`;
+  }
+
+  if (strategyId === 'expected_vs_realized') {
+    const realized = ref.realized;
+    const predicted = ref.predicted;
+    const hasPred = predicted !== null && predicted !== undefined;
+    if (!hasPred) {
+      return `With no expected-return baseline to compare against, this strategy ` +
+             `is forced to ${tag}.`;
+    }
+    if (predicted === 0) {
+      return `With expected return at zero, there\'s no magnitude to ratio against ` +
+             `— the strategy is forced to ${tag}.`;
+    }
+    if (predicted * realized < 0) {
+      return `Since actual and expected pointed opposite directions, the strategy ` +
+             `refuses to call it: ${tag}.`;
+    }
+    const ratio = Math.abs(realized) / Math.abs(predicted);
+    if (ratio >= 1.5) {
+      return `The stock moved roughly <span class="num">${ratio.toFixed(2)}×</span> ` +
+             `more than the news justified — that looks like overreaction, so this ` +
+             `strategy says ${tag} (bet on a pullback).`;
+    }
+    if (ratio <= 0.5) {
+      return `The stock moved only <span class="num">${ratio.toFixed(2)}×</span> ` +
+             `the magnitude the news justified — the price hasn\'t caught up, so ` +
+             `this strategy says ${tag} (bet on more move in the same direction).`;
+    }
+    return `Realized and expected magnitudes are within the neutral band — the ` +
+           `news already looks priced in, so this strategy says ${tag}.`;
+  }
+
+  if (strategyId === 'dimension_weighted') {
+    const { score, top } = _dimWeightedScore(ref);
+    const topPhrase = top ? (DIM_PHRASE[top] || top) : '—';
+    if (score >= 0.20) {
+      return `The dominant driver is <span class="num">${topPhrase}</span> — the kind ` +
+             `of cause that historically keeps paying off in the same direction. So ` +
+             `this strategy says ${tag}.`;
+    }
+    if (score <= -0.20) {
+      return `The dominant driver is <span class="num">${topPhrase}</span> — the kind ` +
+             `of cause that historically tends to fully reverse. So this strategy ` +
+             `says ${tag} (bet against the move).`;
+    }
+    return `No single driver dominates this move clearly enough to call — the mix ` +
+           `washes out, so this strategy says ${tag}.`;
+  }
+
+  if (strategyId === 'hybrid') {
+    const char = ref.character;
+    const realized = ref.realized;
+    const predicted = ref.predicted;
+    const domName = _dominantDimension(ref);
+    const domPhrase = domName ? (DIM_PHRASE[domName] || domName) : '—';
+    const domPersist = domName ? (PERSISTENCE[domName] ?? 0) : 0;
+
+    if (char === 'transient') {
+      return `Layer 1 caught it: the cause is sentiment-driven, so this strategy ` +
+             `says ${tag} immediately.`;
+    }
+    if (char === 'mixed' || char === 'unclear') {
+      return `Layer 1 caught it: the cause is too unclear to act on, so this ` +
+             `strategy says ${tag}.`;
+    }
+    const hasPred = predicted !== null && predicted !== undefined && predicted !== 0
+                    && predicted * realized > 0;
+    if (hasPred && Math.abs(realized) >= 1.5 * Math.abs(predicted)) {
+      return `The cause is fundamental, but Layer 2 caught an overshoot — the price ` +
+             `moved well beyond what the news justified. So this strategy says ${tag}.`;
+    }
+    if (domPersist < 0) {
+      return `The cause is fundamental and there\'s no overshoot, but the strongest ` +
+             `driver was <span class="num">${domPhrase}</span> — historically that ` +
+             `kind of move reverses, so Layer 3 backs off to ${tag}.`;
+    }
+    return `All three checks passed — fundamental cause, no overshoot, and the ` +
+           `strongest driver (<span class="num">${domPhrase}</span>) has a strong ` +
+           `record of continuing. So this strategy says ${tag}.`;
+  }
+
+  return `Strategy concluded ${tag}.`;
+}
+
 function buildVerdictConclusion(strategyId, verdict, ref) {
   if (!ref) return 'Pick a flagged move on the chart above.';
   const conf = Math.round((ref.confidence ?? 0) * 100);
@@ -474,114 +712,20 @@ function buildVerdictConclusion(strategyId, verdict, ref) {
   const verdictCls = verdict === 'lean' ? 'pos'
                    : verdict === 'fade' ? 'neg' : 'muted';
   const tag = `<span class="${verdictCls}">${verdictWord}</span>`;
-  const confTail = `Confidence <span class="num">${conf}%</span>.`;
+  const confTail = ` <span class="muted">Model confidence in the underlying ` +
+                   `attribution: <span class="num">${conf}%</span>.</span>`;
 
-  if (strategyId === 'fundamental_vs_nonfundamental') {
-    if (ref.character === 'structural') {
-      return `Model labeled the move <span class="num">structural</span> — ` +
-             `cause is judged durable, so this strategy says ${tag} (trade with the move). ${confTail}`;
-    }
-    if (ref.character === 'transient') {
-      return `Model labeled the move <span class="num">transient</span> — ` +
-             `narrative-driven and likely to revert, so this strategy says ${tag} (trade against). ${confTail}`;
-    }
-    return `Model labeled the move <span class="num">${ref.character}</span> — ` +
-           `not enough conviction either way, so this strategy says ${tag}. ${confTail}`;
-  }
+  const move = (STATE.bundle && STATE.selectedMoveIdx !== null)
+    ? STATE.bundle.moves[STATE.selectedMoveIdx] : null;
+  const moveDate = move ? move.move_date : null;
 
-  if (strategyId === 'expected_vs_realized') {
-    const realized = ref.realized;
-    const predicted = ref.predicted;
-    const hasPred = predicted !== null && predicted !== undefined;
-    if (!hasPred) {
-      return `Model didn\'t produce a predicted return for this move, so there\'s no ` +
-             `baseline to compare realized against — strategy is forced to ${tag}. ${confTail}`;
-    }
-    if (predicted === 0) {
-      return `Predicted return is zero, leaving no magnitude to ratio against — strategy ` +
-             `is forced to ${tag}. ${confTail}`;
-    }
-    if (predicted * realized < 0) {
-      return `Predicted (<span class="num">${pct(predicted)}</span>) and realized ` +
-             `(<span class="num">${pct(realized)}</span>) have opposite signs — the move ` +
-             `went the opposite way the evidence implied, so this strategy refuses to call ` +
-             `it and returns ${tag}. ${confTail}`;
-    }
-    const ratio = Math.abs(realized) / Math.abs(predicted);
-    if (ratio >= 1.5) {
-      return `Realized magnitude (<span class="num">${pct(realized)}</span>) is ` +
-             `<span class="num">${ratio.toFixed(2)}×</span> the predicted ` +
-             `(<span class="num">${pct(predicted)}</span>) — overshoot beyond the 1.5× ` +
-             `band, read as overreaction → ${tag}. ${confTail}`;
-    }
-    if (ratio <= 0.5) {
-      return `Realized magnitude (<span class="num">${pct(realized)}</span>) is only ` +
-             `<span class="num">${ratio.toFixed(2)}×</span> the predicted ` +
-             `(<span class="num">${pct(predicted)}</span>) — undershoot below the 0.5× ` +
-             `band, the move has room → ${tag}. ${confTail}`;
-    }
-    return `Realized vs predicted ratio is <span class="num">${ratio.toFixed(2)}×</span> ` +
-           `— inside the [0.5×, 1.5×] neutral band, so this strategy says ${tag}. ${confTail}`;
-  }
+  const readSentence = buildModelReadSentence(ref);
+  const reasonSentence = buildStrategyReasoning(strategyId, verdict, ref, tag);
+  const outcomeSentence = (moveDate && STATE.bundle)
+    ? buildOutcomeSentence(verdict, ref, STATE.bundle, moveDate)
+    : '';
 
-  if (strategyId === 'dimension_weighted') {
-    const { score, top } = _dimWeightedScore(ref);
-    const scoreSign = score >= 0 ? '+' : '';
-    const topLabel = top ? (DIM_LABEL[top] || top) : '—';
-    const topPersist = top ? (PERSISTENCE[top] ?? 0) : 0;
-    const topPersistSign = topPersist >= 0 ? '+' : '';
-    if (score >= 0.20) {
-      return `Weighted score <span class="num pos">${scoreSign}${score.toFixed(2)}</span> ` +
-             `clears the +0.20 lean threshold. <span class="num">${topLabel}</span> ` +
-             `(persistence <span class="num">${topPersistSign}${topPersist.toFixed(2)}</span>) ` +
-             `is the dominant contributor → ${tag}. ${confTail}`;
-    }
-    if (score <= -0.20) {
-      return `Weighted score <span class="num neg">${scoreSign}${score.toFixed(2)}</span> ` +
-             `falls below the −0.20 fade threshold. <span class="num">${topLabel}</span> ` +
-             `(persistence <span class="num">${topPersistSign}${topPersist.toFixed(2)}</span>) ` +
-             `dominates and historically reverts → ${tag}. ${confTail}`;
-    }
-    return `Weighted score <span class="num">${scoreSign}${score.toFixed(2)}</span> sits ` +
-           `inside the [−0.20, +0.20] neutral band — no dimension dominates clearly → ${tag}. ${confTail}`;
-  }
-
-  if (strategyId === 'hybrid') {
-    const char = ref.character;
-    const realized = ref.realized;
-    const predicted = ref.predicted;
-    const domName = _dominantDimension(ref);
-    const domLabel = domName ? (DIM_LABEL[domName] || domName) : '—';
-    const domPersist = domName ? (PERSISTENCE[domName] ?? 0) : 0;
-
-    if (char === 'transient') {
-      return `Layer 1 fired: character is <span class="num">transient</span> → ${tag} ` +
-             `(narrative move, expect reversion). Later layers skipped. ${confTail}`;
-    }
-    if (char === 'mixed' || char === 'unclear') {
-      return `Layer 1 fired: character is <span class="num">${char}</span> → ${tag}. ` +
-             `Strategy refuses to act on a low-conviction read. ${confTail}`;
-    }
-    // structural beyond here
-    const hasPred = predicted !== null && predicted !== undefined && predicted !== 0
-                    && predicted * realized > 0;
-    if (hasPred && Math.abs(realized) >= 1.5 * Math.abs(predicted)) {
-      return `Character is <span class="num">structural</span>, but layer 2 caught an ` +
-             `overshoot — realized (<span class="num">${pct(realized)}</span>) is ≥1.5× ` +
-             `predicted (<span class="num">${pct(predicted)}</span>) → ${tag}. ${confTail}`;
-    }
-    if (domPersist < 0) {
-      return `Character is <span class="num">structural</span> and overshoot check passed, ` +
-             `but layer 3 downgraded — dominant dimension <span class="num">${domLabel}</span> ` +
-             `has negative historical persistence (<span class="num">${domPersist.toFixed(2)}</span>), ` +
-             `so the strategy backs off → ${tag}. ${confTail}`;
-    }
-    return `All three layers passed — structural character, no overshoot, dominant dimension ` +
-           `<span class="num">${domLabel}</span> historically persists ` +
-           `(<span class="num">+${domPersist.toFixed(2)}</span>) → ${tag}. ${confTail}`;
-  }
-
-  return `Strategy concluded ${tag}. ${confTail}`;
+  return `${readSentence} ${reasonSentence} ${outcomeSentence}${confTail}`;
 }
 
 function selectStrategy(id) {
