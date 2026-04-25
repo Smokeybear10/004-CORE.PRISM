@@ -1734,7 +1734,7 @@ const ARROW = { positive: '↑', negative: '↓', neutral: '·' };
 const STATE = {
   tickers: [], currentTicker: null, bundle: null,
   evalReport: null,
-  selectedMoveIdx: null, selectedStrategy: 'hybrid',
+  selectedMoveIdx: null, selectedStrategy: 'fundamental_vs_nonfundamental',
   enabledSources: new Set(ALL_IDS),
   chunksAvailable: {}, attribution: null, strategies: {}, chunks: [],
   // Pre-baked full-stack reference, frozen at selectMove time so the
