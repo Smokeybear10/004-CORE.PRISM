@@ -93,9 +93,9 @@ function renderTickerPills() {
 
 // ---------- Overview (top stats) ----------
 function renderOverview(bundle) {
-  document.getElementById('ticker-title').textContent = `${bundle.ticker} · ${bundle.name}`;
+  document.getElementById('ticker-title').textContent = bundle.name;
   document.getElementById('ticker-sub').textContent =
-    `${bundle.sector}  ·  ${bundle.start_date} → ${bundle.end_date}`;
+    `${bundle.ticker} · ${bundle.sector} · ${bundle.start_date} → ${bundle.end_date}`;
 
   const n = bundle.prices.length;
   const m = bundle.moves.length;
@@ -260,22 +260,56 @@ function renderStrategyRow() {
 }
 
 function renderStrategyVerdict() {
-  const label = document.getElementById('strategy-verdict-label');
-  const pill = document.getElementById('verdict-pill');
-  const explain = document.getElementById('strategy-verdict-explain');
+  const nameEl = document.getElementById('verdict-strategy-name');
+  const wordEl = document.getElementById('verdict-word');
+  const subEl = document.getElementById('verdict-subline');
   const verdict = STATE.lastStrategies[STATE.selectedStrategy];
+  const meta = STRATEGIES.find(s => s.id === STATE.selectedStrategy);
+
   if (!verdict) {
-    label.textContent = 'Pick a flagged move to see a verdict.';
-    pill.hidden = true;
-    explain.textContent = '';
+    nameEl.textContent = meta ? meta.label.toUpperCase() : 'PICK A MOVE';
+    wordEl.textContent = '—';
+    wordEl.dataset.state = 'idle';
+    subEl.innerHTML = meta ? meta.blurb : '';
     return;
   }
-  const meta = STRATEGIES.find(s => s.id === STATE.selectedStrategy);
-  label.textContent = `${meta.label} says:`;
-  pill.hidden = false;
-  pill.className = `verdict-pill ${verdict}`;
-  pill.textContent = verdict === 'neutral' ? 'skip' : verdict;
-  explain.textContent = meta.blurb;
+
+  // Brief swap animation: fade out, swap text, fade in.
+  wordEl.classList.add('swap');
+  setTimeout(() => {
+    nameEl.textContent = `${meta.label.toUpperCase()} SAYS`;
+    const display = verdict === 'neutral' ? 'SKIP' : verdict.toUpperCase();
+    wordEl.textContent = display;
+    wordEl.dataset.state = verdict === 'neutral' ? 'skip' : verdict;
+    subEl.innerHTML = buildVerdictSubline(STATE.selectedStrategy, verdict);
+    wordEl.classList.remove('swap');
+  }, 90);
+}
+
+function buildVerdictSubline(strategyId, verdict) {
+  const ref = STATE.lastFullStack;
+  const move = (STATE.bundle && STATE.selectedMoveIdx !== null)
+    ? STATE.bundle.moves[STATE.selectedMoveIdx]
+    : null;
+  if (!move || !ref) {
+    const meta = STRATEGIES.find(s => s.id === strategyId);
+    return meta ? meta.blurb : '';
+  }
+  const realized = ref.realized;
+  const predicted = ref.predicted;
+  const hasPred = predicted !== null && predicted !== undefined;
+  const realizedHtml = `realized <span class="num">${pct(realized)}</span>`;
+  const predHtml = hasPred
+    ? `predicted <span class="num">${pct(predicted)}</span>`
+    : `predicted <span class="num">—</span>`;
+  let deltaHtml = '';
+  if (hasPred) {
+    const delta = realized - predicted;
+    const cls = delta >= 0 ? 'delta-up' : 'delta-down';
+    const sign = delta >= 0 ? '+' : '';
+    deltaHtml = ` &nbsp;·&nbsp; gap <span class="${cls}">${sign}${(delta * 100).toFixed(2)}%</span>`;
+  }
+  return `${realizedHtml} &nbsp;·&nbsp; ${predHtml}${deltaHtml}`;
 }
 
 function selectStrategy(id) {

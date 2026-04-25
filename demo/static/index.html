@@ -3,10 +3,10 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Price Action Tagger</title>
+  <title>Lean / Fade — Price Action Tagger</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&family=Newsreader:ital,opsz,wght@0,6..72,400;0,6..72,500;0,6..72,600;0,6..72,700;1,6..72,400;1,6..72,500&display=swap" rel="stylesheet">
   <script src="https://cdn.plot.ly/plotly-2.35.2.min.js"></script>
   <link rel="stylesheet" href="styles.css">
 </head>
@@ -14,13 +14,10 @@
 
 <header class="topbar">
   <div class="topbar-inner">
-    <div class="brand">
-      <span class="brand-mark">◤</span>
-      <div>
-        <h1>Price Action Tagger</h1>
-        <p class="tagline">Lean or fade — attribution-driven.</p>
-      </div>
-    </div>
+    <a class="brand" href="/">
+      <span class="brand-kicker">PRICE ACTION TAGGER</span>
+      <span class="brand-wordmark">Lean<span class="brand-slash">/</span>Fade<span class="brand-dot">.</span></span>
+    </a>
     <nav class="ticker-pills" id="ticker-pills" role="tablist"></nav>
   </div>
 </header>
@@ -29,8 +26,8 @@
 
   <section class="overview">
     <div class="overview-meta">
-      <h2 id="ticker-title">—</h2>
-      <p id="ticker-sub" class="muted">—</p>
+      <p class="overview-kicker" id="ticker-sub">—</p>
+      <h1 class="overview-title" id="ticker-title">—</h1>
     </div>
     <div class="overview-stats">
       <div class="stat">
@@ -42,7 +39,7 @@
         <span class="stat-value" id="stat-moves">—</span>
       </div>
       <div class="stat">
-        <span class="stat-label">Down / Up</span>
+        <span class="stat-label">Down · Up</span>
         <span class="stat-value" id="stat-split">—</span>
       </div>
     </div>
@@ -50,18 +47,38 @@
 
   <section class="chart-card">
     <header class="card-header">
-      <h3>Price with flagged moves</h3>
-      <p class="muted">Click any dot to inspect the attribution.</p>
+      <div>
+        <span class="kicker">FIGURE 01</span>
+        <h3>Price with flagged moves</h3>
+      </div>
+      <p class="muted small">Click any dot to inspect the attribution.</p>
     </header>
     <div id="chart"></div>
+  </section>
+
+  <section class="verdict-console" id="verdict-console">
+    <header class="card-header">
+      <div>
+        <span class="kicker">VERDICT CONSOLE</span>
+        <h3>Lean, fade, or skip?</h3>
+      </div>
+      <p class="muted small">Same attribution, four frameworks. Pick yours.</p>
+    </header>
+
+    <div class="strategy-row" id="strategy-row" role="radiogroup" aria-label="Trade strategy"></div>
+
+    <div class="verdict-stage" id="verdict-stage">
+      <span class="verdict-strategy-name" id="verdict-strategy-name">Pick a flagged move</span>
+      <span class="verdict-word" id="verdict-word" data-state="idle">—</span>
+      <span class="verdict-subline" id="verdict-subline"></span>
+    </div>
   </section>
 
   <section class="sources-card" id="sources-card">
     <header class="card-header">
       <div>
+        <span class="kicker">EVIDENCE INPUTS</span>
         <h3>Sources feeding the model</h3>
-        <p class="muted">Toggle on/off and watch the attribution re-compute.
-          Realized return is historical — it never moves.</p>
       </div>
       <button type="button" class="reset-btn" id="reset-toggles">Reset to full stack</button>
     </header>
@@ -69,26 +86,12 @@
     <p class="muted small toggle-caption" id="toggle-caption">—</p>
   </section>
 
-  <section class="strategies-card" id="strategies-card">
-    <header class="card-header">
-      <div>
-        <h3>Trade strategy</h3>
-        <p class="muted">Pick a fade-or-follow framework. Same attribution, different verdicts.</p>
-      </div>
-    </header>
-    <div class="strategy-row" id="strategy-row" role="radiogroup" aria-label="Trade strategy"></div>
-    <div class="strategy-verdict" id="strategy-verdict">
-      <span class="muted small" id="strategy-verdict-label">Pick a flagged move to see a verdict.</span>
-      <span class="verdict-pill" id="verdict-pill" hidden></span>
-      <span class="muted small" id="strategy-verdict-explain"></span>
-    </div>
-  </section>
-
   <section class="attribution-card" id="attribution-card">
     <header class="card-header attribution-header">
       <div>
-        <h3 id="attr-title">Attribution</h3>
-        <p class="muted" id="attr-sub">Pick a flagged move to begin.</p>
+        <span class="kicker">ATTRIBUTION</span>
+        <h3 id="attr-title">Pick a flagged move</h3>
+        <p class="muted small" id="attr-sub">—</p>
       </div>
       <div class="char-pill" id="char-pill" hidden></div>
     </header>
@@ -124,7 +127,7 @@
 
     <div class="zero-warning" id="zero-warning" hidden>
       <strong>No sources enabled.</strong>
-      Toggle at least one checkbox above to generate an attribution —
+      Toggle at least one source above to generate an attribution —
       <code>model.attribute()</code> can't cite evidence that isn't there.
     </div>
 
@@ -135,7 +138,7 @@
 
     <div class="evidence-section" id="evidence-section" hidden>
       <h4>Rationale + evidence</h4>
-      <p class="muted small">Every dimension cites at least one chunk_id (CLAUDE.md rule #6).</p>
+      <p class="muted small">Every dimension cites at least one chunk_id.</p>
       <div id="evidence-list"></div>
     </div>
 
@@ -147,9 +150,9 @@
 <footer class="footbar">
   <div class="footbar-inner">
     <span class="muted small">
-      Prices + flagged moves → <code>ingestion.prices</code> (live pipeline).
-      Attribution text → <code>demo.mock_data</code> (swap for
-      <code>model.attribute()</code> when Step 3 lands).
+      Prices + flagged moves → <code>ingestion.prices</code>.
+      Attribution → <code>model.attribute()</code> via Anthropic <code>tool_use</code>.
+      Frameworks → <code>backtest.signal.STRATEGY_REGISTRY</code>.
     </span>
   </div>
 </footer>

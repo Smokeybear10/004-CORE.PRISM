@@ -151,11 +151,14 @@ def _assemble_attribution(
     dims = {}
     for name in _DIM_FIELDS:
         raw = tool_input.get(name)
-        if raw is None:
+        if not isinstance(raw, dict):
+            # Model occasionally emits a bare string (or None) for a dimension —
+            # treat that as "no signal" and fill with neutral defaults.
             dims[name] = DimensionScore(
                 weight=0.0,
                 direction="neutral",
-                rationale=f"model omitted {name}; no signal in evidence",
+                rationale=(raw if isinstance(raw, str)
+                           else f"model omitted {name}; no signal in evidence"),
                 evidence_chunk_ids=[fallback_chunk],
             )
             continue
