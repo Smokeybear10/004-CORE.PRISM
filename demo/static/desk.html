@@ -1,0 +1,2238 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Lean / Fade — Desk</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&family=Source+Serif+4:ital,opsz,wght@0,8..60,400;0,8..60,500;0,8..60,600;0,8..60,700;1,8..60,400;1,8..60,500;1,8..60,600&display=swap" rel="stylesheet">
+  <script src="https://cdn.plot.ly/plotly-2.35.2.min.js"></script>
+  <style>
+    /* ════════════════════════════════════════════════════════════
+       LEAN/FADE DESK
+       Bridgewater visual language: cream paper, navy ink, oxblood
+       accent. Functional tool, not a research note.
+       ═══════════════════════════════════════════════════════════ */
+    :root {
+      --paper: #f5efe1;
+      --paper-2: #ede6d3;
+      --paper-3: #e3dcc8;
+      --rule: #cfc7b2;
+      --rule-strong: #b9b09a;
+
+      --navy: #0a1d36;
+      --navy-2: #1a2c47;
+      --navy-soft: rgba(10, 29, 54, 0.06);
+      --navy-line: rgba(10, 29, 54, 0.18);
+
+      --ink: #0d1320;
+      --ink-2: #2c3344;
+      --ink-quiet: #6a6e7c;
+      --ink-dim: #989384;
+
+      --oxblood: #7a1f1f;
+      --oxblood-2: #5a1414;
+      --oxblood-soft: rgba(122, 31, 31, 0.08);
+      --oxblood-line: rgba(122, 31, 31, 0.30);
+
+      --gold: #a87c3d;
+      --gold-soft: rgba(168, 124, 61, 0.10);
+
+      --up: #2e6f48;
+      --up-soft: rgba(46, 111, 72, 0.08);
+      --up-line: rgba(46, 111, 72, 0.30);
+      --down: #8c2f2f;
+      --down-soft: rgba(140, 47, 47, 0.08);
+      --down-line: rgba(140, 47, 47, 0.30);
+
+      --serif: 'Source Serif 4', 'Iowan Old Style', 'Charter', Georgia, serif;
+      --sans: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+      --mono: 'JetBrains Mono', ui-monospace, monospace;
+
+      --radius: 6px;
+      --radius-sm: 4px;
+    }
+
+    *, *::before, *::after { box-sizing: border-box; }
+    html, body { margin: 0; padding: 0; height: 100%; }
+    body {
+      background: var(--paper);
+      color: var(--ink);
+      font-family: var(--sans);
+      font-size: 14px;
+      line-height: 1.5;
+      -webkit-font-smoothing: antialiased;
+      -moz-osx-font-smoothing: grayscale;
+      font-feature-settings: 'tnum' 1;
+    }
+
+    button { font-family: inherit; cursor: pointer; }
+    input { font-family: inherit; }
+
+    /* ─── Masthead (publication-style) ─── */
+    .masthead {
+      position: sticky;
+      top: 0;
+      z-index: 10;
+      background: rgba(245, 239, 225, 0.94);
+      backdrop-filter: blur(12px) saturate(150%);
+      -webkit-backdrop-filter: blur(12px) saturate(150%);
+      border-bottom: 2px solid var(--navy);
+    }
+    .masthead-inner {
+      max-width: 1240px;
+      margin: 0 auto;
+      padding: 18px 28px 14px;
+      display: flex;
+      justify-content: space-between;
+      align-items: baseline;
+      gap: 24px;
+      flex-wrap: wrap;
+    }
+    .mast-title {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+    .mast-name {
+      font-family: var(--serif);
+      font-weight: 600;
+      font-style: italic;
+      font-size: 1.6rem;
+      letter-spacing: -0.015em;
+      line-height: 1;
+      color: var(--navy);
+    }
+    .mast-name .dot { color: var(--oxblood); }
+    .mast-meta {
+      font: 500 11px var(--mono);
+      letter-spacing: 0.22em;
+      color: var(--ink-quiet);
+      text-transform: uppercase;
+    }
+    .mast-status {
+      display: flex;
+      align-items: center;
+      gap: 18px;
+      font: 500 11px var(--mono);
+      color: var(--ink-quiet);
+      letter-spacing: 0.06em;
+    }
+    .mast-status .iso {
+      color: var(--navy);
+      font-weight: 600;
+    }
+    .mast-status .dot {
+      width: 6px; height: 6px;
+      border-radius: 999px;
+      background: var(--up);
+      display: inline-block;
+      margin-right: 4px;
+      vertical-align: middle;
+    }
+
+    /* ─── Container ─── */
+    .container {
+      max-width: 1240px;
+      margin: 0 auto;
+      padding: 28px 28px 80px;
+      display: flex;
+      flex-direction: column;
+      gap: 20px;
+    }
+
+    /* ─── Search card (entry point) ─── */
+    .search-card {
+      background: #fbf6e8;
+      border: 1px solid var(--rule);
+      border-radius: var(--radius);
+      padding: 18px 20px;
+    }
+    .search-h {
+      display: flex;
+      justify-content: space-between;
+      align-items: baseline;
+      margin-bottom: 12px;
+    }
+    .search-label {
+      font: 600 11px var(--mono);
+      letter-spacing: 0.22em;
+      color: var(--ink-quiet);
+      text-transform: uppercase;
+    }
+    .search-step {
+      font: italic 500 12px var(--serif);
+      color: var(--ink-quiet);
+    }
+    .search-bar { position: relative; }
+    .search-input {
+      width: 100%;
+      padding: 11px 14px 11px 38px;
+      background: var(--paper);
+      border: 1px solid var(--rule);
+      border-radius: var(--radius-sm);
+      color: var(--ink);
+      font: 500 14px var(--sans);
+      letter-spacing: -0.005em;
+      outline: none;
+      transition: border-color 140ms, box-shadow 140ms;
+    }
+    .search-input::placeholder { color: var(--ink-dim); }
+    .search-input:focus {
+      border-color: var(--navy);
+      box-shadow: 0 0 0 3px var(--navy-soft);
+    }
+    .search-icon {
+      position: absolute;
+      left: 12px;
+      top: 50%;
+      transform: translateY(-50%);
+      color: var(--ink-quiet);
+      pointer-events: none;
+    }
+    .search-results {
+      position: absolute;
+      left: 0; right: 0; top: calc(100% + 6px);
+      background: var(--paper);
+      border: 1px solid var(--rule-strong);
+      border-radius: var(--radius-sm);
+      max-height: 320px;
+      overflow-y: auto;
+      z-index: 20;
+      box-shadow: 0 18px 40px rgba(13, 19, 32, 0.18);
+      display: none;
+    }
+    .search-results.open { display: block; }
+    .search-row {
+      padding: 10px 14px;
+      display: grid;
+      grid-template-columns: 60px 1fr auto;
+      gap: 14px;
+      align-items: center;
+      cursor: pointer;
+      border-top: 1px solid var(--rule);
+    }
+    .search-row:first-child { border-top: none; }
+    .search-row:hover, .search-row.selected { background: var(--paper-2); }
+    .search-row .sym {
+      font: 600 13px var(--mono);
+      color: var(--oxblood);
+    }
+    .search-row .name {
+      font: 500 13px var(--serif);
+      color: var(--ink);
+    }
+    .search-row .meta {
+      font: 500 11px var(--mono);
+      color: var(--ink-quiet);
+      letter-spacing: 0.04em;
+    }
+
+    .ticker-strip {
+      display: flex;
+      gap: 6px;
+      flex-wrap: wrap;
+      margin-top: 12px;
+    }
+    .ticker-chip {
+      background: transparent;
+      border: 1px solid var(--rule);
+      border-radius: 4px;
+      padding: 5px 11px;
+      font: 600 12px var(--mono);
+      color: var(--ink-quiet);
+      letter-spacing: 0.04em;
+      transition: color 140ms, border-color 140ms, background 140ms;
+    }
+    .ticker-chip:hover { color: var(--ink); border-color: var(--rule-strong); }
+    .ticker-chip.active {
+      background: var(--navy);
+      color: #fbf6e8;
+      border-color: var(--navy);
+    }
+
+    /* ─── Overview ─── */
+    .overview {
+      display: grid;
+      grid-template-columns: 1fr auto;
+      gap: 24px;
+      align-items: center;
+      padding: 8px 4px 16px;
+      border-bottom: 1px solid var(--rule);
+    }
+    .overview-name {
+      font-family: var(--serif);
+      font-weight: 500;
+      font-size: clamp(2rem, 3.6vw, 2.6rem);
+      letter-spacing: -0.02em;
+      line-height: 1.1;
+      color: var(--ink);
+      margin: 0 0 4px;
+    }
+    .overview-sub {
+      font: 500 12px var(--mono);
+      color: var(--ink-quiet);
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+    }
+    .overview-stats {
+      display: flex;
+      gap: 28px;
+    }
+    .ostat-label {
+      font: 500 10px var(--mono);
+      color: var(--ink-quiet);
+      letter-spacing: 0.18em;
+      text-transform: uppercase;
+      margin-bottom: 4px;
+    }
+    .ostat-value {
+      font-family: var(--serif);
+      font-weight: 500;
+      font-size: 1.3rem;
+      color: var(--ink);
+      letter-spacing: -0.01em;
+    }
+
+    /* ─── Chart ─── */
+    .chart-card {
+      background: #fbf6e8;
+      border: 1px solid var(--rule);
+      border-radius: var(--radius);
+      padding: 18px 20px;
+    }
+    .chart-h {
+      display: flex;
+      justify-content: space-between;
+      align-items: baseline;
+      margin-bottom: 10px;
+    }
+    .chart-h h3 {
+      font-family: var(--serif);
+      font-weight: 500;
+      font-size: 1rem;
+      color: var(--ink);
+      margin: 0;
+      letter-spacing: -0.005em;
+    }
+    .chart-h .pill {
+      font: 500 11px var(--mono);
+      color: var(--ink-quiet);
+      letter-spacing: 0.06em;
+      margin-left: 12px;
+    }
+    .chart-h .hint {
+      font: italic 500 12px var(--serif);
+      color: var(--ink-quiet);
+    }
+    #chart {
+      width: 100%;
+      height: 280px;
+    }
+
+    /* ─── Event card (the meat) ─── */
+    .event-card {
+      background: #fbf6e8;
+      border: 1px solid var(--rule);
+      border-radius: var(--radius);
+      overflow: hidden;
+    }
+    .event-card.empty {
+      padding: 64px 28px;
+      text-align: center;
+    }
+    .event-card.empty .label {
+      font: 500 11px var(--mono);
+      color: var(--ink-quiet);
+      letter-spacing: 0.22em;
+      text-transform: uppercase;
+      margin-bottom: 8px;
+    }
+    .event-card.empty .body {
+      font: italic 500 1.05rem var(--serif);
+      color: var(--ink-quiet);
+      max-width: 460px;
+      margin: 0 auto;
+    }
+
+    /* Event header strip */
+    .event-h {
+      display: flex;
+      gap: 24px;
+      align-items: baseline;
+      padding: 18px 22px 16px;
+      border-bottom: 1px solid var(--rule);
+    }
+    .event-h .case-no {
+      font: 500 11px var(--mono);
+      color: var(--ink-quiet);
+      letter-spacing: 0.22em;
+      text-transform: uppercase;
+    }
+    .event-h .date {
+      font-family: var(--serif);
+      font-weight: 500;
+      font-size: 1.4rem;
+      letter-spacing: -0.015em;
+      color: var(--ink);
+      margin-left: auto;
+    }
+    .event-h .return-pill {
+      font: 600 12px var(--mono);
+      letter-spacing: 0.04em;
+      padding: 4px 10px;
+      border-radius: 4px;
+      border: 1px solid;
+    }
+    .event-h .return-pill.up   { color: var(--up); background: var(--up-soft); border-color: var(--up-line); }
+    .event-h .return-pill.down { color: var(--down); background: var(--down-soft); border-color: var(--down-line); }
+    .event-h .meta {
+      display: flex;
+      gap: 16px;
+      font: 500 12px var(--mono);
+      color: var(--ink-quiet);
+    }
+    .event-h .meta .num { color: var(--ink); }
+
+    /* Verdict region */
+    .verdict-block {
+      padding: 32px 28px 28px;
+      display: grid;
+      grid-template-columns: 1fr 320px;
+      gap: 32px;
+      border-bottom: 1px solid var(--rule);
+      align-items: center;
+    }
+    .verdict-info .lbl {
+      font: 600 10px var(--mono);
+      letter-spacing: 0.28em;
+      color: var(--oxblood);
+      text-transform: uppercase;
+      margin-bottom: 12px;
+    }
+    .verdict-word {
+      font-family: var(--serif);
+      font-weight: 500;
+      font-style: italic;
+      font-size: clamp(4rem, 8vw, 6.5rem);
+      line-height: 0.95;
+      letter-spacing: -0.04em;
+      color: var(--ink-quiet);
+      transition: color 200ms;
+    }
+    .verdict-word[data-state="lean"] { color: var(--up); }
+    .verdict-word[data-state="fade"] { color: var(--down); }
+    .verdict-word[data-state="skip"] { color: var(--ink-quiet); }
+    .verdict-word[data-state="idle"] { color: var(--ink-dim); }
+
+    .verdict-byline {
+      font: italic 500 1rem var(--serif);
+      color: var(--ink-2);
+      margin-top: 14px;
+      max-width: 56ch;
+      line-height: 1.5;
+    }
+    .verdict-byline .num { font-family: var(--mono); font-style: normal; font-size: 0.92rem; color: var(--ink); }
+    .verdict-byline .delta-up { color: var(--up); font-style: normal; }
+    .verdict-byline .delta-down { color: var(--down); font-style: normal; }
+
+    .verdict-meta {
+      display: grid;
+      gap: 8px;
+    }
+    .vmeta-row {
+      display: grid;
+      grid-template-columns: 1fr auto;
+      align-items: baseline;
+      padding: 9px 13px;
+      background: var(--paper);
+      border: 1px solid var(--rule);
+      border-radius: var(--radius-sm);
+    }
+    .vmeta-row .lbl {
+      font: 500 10px var(--mono);
+      letter-spacing: 0.18em;
+      color: var(--ink-quiet);
+      text-transform: uppercase;
+    }
+    .vmeta-row .val {
+      font: 600 13px var(--mono);
+      color: var(--ink);
+    }
+    .vmeta-row.character .val {
+      text-transform: uppercase;
+      letter-spacing: 0.16em;
+      font-size: 11px;
+    }
+    .vmeta-row.character.structural .val { color: var(--navy); }
+    .vmeta-row.character.transient  .val { color: var(--down); }
+    .vmeta-row.character.mixed      .val,
+    .vmeta-row.character.unclear    .val { color: var(--ink-quiet); }
+
+    /* Strategy row */
+    .strat-row {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 6px;
+      padding: 14px 22px 16px;
+      border-bottom: 1px solid var(--rule);
+    }
+    .strat-pill {
+      background: var(--paper);
+      border: 1px solid var(--rule);
+      border-radius: var(--radius-sm);
+      padding: 11px 14px 12px;
+      cursor: pointer;
+      transition: background 140ms, border-color 140ms;
+      text-align: left;
+    }
+    .strat-pill:hover { background: var(--paper-2); border-color: var(--rule-strong); }
+    .strat-pill.active {
+      background: var(--oxblood-soft);
+      border-color: var(--oxblood);
+      box-shadow: inset 0 0 0 1px var(--oxblood-line);
+    }
+    .strat-pill .name {
+      font: 500 12px var(--serif);
+      color: var(--ink);
+      letter-spacing: -0.005em;
+    }
+    .strat-pill .verdict {
+      font: 600 11px var(--mono);
+      letter-spacing: 0.18em;
+      text-transform: uppercase;
+      margin-top: 6px;
+    }
+    .strat-pill .verdict.lean { color: var(--up); }
+    .strat-pill .verdict.fade { color: var(--down); }
+    .strat-pill .verdict.neutral { color: var(--ink-quiet); }
+    .strat-pill .verdict.pending { color: var(--ink-dim); }
+
+    /* Tabs */
+    .tabs {
+      display: flex;
+      gap: 0;
+      padding: 0 22px;
+      border-bottom: 1px solid var(--rule);
+    }
+    .tab {
+      background: transparent;
+      border: none;
+      border-bottom: 2px solid transparent;
+      padding: 13px 18px 12px;
+      font: 500 12px var(--sans);
+      color: var(--ink-quiet);
+      letter-spacing: -0.005em;
+      cursor: pointer;
+      transition: color 140ms, border-color 140ms;
+    }
+    .tab:hover { color: var(--ink-2); }
+    .tab.active {
+      color: var(--oxblood);
+      border-bottom-color: var(--oxblood);
+    }
+    .tab .count {
+      font: 500 10px var(--mono);
+      color: var(--ink-quiet);
+      margin-left: 6px;
+      letter-spacing: 0.04em;
+    }
+    .tab.active .count { color: var(--oxblood); }
+
+    .tab-panels { padding: 18px 22px 22px; }
+    .tab-panel { display: none; }
+    .tab-panel.active { display: block; }
+
+    /* Dimensions */
+    .dim-row {
+      display: grid;
+      grid-template-columns: 140px 1fr 60px;
+      align-items: center;
+      gap: 14px;
+      padding: 11px 0;
+      border-top: 1px solid var(--rule);
+    }
+    .dim-row:first-child { border-top: none; }
+    .dim-row .name {
+      font: 500 13px var(--serif);
+      color: var(--ink);
+      display: flex;
+      gap: 8px;
+      align-items: center;
+    }
+    .dim-row .arrow.positive { color: var(--up); }
+    .dim-row .arrow.negative { color: var(--down); }
+    .dim-row .arrow.neutral  { color: var(--ink-quiet); }
+    .dim-row .bar {
+      height: 5px;
+      background: var(--paper-2);
+      border-radius: 999px;
+      overflow: hidden;
+    }
+    .dim-row .fill {
+      height: 100%;
+      border-radius: 999px;
+      transition: width 280ms cubic-bezier(0.2, 0.6, 0.2, 1);
+    }
+    .dim-row .fill.positive { background: linear-gradient(90deg, rgba(46, 111, 72, 0.4), var(--up)); }
+    .dim-row .fill.negative { background: linear-gradient(90deg, rgba(140, 47, 47, 0.4), var(--down)); }
+    .dim-row .fill.neutral  { background: linear-gradient(90deg, var(--rule-strong), var(--ink-quiet)); }
+    .dim-row .num {
+      font: 500 12px var(--mono);
+      color: var(--ink-quiet);
+      text-align: right;
+    }
+    .dim-row .num.positive { color: var(--up); }
+    .dim-row .num.negative { color: var(--down); }
+    .dim-rationale {
+      grid-column: 2 / -1;
+      padding: 4px 0 6px;
+      font: 400 13px var(--serif);
+      color: var(--ink-2);
+      line-height: 1.55;
+    }
+    .dim-rationale code {
+      font: 500 11px var(--mono);
+      color: var(--oxblood);
+      background: var(--oxblood-soft);
+      padding: 1px 6px;
+      border-radius: 3px;
+      letter-spacing: 0.02em;
+    }
+
+    /* Evidence */
+    .ev-row {
+      padding: 14px 0;
+      border-top: 1px solid var(--rule);
+    }
+    .ev-row:first-child { border-top: none; }
+    .ev-meta {
+      display: flex;
+      gap: 8px;
+      align-items: center;
+      flex-wrap: wrap;
+      margin-bottom: 7px;
+      font: 500 11px var(--mono);
+      color: var(--ink-quiet);
+      letter-spacing: 0.04em;
+    }
+    .ev-meta .badge {
+      font: 600 10px var(--mono);
+      letter-spacing: 0.18em;
+      text-transform: uppercase;
+      padding: 2px 7px;
+      border-radius: 3px;
+      background: var(--paper-2);
+      border: 1px solid var(--rule);
+      color: var(--ink-2);
+    }
+    .ev-meta .badge.news { color: var(--navy); border-color: var(--navy-line); background: var(--navy-soft); }
+    .ev-meta .badge.sec_10k,
+    .ev-meta .badge.sec_8k { color: var(--gold); border-color: rgba(168, 124, 61, 0.30); background: var(--gold-soft); }
+    .ev-meta .badge.thirteen_f { color: var(--up); border-color: var(--up-line); background: var(--up-soft); }
+    .ev-meta .badge.earnings_transcript { color: var(--oxblood); border-color: var(--oxblood-line); background: var(--oxblood-soft); }
+    .ev-meta code { font-size: 11px; color: var(--ink-2); }
+    .ev-text {
+      font: 400 13px var(--serif);
+      color: var(--ink);
+      line-height: 1.6;
+    }
+
+    /* Sources */
+    .src-grid {
+      display: grid;
+      grid-template-columns: repeat(7, 1fr);
+      gap: 6px;
+    }
+    .src-toggle {
+      background: var(--paper);
+      border: 1px solid var(--rule);
+      border-radius: var(--radius-sm);
+      padding: 9px 11px;
+      cursor: pointer;
+      transition: border-color 140ms, background 140ms;
+    }
+    .src-toggle:hover { border-color: var(--rule-strong); }
+    .src-toggle.checked { border-color: var(--oxblood); background: var(--oxblood-soft); }
+    .src-toggle.disabled { opacity: 0.4; cursor: not-allowed; }
+    .src-toggle input { display: none; }
+    .src-toggle .name {
+      font: 500 12px var(--serif);
+      color: var(--ink);
+      letter-spacing: -0.005em;
+    }
+    .src-toggle.checked .name { color: var(--oxblood); }
+    .src-toggle .count {
+      font: 500 11px var(--mono);
+      color: var(--ink-quiet);
+      margin-top: 2px;
+    }
+    .toggle-caption {
+      font: 500 12px var(--mono);
+      color: var(--ink-quiet);
+      letter-spacing: 0.04em;
+      margin-top: 14px;
+    }
+    .toggle-caption .num { color: var(--oxblood); font-weight: 600; }
+
+    .loading {
+      position: relative;
+    }
+    .loading::after {
+      content: '';
+      position: absolute;
+      inset: 0;
+      pointer-events: none;
+      border-radius: var(--radius);
+      background: linear-gradient(90deg, transparent, rgba(122, 31, 31, 0.05), transparent);
+      background-size: 200% 100%;
+      animation: shimmer 1.4s ease-in-out infinite;
+    }
+    @keyframes shimmer { 0% { background-position: 200% 0; } 100% { background-position: -200% 0; } }
+
+    /* Footer */
+    .footer {
+      max-width: 1240px;
+      margin: 36px auto 0;
+      padding: 22px 28px 28px;
+      border-top: 1px solid var(--rule);
+      font: 500 11px var(--mono);
+      letter-spacing: 0.18em;
+      color: var(--ink-quiet);
+      text-transform: uppercase;
+      display: flex;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      gap: 12px;
+    }
+
+    /* Switcher */
+    .switcher {
+      position: fixed;
+      bottom: 18px;
+      right: 18px;
+      background: var(--paper);
+      border: 1px solid var(--rule-strong);
+      border-radius: 999px;
+      padding: 4px;
+      display: flex;
+      gap: 2px;
+      z-index: 50;
+      box-shadow: 0 14px 36px rgba(13, 19, 32, 0.16);
+    }
+    .switcher a {
+      font: 500 11px var(--mono);
+      color: var(--ink-quiet);
+      letter-spacing: 0.14em;
+      text-transform: uppercase;
+      padding: 7px 13px;
+      border-radius: 999px;
+      text-decoration: none;
+      transition: color 140ms, background 140ms;
+    }
+    .switcher a:hover { color: var(--ink); background: var(--paper-2); }
+    .switcher a.current { background: var(--oxblood-soft); color: var(--oxblood); }
+
+    @media (max-width: 920px) {
+      .verdict-block { grid-template-columns: 1fr; }
+      .src-grid { grid-template-columns: repeat(4, 1fr); }
+      .strat-row { grid-template-columns: repeat(2, 1fr); }
+    }
+    @media (max-width: 560px) {
+      .src-grid { grid-template-columns: repeat(2, 1fr); }
+      .strat-row { grid-template-columns: 1fr; }
+    }
+
+    /* ════════════════════════════════════════════════════════════
+       UPGRADE PASS — Reckoning Strip · Bound Evidence
+       Keyboard Nav · Filter Bar
+       ══════════════════════════════════════════════════════════ */
+
+    /* —— 01 Reckoning Strip —— */
+    .reck {
+      display: grid;
+      grid-template-columns: 1.4fr 1fr 0.8fr 0.8fr;
+      gap: 18px;
+      padding: 14px 0 16px;
+      border-top: 1px solid var(--rule);
+      border-bottom: 1px solid var(--rule);
+      margin-bottom: 16px;
+    }
+    .reck .cell { padding-right: 16px; }
+    .reck .cell + .cell { border-left: 1px solid var(--rule); padding-left: 18px; }
+    .reck .lbl {
+      font: 600 9.5px var(--mono); letter-spacing: 0.20em; color: var(--ink-quiet);
+      text-transform: uppercase; margin: 0 0 8px;
+    }
+    .reck .word {
+      font-family: var(--serif); font-weight: 500; font-style: italic;
+      font-size: 44px; line-height: 1.12; letter-spacing: -0.02em;
+      color: var(--oxblood); margin: 0 0 4px;
+    }
+    .reck .word[data-state="fade"]    { color: var(--down); }
+    .reck .word[data-state="lean"]    { color: var(--navy); }
+    .reck .word[data-state="skip"]    { color: var(--ink-quiet); }
+    .reck .word[data-state="idle"]    { color: var(--ink-dim); }
+    .reck .word small {
+      display: block; margin-top: 4px;
+      font: 600 11px var(--mono); letter-spacing: 0.18em;
+      color: var(--ink-quiet); font-style: normal; text-transform: uppercase;
+    }
+    .reck .word small.character {
+      color: var(--oxblood);
+    }
+    .reck .byline {
+      font: italic 400 13.5px var(--serif); color: var(--ink-2);
+      line-height: 1.45; margin: 8px 0 0;
+    }
+    .reck .byline b { color: var(--oxblood); font-weight: 600; font-style: normal; font-family: var(--mono); font-size: 12.5px; }
+    .reck .delta-rows { display: flex; flex-direction: column; gap: 8px; margin-top: 2px; }
+    .reck .delta-rows .row {
+      display: grid; grid-template-columns: 64px 1fr 56px; gap: 10px; align-items: center;
+    }
+    .reck .delta-rows .k {
+      font: 600 10px var(--mono); color: var(--ink-quiet);
+      letter-spacing: 0.16em; text-transform: uppercase;
+    }
+    .reck .delta-rows .v {
+      font-family: var(--serif); font-weight: 600; font-size: 15px;
+      color: var(--ink); text-align: right; letter-spacing: -0.01em;
+    }
+    .reck .delta-rows .v.up { color: var(--up); }
+    .reck .delta-rows .v.dn { color: var(--down); }
+    .reck .delta-rows .track {
+      height: 8px; background: var(--paper-3); position: relative; border-radius: 2px;
+      overflow: hidden;
+    }
+    .reck .delta-rows .track .axis {
+      position: absolute; left: 50%; top: -2px; bottom: -2px; width: 1px;
+      background: var(--rule-strong);
+    }
+    .reck .delta-rows .track .fill {
+      position: absolute; top: 0; bottom: 0;
+      transition: width 600ms cubic-bezier(.2,.8,.2,1), left 600ms cubic-bezier(.2,.8,.2,1);
+    }
+    .reck .delta-rows .track .fill.dn { background: var(--down); }
+    .reck .delta-rows .track .fill.up { background: var(--up); }
+    .reck .delta-rows .track .fill.predicted { opacity: 0.55; }
+    .reck .gap-note {
+      font: italic 500 11.5px var(--serif); color: var(--ink-quiet);
+      margin: 6px 0 0; padding-top: 6px; border-top: 1px dotted var(--rule);
+    }
+    .reck .gauge-cell { display: flex; flex-direction: column; align-items: flex-start; }
+    .reck svg.gauge { width: 100%; max-width: 130px; height: auto; }
+    .reck svg.gauge .bg { fill: none; stroke: var(--rule); stroke-width: 8; stroke-linecap: round; }
+    .reck svg.gauge .fg {
+      fill: none; stroke-width: 8; stroke-linecap: round;
+      transition: stroke-dashoffset 700ms cubic-bezier(.2,.8,.2,1);
+    }
+    .reck svg.gauge .fg.conf { stroke: var(--navy); }
+    .reck svg.gauge .fg.coh  { stroke: var(--oxblood); }
+    .reck svg.gauge text {
+      font-family: var(--serif); font-style: italic; font-weight: 500;
+      font-size: 22px; fill: var(--navy);
+    }
+    .reck svg.gauge.coh-svg text { fill: var(--oxblood); }
+    .reck .gauge-sub {
+      font: italic 500 11px var(--serif); color: var(--ink-quiet); margin: 2px 0 0;
+    }
+
+    /* —— Disagreement counter (atop the verdict word) —— */
+    .reck .disagree {
+      display: flex; gap: 6px; align-items: baseline;
+      font: 600 10px var(--mono); letter-spacing: 0.18em;
+      text-transform: uppercase; color: var(--ink-quiet);
+      margin: 0 0 8px;
+    }
+    .reck .disagree .seg { display: inline-flex; align-items: baseline; gap: 4px; }
+    .reck .disagree .seg + .seg::before {
+      content: '·'; color: var(--rule-strong);
+      margin: 0 4px 0 0; letter-spacing: 0;
+    }
+    .reck .disagree .seg b {
+      font-family: var(--serif); font-weight: 600; font-style: italic;
+      font-size: 14px; letter-spacing: -0.005em;
+    }
+    .reck .disagree .lean b { color: var(--up); }
+    .reck .disagree .fade b { color: var(--down); }
+    .reck .disagree .skip b { color: var(--ink-2); }
+    .reck .disagree .of  { color: var(--ink-dim); font-weight: 500; }
+
+    /* —— Forward-return strip (below the Reckoning Strip) —— */
+    .fwd-strip {
+      display: grid;
+      grid-template-columns: auto repeat(3, 1fr);
+      gap: 0;
+      border: 1px solid var(--rule);
+      border-radius: var(--radius-sm);
+      background: var(--paper);
+      margin: 0 0 16px;
+      overflow: hidden;
+    }
+    .fwd-strip .head {
+      padding: 14px 16px;
+      background: var(--paper-2);
+      border-right: 1px solid var(--rule);
+      display: flex; flex-direction: column; gap: 4px; justify-content: center;
+      min-width: 200px;
+    }
+    .fwd-strip .head .lbl {
+      font: 600 10px var(--mono); letter-spacing: 0.22em;
+      color: var(--ink-quiet); text-transform: uppercase;
+    }
+    .fwd-strip .head .pitch {
+      font: italic 500 12.5px var(--serif); color: var(--ink-2);
+    }
+    .fwd-strip .head .pitch b { color: var(--oxblood); font-style: normal; font-weight: 600; }
+    .fwd-strip .col {
+      padding: 14px 16px;
+      border-right: 1px solid var(--rule);
+      display: flex; flex-direction: column; gap: 6px;
+    }
+    .fwd-strip .col:last-child { border-right: none; }
+    .fwd-strip .col .h {
+      font: 600 9.5px var(--mono); letter-spacing: 0.18em;
+      color: var(--ink-quiet); text-transform: uppercase;
+    }
+    .fwd-strip .col .v {
+      font-family: var(--serif); font-weight: 500; font-size: 22px;
+      letter-spacing: -0.01em; line-height: 1;
+    }
+    .fwd-strip .col .v.up { color: var(--up); }
+    .fwd-strip .col .v.dn { color: var(--down); }
+    .fwd-strip .col .v.flat { color: var(--ink-quiet); }
+    .fwd-strip .col .judge {
+      font: 600 10px var(--mono); letter-spacing: 0.16em;
+      text-transform: uppercase;
+      display: inline-flex; align-items: center; gap: 5px;
+    }
+    .fwd-strip .col .judge.correct { color: var(--up); }
+    .fwd-strip .col .judge.wrong   { color: var(--down); }
+    .fwd-strip .col .judge.na      { color: var(--ink-quiet); }
+    .fwd-strip .col .judge::before {
+      content: ''; width: 6px; height: 6px; border-radius: 999px; display: inline-block;
+      background: currentColor; opacity: 0.85;
+    }
+
+    /* —— Inline chunk preview (click chunk_id chip to expand) —— */
+    .dim-row .dim-rationale code {
+      cursor: pointer;
+      user-select: none;
+    }
+    .dim-row .dim-rationale code:hover {
+      background: var(--oxblood);
+      color: #fbf6e8;
+    }
+    .dim-row .dim-rationale code.open {
+      background: var(--oxblood);
+      color: #fbf6e8;
+    }
+    .chunk-preview {
+      grid-column: 2 / -1;
+      margin: 4px 0 8px;
+      padding: 12px 14px;
+      background: #fbf6e8;
+      border: 1px solid var(--oxblood-line);
+      border-left: 3px solid var(--oxblood);
+      border-radius: var(--radius-sm);
+      animation: chunkOpen 220ms ease-out;
+    }
+    @keyframes chunkOpen {
+      from { opacity: 0; transform: translateY(-3px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+    .chunk-preview .meta {
+      display: flex; gap: 8px; align-items: center; flex-wrap: wrap;
+      margin-bottom: 8px;
+      font: 500 11px var(--mono); color: var(--ink-quiet);
+      letter-spacing: 0.04em;
+    }
+    .chunk-preview .meta .badge {
+      font: 600 10px var(--mono); letter-spacing: 0.18em;
+      text-transform: uppercase; padding: 2px 7px; border-radius: 3px;
+      background: var(--paper-2); border: 1px solid var(--rule); color: var(--ink-2);
+    }
+    .chunk-preview .meta .badge.news { color: var(--navy); border-color: var(--navy-line); background: var(--navy-soft); }
+    .chunk-preview .meta .badge.sec_10k,
+    .chunk-preview .meta .badge.sec_8k { color: var(--gold); border-color: rgba(168, 124, 61, 0.30); background: var(--gold-soft); }
+    .chunk-preview .meta .badge.thirteen_f { color: var(--up); border-color: var(--up-line); background: var(--up-soft); }
+    .chunk-preview .meta .badge.earnings_transcript { color: var(--oxblood); border-color: var(--oxblood-line); background: var(--oxblood-soft); }
+    .chunk-preview .text {
+      font: 400 13px var(--serif); color: var(--ink); line-height: 1.6;
+    }
+    .chunk-preview .quote {
+      margin: 4px 0 8px;
+      padding: 2px 14px;
+      border-left: 2px solid var(--oxblood);
+      font: italic 500 13.5px var(--serif);
+      color: var(--ink); line-height: 1.55;
+    }
+    .chunk-preview .quote::before { content: '\201C'; opacity: 0.65; margin-right: 1px; }
+    .chunk-preview .quote::after  { content: '\201D'; opacity: 0.65; margin-left: 1px; }
+    .chunk-preview .reasoning {
+      margin: 0 0 6px;
+      font: 500 12.5px var(--serif); color: var(--ink-2); line-height: 1.5;
+    }
+    .chunk-preview .reasoning::before {
+      content: 'Why this matters · ';
+      font: 600 9.5px var(--mono); letter-spacing: 0.18em;
+      color: var(--ink-quiet); text-transform: uppercase;
+    }
+    .chunk-preview .src-link {
+      display: inline-block;
+      margin-top: 8px;
+      font: 500 11px var(--mono);
+      color: var(--oxblood);
+      text-decoration: none;
+      border-bottom: 1px dashed var(--oxblood-line);
+      letter-spacing: 0.04em;
+    }
+    .chunk-preview .miss {
+      font: italic 500 12px var(--serif); color: var(--ink-quiet);
+    }
+
+    /* —— 02 Bound Evidence —— */
+    .ev-row {
+      cursor: pointer;
+      transition: background 180ms, border-color 180ms, box-shadow 180ms;
+    }
+    .ev-row.is-bound {
+      background: var(--gold-soft);
+      border-color: rgba(168,124,61,0.45) !important;
+      box-shadow: 0 0 0 2px rgba(168,124,61,0.18);
+    }
+    .dim-row {
+      cursor: pointer;
+      transition: background 180ms;
+    }
+    .dim-row.is-bound {
+      background: var(--gold-soft);
+    }
+    .dim-row code { transition: color 180ms; }
+    .dim-row.is-bound code { color: var(--gold); }
+    .ev-row .ev-meta code,
+    .dim-row code {
+      font: 500 10.5px var(--mono); color: var(--oxblood);
+      background: rgba(122,31,31,0.06); padding: 1px 4px; border-radius: 2px;
+      letter-spacing: 0.02em;
+    }
+    .ev-row[data-bind-active="true"] {
+      background: var(--gold-soft);
+      border-left: 3px solid var(--gold);
+    }
+
+    /* —— 06 Keyboard Nav overlay —— */
+    .kbd-overlay {
+      position: fixed; inset: 0; z-index: 200;
+      background: rgba(13, 19, 32, 0.55);
+      backdrop-filter: blur(6px);
+      -webkit-backdrop-filter: blur(6px);
+      display: none; align-items: center; justify-content: center;
+      animation: kbFade 180ms ease-out;
+    }
+    .kbd-overlay.open { display: flex; }
+    @keyframes kbFade { from { opacity: 0; } to { opacity: 1; } }
+    .kbd-card {
+      background: var(--paper); border: 1px solid var(--rule-strong); border-radius: 8px;
+      padding: 28px 32px; max-width: 560px; width: calc(100% - 48px);
+      box-shadow: 0 30px 80px rgba(13, 19, 32, 0.4);
+    }
+    .kbd-card h3 {
+      font-family: var(--serif); font-weight: 500; font-style: italic;
+      font-size: 22px; color: var(--navy); margin: 0 0 4px; letter-spacing: -0.015em;
+    }
+    .kbd-card .kicker {
+      font: 600 10px var(--mono); letter-spacing: 0.22em; color: var(--ink-quiet);
+      text-transform: uppercase; margin: 0 0 18px;
+    }
+    .kbd-grid { display: flex; flex-direction: column; }
+    .kbd-grid .row {
+      display: grid; grid-template-columns: 100px 1fr; gap: 16px; align-items: center;
+      padding: 9px 0; border-bottom: 1px solid var(--rule);
+    }
+    .kbd-grid .row:last-child { border-bottom: none; }
+    .kbd-grid .keys { display: flex; gap: 4px; }
+    .kbd-grid .key {
+      font: 600 11px var(--mono); padding: 3px 8px; min-width: 26px; text-align: center;
+      background: var(--paper-2); border: 1px solid var(--rule-strong);
+      border-bottom-width: 2px; border-radius: 3px;
+      color: var(--navy); letter-spacing: 0.04em;
+    }
+    .kbd-grid .desc {
+      font: 400 13.5px var(--serif); color: var(--ink-2);
+    }
+    .kbd-grid .desc em { font-style: italic; color: var(--oxblood); }
+    .kbd-card .foot {
+      font: italic 500 12px var(--serif); color: var(--ink-quiet);
+      margin-top: 16px; padding-top: 12px; border-top: 1px dashed var(--rule);
+    }
+
+    .kbd-hint-pill {
+      position: fixed; bottom: 18px; right: 18px; z-index: 90;
+      background: rgba(245, 239, 225, 0.94);
+      backdrop-filter: blur(8px) saturate(150%);
+      -webkit-backdrop-filter: blur(8px) saturate(150%);
+      border: 1px solid var(--rule-strong);
+      border-radius: 6px;
+      padding: 7px 11px;
+      font: 500 11px var(--mono); color: var(--ink-quiet); letter-spacing: 0.14em;
+      cursor: pointer; transition: color 180ms, border-color 180ms;
+      display: flex; align-items: center; gap: 6px;
+    }
+    .kbd-hint-pill:hover { color: var(--navy); border-color: var(--navy); }
+    .kbd-hint-pill .key {
+      font-weight: 600; background: var(--paper-2); border: 1px solid var(--rule);
+      border-bottom-width: 2px; padding: 1px 6px; border-radius: 2px; color: var(--navy);
+    }
+
+    /* —— 07 Filter Bar —— */
+    .filter-bar {
+      background: #fbf6e8;
+      border: 1px solid var(--rule);
+      border-radius: var(--radius);
+      padding: 14px 16px;
+      margin-bottom: 16px;
+      display: grid;
+      grid-template-columns: 1fr 1fr 1fr 1.2fr auto;
+      gap: 22px;
+      align-items: center;
+    }
+    .filter-bar .grp {
+      display: flex; flex-direction: column; gap: 6px;
+      min-width: 0;
+    }
+    .filter-bar .grp .lbl {
+      font: 600 9.5px var(--mono); letter-spacing: 0.20em; color: var(--ink-quiet);
+      text-transform: uppercase;
+    }
+    .filter-bar .grp .val {
+      font: italic 500 14px var(--serif); color: var(--navy);
+    }
+    .filter-bar .grp .val b {
+      font-style: normal; font-weight: 600; color: var(--oxblood);
+      font-family: var(--mono); font-size: 12.5px;
+    }
+    .filter-bar input[type="range"] {
+      -webkit-appearance: none; appearance: none;
+      width: 100%; height: 4px; background: var(--paper-3); border-radius: 2px;
+      outline: none; cursor: pointer; margin: 4px 0;
+    }
+    .filter-bar input[type="range"]::-webkit-slider-thumb {
+      -webkit-appearance: none; appearance: none;
+      width: 14px; height: 14px; border-radius: 50%;
+      background: var(--navy); border: 2px solid #fbf6e8;
+      box-shadow: 0 1px 3px rgba(13,19,32,0.3); cursor: pointer;
+    }
+    .filter-bar input[type="range"]::-moz-range-thumb {
+      width: 14px; height: 14px; border-radius: 50%;
+      background: var(--navy); border: 2px solid #fbf6e8;
+      box-shadow: 0 1px 3px rgba(13,19,32,0.3); cursor: pointer;
+    }
+    .filter-bar .chips { display: flex; gap: 4px; flex-wrap: wrap; }
+    .filter-bar .chip {
+      font: 600 9.5px var(--mono); letter-spacing: 0.12em; text-transform: uppercase;
+      padding: 4px 9px; border: 1px solid var(--rule); border-radius: 3px;
+      color: var(--ink-quiet); background: var(--paper);
+      cursor: pointer; transition: all 160ms;
+    }
+    .filter-bar .chip:hover { color: var(--ink); border-color: var(--rule-strong); }
+    .filter-bar .chip.on {
+      background: var(--navy); color: #fbf6e8; border-color: var(--navy);
+    }
+    .filter-bar .reset {
+      font: 600 10px var(--mono); letter-spacing: 0.18em; text-transform: uppercase;
+      padding: 7px 11px; border: 1px solid var(--rule); border-radius: 3px;
+      color: var(--ink-quiet); background: transparent;
+      cursor: pointer; transition: color 160ms, border-color 160ms;
+      align-self: end;
+    }
+    .filter-bar .reset:hover { color: var(--oxblood); border-color: var(--oxblood-line); }
+    .filter-bar-result {
+      font: italic 500 12px var(--serif); color: var(--ink-quiet);
+      margin: 10px 0 0; padding-top: 10px; border-top: 1px dashed var(--rule);
+    }
+    .filter-bar-result b {
+      color: var(--oxblood); font-style: normal; font-weight: 600;
+      font-family: var(--mono); font-size: 12px;
+    }
+
+    @media (max-width: 900px) {
+      .reck { grid-template-columns: 1fr 1fr; }
+      .reck .cell + .cell { border-left: none; padding-left: 0; }
+      .filter-bar { grid-template-columns: 1fr 1fr; }
+    }
+    @media (max-width: 560px) {
+      .reck { grid-template-columns: 1fr; }
+      .filter-bar { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+
+<header class="masthead">
+  <div class="masthead-inner">
+    <div class="mast-title">
+      <span class="mast-name">Lean / Fade<span class="dot">.</span> <span style="font-style:normal; font-weight:500; font-size: 0.86em;">Desk</span></span>
+      <span class="mast-meta" id="mast-meta">PRICE ACTION TAGGER · BRIDGEWATER HACKATHON</span>
+    </div>
+    <div class="mast-status">
+      <span><span class="dot"></span><span class="iso" id="status-date">2026-04-25</span> · LIVE</span>
+      <span>MODEL · CLAUDE-HAIKU-4-5</span>
+    </div>
+  </div>
+</header>
+
+<main class="container">
+
+  <section class="search-card">
+    <div class="search-h">
+      <span class="search-label">Tag a price move</span>
+      <span class="search-step">Step 1 · pick the company</span>
+    </div>
+    <div class="search-bar">
+      <svg class="search-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.35-4.35"/></svg>
+      <input class="search-input" id="search-input" type="text" placeholder="Search ticker or name…" autocomplete="off">
+      <div class="search-results" id="search-results"></div>
+    </div>
+    <div class="ticker-strip" id="ticker-strip"></div>
+  </section>
+
+  <section class="overview" id="overview" hidden>
+    <div>
+      <h2 class="overview-name" id="overview-name">—</h2>
+      <p class="overview-sub" id="overview-sub">—</p>
+    </div>
+    <div class="overview-stats">
+      <div><div class="ostat-label">Bars</div><div class="ostat-value" id="stat-bars">—</div></div>
+      <div><div class="ostat-label">Flagged</div><div class="ostat-value" id="stat-flagged">—</div></div>
+      <div><div class="ostat-label">Up · Down</div><div class="ostat-value" id="stat-split">—</div></div>
+    </div>
+  </section>
+
+  <section class="filter-bar" id="filter-bar" hidden>
+    <div class="grp">
+      <span class="lbl">Significance · |z|</span>
+      <span class="val">≥ <b id="filt-z-val">0.0</b></span>
+      <input type="range" id="filt-z" min="0" max="6" step="0.1" value="0">
+    </div>
+    <div class="grp">
+      <span class="lbl">Confidence floor</span>
+      <span class="val">≥ <b id="filt-conf-val">0%</b></span>
+      <input type="range" id="filt-conf" min="0" max="100" step="5" value="0">
+    </div>
+    <div class="grp">
+      <span class="lbl">Character</span>
+      <div class="chips" id="filt-character">
+        <button type="button" class="chip on" data-c="structural">Structural</button>
+        <button type="button" class="chip on" data-c="transient">Transient</button>
+        <button type="button" class="chip on" data-c="mixed">Mixed</button>
+        <button type="button" class="chip on" data-c="unclear">Unclear</button>
+      </div>
+    </div>
+    <div class="grp">
+      <span class="lbl">Direction</span>
+      <div class="chips" id="filt-direction">
+        <button type="button" class="chip on" data-d="up">Up moves</button>
+        <button type="button" class="chip on" data-d="down">Down moves</button>
+      </div>
+    </div>
+    <button type="button" class="reset" id="filt-reset">Reset</button>
+    <div class="filter-bar-result" id="filt-result" style="grid-column: 1 / -1;">All <b>0</b> events visible.</div>
+  </section>
+
+  <section class="chart-card" id="chart-card" hidden>
+    <div class="chart-h">
+      <div>
+        <h3 style="display:inline">Figure I · Price action</h3>
+        <span class="pill" id="chart-meta">—</span>
+      </div>
+      <span class="hint">Step 2 · click any annotated dot</span>
+    </div>
+    <div id="chart"></div>
+  </section>
+
+  <section class="event-card empty" id="event-card">
+    <div class="label">No event selected</div>
+    <div class="body">Pick a ticker above, then click any annotated dot in the chart to load the lean/fade reading and the cited evidence.</div>
+  </section>
+
+</main>
+
+<footer class="footer">
+  <span>© Lean/Fade. — Bridgewater Hackathon Build, 2026</span>
+  <span>Concept · DESK</span>
+</footer>
+
+<nav class="switcher" aria-label="Switcher">
+  <a href="/">Editorial</a>
+  <a href="/observations.html">Observations</a>
+  <a href="/console.html">Console</a>
+  <a href="/desk.html" class="current">Desk</a>
+</nav>
+
+<button type="button" class="kbd-hint-pill" id="kbd-hint-pill" title="Keyboard shortcuts">
+  <span class="key">?</span> shortcuts
+</button>
+
+<div class="kbd-overlay" id="kbd-overlay" role="dialog" aria-modal="true" aria-labelledby="kbd-title">
+  <div class="kbd-card">
+    <p class="kicker">Keyboard</p>
+    <h3 id="kbd-title">Shortcuts</h3>
+    <div class="kbd-grid">
+      <div class="row"><div class="keys"><span class="key">/</span></div><div class="desc">Focus the search bar</div></div>
+      <div class="row"><div class="keys"><span class="key">j</span><span class="key">k</span></div><div class="desc">Next · previous flagged event</div></div>
+      <div class="row"><div class="keys"><span class="key">t</span></div><div class="desc">Cycle Dimensions → Evidence → Sources tab</div></div>
+      <div class="row"><div class="keys"><span class="key">f</span></div><div class="desc">Filter to <em>fade-only</em> (transient) events</div></div>
+      <div class="row"><div class="keys"><span class="key">l</span></div><div class="desc">Filter to <em>lean-only</em> (structural) events</div></div>
+      <div class="row"><div class="keys"><span class="key">a</span></div><div class="desc">Reset all filters</div></div>
+      <div class="row"><div class="keys"><span class="key">⌘</span><span class="key">k</span></div><div class="desc">Command palette · focus search</div></div>
+      <div class="row"><div class="keys"><span class="key">?</span></div><div class="desc">Show this overlay</div></div>
+      <div class="row"><div class="keys"><span class="key">Esc</span></div><div class="desc">Close overlay</div></div>
+    </div>
+    <p class="foot">Hover any evidence chunk → the citing dimensions glow gold. Hover a dimension citation → the matching evidence row highlights. Click works the same.</p>
+  </div>
+</div>
+
+<script>
+const SOURCE_TYPES = [
+  { id: 'news', label: 'News' },
+  { id: 'sec_10k', label: '10-K' },
+  { id: 'sec_8k', label: '8-K' },
+  { id: 'earnings_transcript', label: 'Earnings' },
+  { id: 'peer_news', label: 'Peer' },
+  { id: 'macro', label: 'Macro' },
+  { id: 'thirteen_f', label: '13F' },
+];
+const ALL_IDS = SOURCE_TYPES.map(s => s.id);
+const DIM_FIELDS = [
+  { id: 'demand', label: 'Demand' },
+  { id: 'pricing', label: 'Pricing' },
+  { id: 'competitive', label: 'Competitive' },
+  { id: 'management_credibility', label: 'Management' },
+  { id: 'macro', label: 'Macro' },
+];
+const STRATEGIES = [
+  { id: 'fundamental_vs_nonfundamental', label: 'Fundamental' },
+  { id: 'expected_vs_realized', label: 'Expected vs Realized' },
+  { id: 'dimension_weighted', label: 'Dimension-weighted' },
+  { id: 'hybrid', label: 'Hybrid' },
+];
+const ARROW = { positive: '↑', negative: '↓', neutral: '·' };
+
+const STATE = {
+  tickers: [], currentTicker: null, bundle: null,
+  selectedMoveIdx: null, selectedStrategy: 'hybrid',
+  enabledSources: new Set(ALL_IDS),
+  chunksAvailable: {}, attribution: null, strategies: {}, chunks: [],
+  fetchSeq: 0, activeTab: 'dimensions',
+  searchSelectedIdx: 0,
+  // —— upgrade pass ——
+  filters: { zMin: 0, confMin: 0, characters: new Set(['structural','transient','mixed','unclear']), directions: new Set(['up','down']) },
+  visibleMoveIdx: [],
+};
+const DIM_PERSISTENCE_SIGN = { demand: +1, pricing: +1, competitive: +1, management_credibility: +1, macro: -1 };
+function computeCoherence(attr) {
+  if (!attr || !attr.dimensions || attr.realized == null) return null;
+  const realSign = attr.realized >= 0 ? 1 : -1;
+  let aligned = 0, total = 0;
+  for (const [k, d] of Object.entries(attr.dimensions)) {
+    const w = d?.weight ?? 0;
+    if (!w) continue;
+    const dirSign = d.direction === 'positive' ? 1 : d.direction === 'negative' ? -1 : 0;
+    if (dirSign === 0) continue;
+    const persistSign = DIM_PERSISTENCE_SIGN[k] ?? 1;
+    const expectedReturnSign = dirSign * persistSign;
+    total += w;
+    if (expectedReturnSign === realSign) aligned += w;
+  }
+  return total > 0 ? aligned / total : null;
+}
+
+const pct = (x, d=2) => x == null ? '—' : `${x>=0?'+':''}${(x*100).toFixed(d)}%`;
+async function fetchJSON(p) { const r = await fetch(p); if (!r.ok) throw new Error(r.status); return r.json(); }
+function escapeHtml(s) { return String(s ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+function formatDate(iso) {
+  const [y, m, d] = iso.split('-').map(Number);
+  return new Date(y, m-1, d).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' });
+}
+
+document.getElementById('status-date').textContent = new Date().toISOString().slice(0, 10);
+
+const searchInput = document.getElementById('search-input');
+const searchResults = document.getElementById('search-results');
+function renderSearchResults(query) {
+  const q = (query || '').toLowerCase().trim();
+  const matches = q
+    ? STATE.tickers.filter(t => t.ticker.toLowerCase().includes(q) || t.name.toLowerCase().includes(q) || t.sector.toLowerCase().includes(q))
+    : STATE.tickers;
+  searchResults.innerHTML = '';
+  matches.forEach((t, i) => {
+    const row = document.createElement('div');
+    row.className = 'search-row' + (i === STATE.searchSelectedIdx ? ' selected' : '');
+    row.innerHTML =
+      `<span class="sym">${t.ticker}</span>` +
+      `<span class="name">${t.name}</span>` +
+      `<span class="meta">${t.moves} moves · ${t.sector}</span>`;
+    row.addEventListener('click', () => pickTicker(t.ticker));
+    searchResults.appendChild(row);
+  });
+  searchResults.classList.toggle('open', matches.length > 0);
+}
+searchInput.addEventListener('focus', () => { STATE.searchSelectedIdx = 0; renderSearchResults(searchInput.value); });
+searchInput.addEventListener('input', () => { STATE.searchSelectedIdx = 0; renderSearchResults(searchInput.value); });
+searchInput.addEventListener('keydown', e => {
+  const visible = searchResults.querySelectorAll('.search-row');
+  if (e.key === 'ArrowDown') { e.preventDefault(); STATE.searchSelectedIdx = Math.min(visible.length - 1, STATE.searchSelectedIdx + 1); renderSearchResults(searchInput.value); }
+  else if (e.key === 'ArrowUp') { e.preventDefault(); STATE.searchSelectedIdx = Math.max(0, STATE.searchSelectedIdx - 1); renderSearchResults(searchInput.value); }
+  else if (e.key === 'Enter') {
+    e.preventDefault();
+    const sel = visible[STATE.searchSelectedIdx];
+    if (sel) pickTicker(sel.querySelector('.sym').textContent);
+  } else if (e.key === 'Escape') {
+    searchInput.blur(); searchResults.classList.remove('open');
+  }
+});
+document.addEventListener('click', e => {
+  if (!e.target.closest('.search-bar')) searchResults.classList.remove('open');
+});
+document.addEventListener('keydown', e => {
+  if ((e.metaKey || e.ctrlKey) && e.key === 'k') { e.preventDefault(); searchInput.focus(); searchInput.select(); }
+});
+function pickTicker(sym) {
+  searchInput.value = '';
+  searchResults.classList.remove('open');
+  selectTicker(sym);
+}
+
+function renderTickerStrip() {
+  const strip = document.getElementById('ticker-strip');
+  strip.innerHTML = '';
+  for (const t of STATE.tickers) {
+    const chip = document.createElement('button');
+    chip.type = 'button';
+    chip.className = 'ticker-chip' + (t.ticker === STATE.currentTicker ? ' active' : '');
+    chip.textContent = t.ticker;
+    chip.addEventListener('click', () => selectTicker(t.ticker));
+    strip.appendChild(chip);
+  }
+}
+
+function renderOverview(bundle) {
+  document.getElementById('overview').hidden = false;
+  document.getElementById('overview-name').textContent = bundle.name;
+  document.getElementById('overview-sub').textContent =
+    `${bundle.ticker} · ${bundle.sector} · ${bundle.start_date} → ${bundle.end_date}`;
+  document.getElementById('stat-bars').textContent = bundle.prices.length.toLocaleString();
+  document.getElementById('stat-flagged').textContent = bundle.moves.length.toLocaleString();
+  const down = bundle.moves.filter(m => m.return_pct < 0).length;
+  document.getElementById('stat-split').textContent = `${bundle.moves.length - down} ↑ · ${down} ↓`;
+}
+
+function passesFilters(m) {
+  if (Math.abs(m.vol_zscore || 0) < STATE.filters.zMin) return false;
+  const conf = m.attribution?.confidence ?? 0;
+  if (conf < STATE.filters.confMin) return false;
+  const ch = m.attribution?.character || 'unclear';
+  if (!STATE.filters.characters.has(ch)) return false;
+  const dir = m.return_pct >= 0 ? 'up' : 'down';
+  if (!STATE.filters.directions.has(dir)) return false;
+  return true;
+}
+function renderChart(bundle) {
+  document.getElementById('chart-card').hidden = false;
+  const visible = bundle.moves.map((m, i) => ({ m, i })).filter(x => passesFilters(x.m));
+  STATE.visibleMoveIdx = visible.map(x => x.i);
+  document.getElementById('chart-meta').textContent =
+    `· ${visible.length} of ${bundle.moves.length} flagged · ${bundle.start_date.slice(0,4)}–${bundle.end_date.slice(0,4)}`;
+  const fr = document.getElementById('filt-result');
+  if (fr) fr.innerHTML = `Showing <b>${visible.length}</b> of ${bundle.moves.length} flagged events.`;
+  const priceByDate = new Map(bundle.prices.map(p => [p.date, p.close]));
+  const moveX = visible.map(x => x.m.move_date);
+  const moveY = visible.map(x => priceByDate.get(x.m.move_date) ?? null);
+  const moveColors = visible.map(x => x.m.return_pct < 0 ? '#8c2f2f' : '#0a1d36');
+
+  const traces = [
+    {
+      x: bundle.prices.map(p => p.date),
+      y: bundle.prices.map(p => p.close),
+      mode: 'lines',
+      line: { color: '#0a1d36', width: 1.4 },
+      name: 'Close',
+      hovertemplate: '%{x}<br>$%{y:.2f}<extra></extra>',
+    },
+    {
+      x: moveX, y: moveY,
+      customdata: visible.map(x => x.i),
+      mode: 'markers',
+      marker: { size: 7, color: moveColors, line: { color: '#fbf6e8', width: 1.4 } },
+      text: visible.map(x => `<b>${x.m.move_date}</b><br>${pct(x.m.return_pct)} · z ${x.m.vol_zscore.toFixed(1)}σ`),
+      hovertemplate: '%{text}<extra></extra>',
+      name: 'Flagged',
+    }
+  ];
+  const layout = {
+    paper_bgcolor: 'rgba(0,0,0,0)',
+    plot_bgcolor:  'rgba(0,0,0,0)',
+    margin: { l: 48, r: 12, t: 8, b: 28 },
+    font: { family: 'Inter, sans-serif', color: '#6a6e7c', size: 11 },
+    hoverlabel: { bgcolor: '#fbf6e8', bordercolor: '#cfc7b2', font: { color: '#0d1320', family: 'Source Serif 4, serif' } },
+    xaxis: { gridcolor: '#e3dcc8', linecolor: '#cfc7b2', tickcolor: '#cfc7b2', zeroline: false },
+    yaxis: { gridcolor: '#e3dcc8', linecolor: '#cfc7b2', tickcolor: '#cfc7b2', zeroline: false, tickprefix: '$' },
+    showlegend: false,
+  };
+  Plotly.react('chart', traces, layout, { displaylogo: false, responsive: true, modeBarButtonsToRemove: ['lasso2d','select2d'] });
+  const div = document.getElementById('chart');
+  if (!div._handlerAttached) {
+    div.on('plotly_click', ev => { const p = ev.points[0]; if (!p || p.curveNumber !== 1) return; selectMove(p.customdata); });
+    div._handlerAttached = true;
+  }
+}
+
+/* ── Forward-return verification ──
+ * For move_date M, find P0 = close on M, then PN = close on next-N-trading-days.
+ * Uses the prices array directly so no new endpoints, no Claude calls.
+ */
+function computeForwardReturns(bundle, moveDate) {
+  if (!bundle?.prices?.length) return { d1: null, d5: null, d20: null };
+  const idx = bundle.prices.findIndex(p => p.date === moveDate);
+  if (idx < 0) return { d1: null, d5: null, d20: null };
+  const p0 = bundle.prices[idx]?.close;
+  const pickAt = (n) => {
+    const i = idx + n;
+    return i < bundle.prices.length ? bundle.prices[i]?.close : null;
+  };
+  const ret = (pn) => (pn != null && p0 != null && p0 > 0) ? (pn / p0 - 1) : null;
+  return { d1: ret(pickAt(1)), d5: ret(pickAt(5)), d20: ret(pickAt(20)) };
+}
+
+/* Did the verdict pan out at horizon N?
+ *   lean → expect price to continue in the move's direction
+ *   fade → expect price to revert against the move's direction
+ *   skip / neutral → no opinion → 'na'
+ * Threshold: |fwd return| ≥ 0.5% to count as a real outcome (otherwise 'flat').
+ */
+function judgeVerdict(verdict, moveSign, fwdReturn) {
+  if (verdict == null || verdict === 'neutral') return 'na';
+  if (fwdReturn == null) return 'na';
+  if (Math.abs(fwdReturn) < 0.005) return 'na';
+  const fwdSign = fwdReturn >= 0 ? 1 : -1;
+  if (verdict === 'lean')  return fwdSign === moveSign ? 'correct' : 'wrong';
+  if (verdict === 'fade')  return fwdSign !== moveSign ? 'correct' : 'wrong';
+  return 'na';
+}
+
+/* ── Disagreement counter ── */
+function countDisagreement(strategies) {
+  const out = { lean: 0, fade: 0, skip: 0 };
+  for (const s of STRATEGIES) {
+    const v = strategies[s.id];
+    if (v === 'lean') out.lean++;
+    else if (v === 'fade') out.fade++;
+    else if (v === 'neutral') out.skip++;
+  }
+  return out;
+}
+
+function renderEventCard() {
+  const card = document.getElementById('event-card');
+  card.classList.remove('empty');
+  if (STATE.selectedMoveIdx == null || !STATE.bundle) {
+    card.classList.add('empty');
+    card.innerHTML =
+      `<div class="label">No event selected</div>` +
+      `<div class="body">Pick a ticker above, then click any annotated dot in the chart.</div>`;
+    return;
+  }
+  const move = STATE.bundle.moves[STATE.selectedMoveIdx];
+  const a = STATE.attribution;
+  const verdict = STATE.strategies[STATE.selectedStrategy];
+  const verdictWord = verdict ? (verdict === 'neutral' ? 'Skip' : verdict.charAt(0).toUpperCase() + verdict.slice(1)) : '—';
+  const verdictState = verdict ? (verdict === 'neutral' ? 'skip' : verdict) : 'idle';
+  const stratLabel = (STRATEGIES.find(s => s.id === STATE.selectedStrategy) || {}).label || '';
+
+  const hasAttr = !!a;
+  const r = hasAttr ? a.realized : null;
+  const p = hasAttr ? a.predicted : null;
+  const hasPred = p != null;
+  const delta = hasPred ? r - p : null;
+  const dCls = delta != null && delta >= 0 ? 'delta-up' : 'delta-down';
+  const dSym = delta != null && delta >= 0 ? '+' : '';
+
+  const dateStr = formatDate(move.move_date);
+  const retCls = move.return_pct >= 0 ? 'up' : 'down';
+  const caseNo = `Case ${String((STATE.selectedMoveIdx ?? 0) + 1).padStart(2, '0')}`;
+
+  let bylineText = 'Pick a strategy above to see the verdict.';
+  if (hasAttr) {
+    const character = a.character || 'unclear';
+    bylineText = `The framework reads this move as <strong>${character}</strong>. Realized return of <span class="num">${pct(r)}</span>` +
+      (hasPred ? ` against a predicted <span class="num">${pct(p)}</span>, a gap of <span class="${dCls}">${dSym}${(delta*100).toFixed(2)}pp</span>.` : '.');
+  }
+
+  // —— Reckoning Strip math ——
+  const conf = a?.confidence;
+  const coh = computeCoherence(a);
+  const ARC_LEN = 175.93;  // path length of the gauge arc (radius 56, π × r ≈ 175.93)
+  const confOff = conf != null ? ARC_LEN * (1 - conf) : ARC_LEN;
+  const cohOff  = coh  != null ? ARC_LEN * (1 - coh)  : ARC_LEN;
+
+  // Realized/Predicted bars: bidirectional from a 0% center axis. Cap at ±30% for display.
+  const CAP = 0.30;
+  const rPct = r != null ? Math.max(-CAP, Math.min(CAP, r)) : 0;
+  const pPct = p != null ? Math.max(-CAP, Math.min(CAP, p)) : 0;
+  const barFor = (v, extra = '') => {
+    const w = Math.abs(v) / CAP * 50; // half the track
+    const left = v >= 0 ? 50 : 50 - w;
+    const dir = v >= 0 ? 'up' : 'dn';
+    return `class="fill ${dir} ${extra}" style="left:${left}%; width:${w}%"`;
+  };
+  const rCls = r != null && r >= 0 ? 'up' : 'dn';
+  const pCls = p != null && p >= 0 ? 'up' : 'dn';
+
+  // Punchier byline: lead with what dominates.
+  let punch = bylineText;
+  if (hasAttr && a.dimensions) {
+    const dom = Object.entries(a.dimensions)
+      .map(([k, v]) => ({ k, w: v?.weight ?? 0, dir: v?.direction || 'neutral' }))
+      .sort((x, y) => y.w - x.w)[0];
+    if (dom && dom.w > 0) {
+      const domName = (DIM_FIELDS.find(d => d.id === dom.k) || { label: dom.k }).label;
+      const gapStr = hasPred ? ` · gap <b>${dSym}${(delta*100).toFixed(2)}pp</b>` : '';
+      punch = `Dominant dimension: <b>${domName}</b> (${dom.dir}, w ${dom.w.toFixed(2)}). Realized <b>${pct(r,1)}</b>${hasPred ? ` vs predicted <b>${pct(p,1)}</b>${gapStr}` : ''}.`;
+    }
+  }
+
+  // Disagreement counts across the four frameworks
+  const dis = countDisagreement(STATE.strategies);
+  const totalDis = dis.lean + dis.fade + dis.skip;
+  const disHtml = totalDis > 0
+    ? `<p class="disagree">
+         <span class="seg lean"><b>${dis.lean}</b> lean</span>
+         <span class="seg fade"><b>${dis.fade}</b> fade</span>
+         <span class="seg skip"><b>${dis.skip}</b> skip</span>
+         <span class="of">of ${totalDis}</span>
+       </p>` : '';
+
+  // Forward-return verification
+  const fwd = computeForwardReturns(STATE.bundle, move.move_date);
+  const moveSign = move.return_pct >= 0 ? 1 : -1;
+  const fwdCol = (label, fwdRet) => {
+    if (fwdRet == null) {
+      return `<div class="col">
+        <span class="h">${label}</span>
+        <span class="v flat">—</span>
+        <span class="judge na">no data</span>
+      </div>`;
+    }
+    const cls = Math.abs(fwdRet) < 0.005 ? 'flat' : (fwdRet >= 0 ? 'up' : 'dn');
+    const judgement = judgeVerdict(verdict, moveSign, fwdRet);
+    const judgeHtml = judgement === 'correct' ? '<span class="judge correct">verdict held</span>'
+                    : judgement === 'wrong'   ? '<span class="judge wrong">verdict missed</span>'
+                    : '<span class="judge na">no opinion</span>';
+    return `<div class="col">
+      <span class="h">${label}</span>
+      <span class="v ${cls}">${pct(fwdRet, 2)}</span>
+      ${judgeHtml}
+    </div>`;
+  };
+  const fwdAny = fwd.d1 != null || fwd.d5 != null || fwd.d20 != null;
+  const fwdStripHtml = fwdAny ? `
+    <div class="fwd-strip">
+      <div class="head">
+        <span class="lbl">Forward grade</span>
+        <span class="pitch">What actually happened next, vs. <b>${verdictWord}</b>.</span>
+      </div>
+      ${fwdCol('Next 1 day', fwd.d1)}
+      ${fwdCol('Next 5 days', fwd.d5)}
+      ${fwdCol('Next 20 days', fwd.d20)}
+    </div>
+  ` : '';
+
+  card.innerHTML = `
+    <div class="event-h">
+      <span class="case-no">${caseNo}</span>
+      <span class="return-pill ${retCls}">${pct(move.return_pct)}</span>
+      <div class="meta">
+        <span>z <span class="num">${move.vol_zscore.toFixed(2)}</span>σ</span>
+        ${move.magnitude_rank != null ? `<span>rank <span class="num">${(move.magnitude_rank*100).toFixed(0)}%</span></span>` : ''}
+        <span>chunks <span class="num">${a?.chunks_considered ?? 0}</span></span>
+      </div>
+      <div class="date">${dateStr}</div>
+    </div>
+
+    <div class="reck" id="reck">
+      <div class="cell">
+        <p class="lbl">${stratLabel} · The Finding</p>
+        ${disHtml}
+        <p class="word" data-state="${verdictState}">${verdictWord}.<small class="character">${a?.character || '—'}</small></p>
+        <p class="byline">${punch}</p>
+      </div>
+      <div class="cell">
+        <p class="lbl">Realized vs. Predicted</p>
+        <div class="delta-rows">
+          <div class="row">
+            <span class="k">Realized</span>
+            <span class="track"><span class="axis"></span><span ${barFor(rPct)}></span></span>
+            <span class="v ${rCls}">${pct(r, 1)}</span>
+          </div>
+          <div class="row">
+            <span class="k">Predicted</span>
+            <span class="track"><span class="axis"></span><span ${barFor(pPct, 'predicted')}></span></span>
+            <span class="v ${pCls}">${hasPred ? pct(p, 1) : '—'}</span>
+          </div>
+          <p class="gap-note">${
+            hasPred
+              ? (Math.abs(delta) < 0.005
+                  ? 'Model and market agreed within 50bp.'
+                  : (delta * (r ?? 0) > 0
+                      ? `Model under-shot the move by <b style="color:var(--oxblood);font-style:normal;font-family:var(--mono);font-size:11px;">${(Math.abs(delta)*100).toFixed(2)}pp</b>.`
+                      : `Model over-shot the move by <b style="color:var(--oxblood);font-style:normal;font-family:var(--mono);font-size:11px;">${(Math.abs(delta)*100).toFixed(2)}pp</b>.`))
+              : 'No predicted return on file.'
+          }</p>
+        </div>
+      </div>
+      <div class="cell gauge-cell">
+        <p class="lbl">Confidence</p>
+        <svg class="gauge" viewBox="0 0 140 90">
+          <path class="bg" d="M 14 80 A 56 56 0 0 1 126 80"/>
+          <path class="fg conf" d="M 14 80 A 56 56 0 0 1 126 80"
+                stroke-dasharray="${ARC_LEN}" stroke-dashoffset="${confOff}"/>
+          <text x="70" y="62" text-anchor="middle">${conf != null ? conf.toFixed(2) : '—'}</text>
+        </svg>
+        <p class="gauge-sub">${a?.chunks_considered ?? 0} chunks considered</p>
+      </div>
+      <div class="cell gauge-cell">
+        <p class="lbl">Coherence</p>
+        <svg class="gauge coh-svg" viewBox="0 0 140 90">
+          <path class="bg" d="M 14 80 A 56 56 0 0 1 126 80"/>
+          <path class="fg coh" d="M 14 80 A 56 56 0 0 1 126 80"
+                stroke-dasharray="${ARC_LEN}" stroke-dashoffset="${cohOff}"/>
+          <text x="70" y="62" text-anchor="middle">${coh != null ? coh.toFixed(2) : '—'}</text>
+        </svg>
+        <p class="gauge-sub">Dimensions vs. realized sign</p>
+      </div>
+    </div>
+
+    ${fwdStripHtml}
+
+    <div class="strat-row" id="strat-row"></div>
+
+    <div class="tabs" id="tabs"></div>
+    <div class="tab-panels">
+      <div class="tab-panel" id="tab-dimensions"></div>
+      <div class="tab-panel" id="tab-evidence"></div>
+      <div class="tab-panel" id="tab-sources"></div>
+    </div>
+  `;
+  renderStrategyRow();
+  renderTabs();
+  renderActiveTab();
+}
+
+function renderStrategyRow() {
+  const row = document.getElementById('strat-row');
+  row.innerHTML = '';
+  for (const s of STRATEGIES) {
+    const v = STATE.strategies[s.id];
+    const cls = v || 'pending';
+    const text = v ? (v === 'neutral' ? 'Skip' : v.charAt(0).toUpperCase() + v.slice(1)) : '—';
+    const btn = document.createElement('button');
+    btn.type = 'button';
+    btn.className = 'strat-pill' + (s.id === STATE.selectedStrategy ? ' active' : '');
+    btn.innerHTML = `<div class="name">${s.label}</div><div class="verdict ${cls}">${text}</div>`;
+    btn.addEventListener('click', () => { STATE.selectedStrategy = s.id; renderEventCard(); });
+    row.appendChild(btn);
+  }
+}
+
+function renderTabs() {
+  const tabs = document.getElementById('tabs');
+  tabs.innerHTML = '';
+  const counts = {
+    dimensions: 5,
+    evidence: STATE.chunks.length,
+    sources: ALL_IDS.filter(id => (STATE.chunksAvailable[id] || 0) > 0).length,
+  };
+  const order = [
+    { id: 'dimensions', label: 'Dimensions' },
+    { id: 'evidence', label: 'Evidence' },
+    { id: 'sources', label: 'Sources' },
+  ];
+  for (const t of order) {
+    const btn = document.createElement('button');
+    btn.type = 'button';
+    btn.className = 'tab' + (t.id === STATE.activeTab ? ' active' : '');
+    btn.innerHTML = `${t.label}<span class="count">${counts[t.id]}</span>`;
+    btn.addEventListener('click', () => { STATE.activeTab = t.id; renderTabs(); renderActiveTab(); });
+    tabs.appendChild(btn);
+  }
+}
+
+function renderActiveTab() {
+  document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
+  const panel = document.getElementById(`tab-${STATE.activeTab}`);
+  panel.classList.add('active');
+  if (STATE.activeTab === 'dimensions') renderDimensions(panel);
+  else if (STATE.activeTab === 'evidence') renderEvidence(panel);
+  else if (STATE.activeTab === 'sources') renderSources(panel);
+}
+
+function renderDimensions(panel) {
+  panel.innerHTML = '';
+  const a = STATE.attribution;
+  if (!a) {
+    panel.innerHTML = '<div style="color:var(--ink-quiet);padding:20px 0;text-align:center;font:italic 500 1rem var(--serif);">No attribution loaded.</div>';
+    return;
+  }
+  const dims = a.dimensions || {};
+  const sorted = DIM_FIELDS
+    .map(d => ({ ...d, ...(dims[d.id] || {}) }))
+    .sort((a, b) => (b.weight || 0) - (a.weight || 0));
+  for (const d of sorted) {
+    const dir = d.direction || 'neutral';
+    const w = d.weight || 0;
+    const sym = dir === 'positive' ? '+' : dir === 'negative' ? '−' : '·';
+    const cites = d.evidence_chunk_ids || [];
+    const row = document.createElement('div');
+    row.className = 'dim-row';
+    row.dataset.dim = d.id;
+    row.dataset.cites = cites.join('|');
+    const citeBadges = cites.length
+      ? ' ' + cites.slice(0, 3).map(c => `<code data-chunk-id="${escapeHtml(c)}">${escapeHtml(c)}</code>`).join(' ')
+      : '';
+    row.innerHTML =
+      `<div class="name"><span class="arrow ${dir}">${ARROW[dir] || '·'}</span> ${d.label}</div>` +
+      `<div class="bar"><div class="fill ${dir}" style="width:${Math.max(2, w*100)}%"></div></div>` +
+      `<div class="num ${dir}">${sym}${w.toFixed(2)}</div>` +
+      `<div class="dim-rationale">${escapeHtml(d.rationale || 'no rationale')}${citeBadges}</div>`;
+    row.addEventListener('mouseenter', () => bindHighlight(cites, true));
+    row.addEventListener('mouseleave', () => bindHighlight(cites, false));
+
+    // Click on a chunk_id chip → toggle inline preview (don't bubble to row).
+    row.querySelectorAll('code[data-chunk-id]').forEach(chip => {
+      chip.addEventListener('click', (e) => {
+        e.stopPropagation();
+        toggleChunkPreview(row, chip);
+      });
+    });
+
+    // Click anywhere else on the row → jump to evidence tab and highlight.
+    row.addEventListener('click', (e) => {
+      if (e.target.closest('code[data-chunk-id]')) return;
+      if (e.target.closest('.chunk-preview')) return;
+      if (!cites.length) return;
+      STATE.activeTab = 'evidence';
+      renderTabs(); renderActiveTab();
+      requestAnimationFrame(() => {
+        const ev = document.querySelector(`.ev-row[data-chunk-id="${cites[0]}"]`);
+        if (ev) {
+          ev.scrollIntoView({ behavior: 'smooth', block: 'center' });
+          bindHighlight(cites, true);
+          setTimeout(() => bindHighlight(cites, false), 1800);
+        }
+      });
+    });
+    panel.appendChild(row);
+  }
+}
+
+/* Toggle an inline chunk preview under the given dim-row. Click again to close. */
+function toggleChunkPreview(row, chip) {
+  const chunkId = chip.dataset.chunkId;
+  const existing = row.querySelector(`.chunk-preview[data-chunk-id="${chunkId}"]`);
+  if (existing) {
+    existing.remove();
+    chip.classList.remove('open');
+    return;
+  }
+  // Close any other open preview in this row first (one open at a time).
+  row.querySelectorAll('.chunk-preview').forEach(n => n.remove());
+  row.querySelectorAll('code[data-chunk-id].open').forEach(c => c.classList.remove('open'));
+  chip.classList.add('open');
+
+  const dimId = row.dataset.dim;
+  const dim = STATE.attribution?.dimensions?.[dimId] || {};
+  const cited = (dim.cited_evidence || []).find(ce => ce.chunk_id === chunkId);
+
+  const chunk = (STATE.chunks || []).find(c => c.chunk_id === chunkId);
+  const node = document.createElement('div');
+  node.className = 'chunk-preview';
+  node.dataset.chunkId = chunkId;
+  if (!chunk && !cited) {
+    node.innerHTML = `<div class="miss">Chunk <code>${escapeHtml(chunkId)}</code> not in the bundle (model cited an out-of-window chunk).</div>`;
+  } else {
+    const metaBits = [];
+    if (chunk?.source_type) {
+      metaBits.push(`<span class="badge ${chunk.source_type}">${chunk.source_type.replace('_', ' ')}</span>`);
+    }
+    metaBits.push(`<code>${escapeHtml(chunkId)}</code>`);
+    if (chunk?.publication_date) metaBits.push(`<span>${chunk.publication_date}</span>`);
+    if (chunk?.section_name) metaBits.push(`<span style="font-style:italic">${escapeHtml(chunk.section_name)}</span>`);
+    const link = chunk?.source_url
+      ? `<a class="src-link" href="${chunk.source_url}" target="_blank" rel="noopener">source ↗</a>`
+      : '';
+
+    let bodyHtml = `<div class="meta">${metaBits.join(' · ')}</div>`;
+    if (cited?.quote) {
+      // Rich shape: lead with the verbatim quote, then the model's reasoning.
+      // Drop the full chunk text — the quote is the part the model leaned on.
+      bodyHtml += `<blockquote class="quote">${escapeHtml(cited.quote)}</blockquote>`;
+      if (cited.reasoning) {
+        bodyHtml += `<div class="reasoning">${escapeHtml(cited.reasoning)}</div>`;
+      }
+    } else if (chunk?.text) {
+      bodyHtml += `<div class="text">${escapeHtml(chunk.text)}</div>`;
+    }
+    bodyHtml += link;
+    node.innerHTML = bodyHtml;
+  }
+  row.appendChild(node);
+}
+function bindHighlight(chunkIds, on) {
+  const set = new Set(chunkIds || []);
+  document.querySelectorAll('.ev-row').forEach(r => {
+    r.classList.toggle('is-bound', on && set.has(r.dataset.chunkId));
+  });
+  document.querySelectorAll('.dim-row').forEach(r => {
+    const cs = (r.dataset.cites || '').split('|').filter(Boolean);
+    r.classList.toggle('is-bound', on && cs.some(c => set.has(c)));
+  });
+}
+
+function renderEvidence(panel) {
+  panel.innerHTML = '';
+  if (!STATE.chunks || STATE.chunks.length === 0) {
+    panel.innerHTML = '<div style="color:var(--ink-quiet);padding:20px 0;text-align:center;font:italic 500 1rem var(--serif);">No chunks loaded.</div>';
+    return;
+  }
+  for (const c of STATE.chunks) {
+    const row = document.createElement('div');
+    row.className = 'ev-row';
+    row.dataset.chunkId = c.chunk_id;
+    const badge = `<span class="badge ${c.source_type}">${c.source_type.replace('_',' ')}</span>`;
+    const meta = [
+      badge,
+      `<code>${escapeHtml(c.chunk_id)}</code>`,
+      `<span>${c.publication_date}</span>`,
+      c.section_name ? `<span style="font-style:italic">${escapeHtml(c.section_name)}</span>` : '',
+    ].filter(Boolean).join(' · ');
+    row.innerHTML = `<div class="ev-meta">${meta}</div><div class="ev-text">${escapeHtml(c.text || '')}</div>`;
+    row.addEventListener('mouseenter', () => bindHighlight([c.chunk_id], true));
+    row.addEventListener('mouseleave', () => bindHighlight([c.chunk_id], false));
+    panel.appendChild(row);
+  }
+}
+
+function renderSources(panel) {
+  panel.innerHTML = '';
+  const grid = document.createElement('div');
+  grid.className = 'src-grid';
+  for (const s of SOURCE_TYPES) {
+    const count = STATE.chunksAvailable[s.id] ?? 0;
+    const checked = STATE.enabledSources.has(s.id) && count > 0;
+    const disabled = count === 0;
+    const node = document.createElement('label');
+    node.className = 'src-toggle' + (checked ? ' checked' : '') + (disabled ? ' disabled' : '');
+    node.innerHTML =
+      `<input type="checkbox" ${checked?'checked':''} ${disabled?'disabled':''}>` +
+      `<div class="name">${s.label}</div>` +
+      `<div class="count">${count} ${count===1?'chunk':'chunks'}</div>`;
+    const input = node.querySelector('input');
+    input.addEventListener('change', e => {
+      if (e.target.checked) STATE.enabledSources.add(s.id);
+      else STATE.enabledSources.delete(s.id);
+      recomputeAttribution();
+    });
+    grid.appendChild(node);
+  }
+  panel.appendChild(grid);
+
+  const cap = document.createElement('div');
+  cap.className = 'toggle-caption';
+  const enabled = ALL_IDS.filter(id => STATE.enabledSources.has(id) && (STATE.chunksAvailable[id] || 0) > 0).length;
+  const total = ALL_IDS.filter(id => (STATE.chunksAvailable[id] || 0) > 0).length;
+  cap.innerHTML = `<span class="num">${enabled}</span> of ${total} sources active · ${STATE.chunks.length} chunks feeding model`;
+  panel.appendChild(cap);
+}
+
+async function selectTicker(t) {
+  STATE.currentTicker = t;
+  STATE.selectedMoveIdx = null;
+  STATE.attribution = null; STATE.strategies = {}; STATE.chunks = [];
+  STATE.activeTab = 'dimensions';
+  renderTickerStrip();
+  const bundle = await fetchJSON(`data/${t}.json`);
+  STATE.bundle = bundle;
+  renderOverview(bundle);
+  document.getElementById('filter-bar').hidden = false;
+  renderChart(bundle);
+  if (bundle.moves.length > 0) {
+    let mx = 0, mxAbs = 0;
+    bundle.moves.forEach((m, i) => {
+      if (Math.abs(m.return_pct) > mxAbs) { mxAbs = Math.abs(m.return_pct); mx = i; }
+    });
+    selectMove(mx);
+  } else { renderEventCard(); }
+}
+function selectMove(idx) {
+  STATE.selectedMoveIdx = idx;
+  const m = STATE.bundle.moves[idx];
+  STATE.chunksAvailable = m.chunks_available || {};
+  STATE.enabledSources = new Set(ALL_IDS.filter(id => (STATE.chunksAvailable[id] || 0) > 0));
+  STATE.attribution = m.attribution || null;
+  STATE.strategies = m.strategies || (STATE.attribution ? deriveStrategies(STATE.attribution) : {});
+  STATE.chunks = m.chunks || [];
+  renderEventCard();
+  // Fast first paint from the static bundle, then fire the live /api/attribute
+  // call so the per-citation quote + reasoning shape arrives. The live result
+  // replaces the placeholder when it lands.
+  if (STATE.enabledSources.size > 0) {
+    recomputeAttribution();
+  }
+}
+async function recomputeAttribution() {
+  if (STATE.selectedMoveIdx == null) return;
+  const move = STATE.bundle.moves[STATE.selectedMoveIdx];
+  const enabled = Array.from(STATE.enabledSources);
+  if (enabled.length === 0) {
+    STATE.fetchSeq++;
+    STATE.attribution = null; STATE.strategies = {}; STATE.chunks = [];
+    renderEventCard(); return;
+  }
+  const seq = ++STATE.fetchSeq;
+  document.getElementById('event-card').classList.add('loading');
+  try {
+    const res = await fetch('/api/attribute', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        ticker: STATE.bundle.ticker,
+        move_date: move.move_date,
+        return_pct: move.return_pct,
+        vol_zscore: move.vol_zscore ?? 0,
+        enabled_sources: enabled,
+      }),
+    });
+    if (!res.ok) throw new Error('api ' + res.status);
+    const data = await res.json();
+    if (seq !== STATE.fetchSeq) return;
+    const a = data.attribution;
+    if (!a || Object.keys(a).length === 0) {
+      STATE.attribution = null; STATE.strategies = {}; STATE.chunks = [];
+    } else {
+      STATE.attribution = {
+        realized: a.return_pct, predicted: a.predicted_return_pct,
+        character: a.move_character, confidence: a.confidence,
+        chunks_considered: a.chunks_considered,
+        dimensions: { demand: a.demand, pricing: a.pricing, competitive: a.competitive,
+          management_credibility: a.management_credibility, macro: a.macro },
+      };
+      STATE.strategies = (data.strategies && Object.keys(data.strategies).length > 0)
+        ? data.strategies : deriveStrategies(STATE.attribution);
+      STATE.chunks = data.chunks || [];
+    }
+    renderEventCard();
+  } catch (err) { console.error('recompute', err); }
+  finally { document.getElementById('event-card').classList.remove('loading'); }
+}
+
+const DIM_PERSISTENCE = { demand: +0.80, pricing: +0.60, competitive: +0.40, management_credibility: 0.0, macro: -0.70 };
+function deriveStrategies(attr) {
+  if (!attr) return {};
+  const r = attr.realized, p = attr.predicted, c = attr.character, dims = attr.dimensions || {};
+  const fund = c === 'structural' ? 'lean' : c === 'transient' ? 'fade' : 'neutral';
+  let exp = 'neutral';
+  if (p != null && p !== 0 && p * r >= 0) {
+    const ratio = Math.abs(r) / Math.abs(p);
+    if (ratio >= 1.5) exp = 'fade'; else if (ratio <= 0.5) exp = 'lean';
+  }
+  let score = 0;
+  for (const [k, coeff] of Object.entries(DIM_PERSISTENCE)) score += ((dims[k] || {}).weight ?? 0) * coeff;
+  const dimW = score >= 0.20 ? 'lean' : score <= -0.20 ? 'fade' : 'neutral';
+  let hybrid;
+  if (c === 'transient') hybrid = 'fade';
+  else if (c === 'mixed' || c === 'unclear') hybrid = 'neutral';
+  else if (p != null && p !== 0 && p * r > 0 && Math.abs(r) >= 1.5 * Math.abs(p)) hybrid = 'fade';
+  else {
+    let domName = null, domW = -1;
+    for (const k of Object.keys(DIM_PERSISTENCE)) {
+      const w = (dims[k] || {}).weight ?? 0;
+      if (w > domW) { domW = w; domName = k; }
+    }
+    hybrid = domName && (DIM_PERSISTENCE[domName] ?? 0) < 0 ? 'neutral' : 'lean';
+  }
+  return { fundamental_vs_nonfundamental: fund, expected_vs_realized: exp, dimension_weighted: dimW, hybrid };
+}
+
+/* ════════════════════════════════════════════════════════════════
+   07 · Filter bar wiring
+   ══════════════════════════════════════════════════════════════ */
+function rerenderForFilters() {
+  if (!STATE.bundle) return;
+  renderChart(STATE.bundle);
+  // If currently selected move is filtered out, pick the largest visible.
+  if (STATE.selectedMoveIdx != null && !STATE.visibleMoveIdx.includes(STATE.selectedMoveIdx)) {
+    if (STATE.visibleMoveIdx.length > 0) {
+      let bestI = STATE.visibleMoveIdx[0], bestAbs = 0;
+      for (const i of STATE.visibleMoveIdx) {
+        const a = Math.abs(STATE.bundle.moves[i].return_pct || 0);
+        if (a > bestAbs) { bestAbs = a; bestI = i; }
+      }
+      selectMove(bestI);
+    } else {
+      STATE.selectedMoveIdx = null;
+      STATE.attribution = null; STATE.strategies = {}; STATE.chunks = [];
+      renderEventCard();
+    }
+  }
+}
+(function wireFilters() {
+  const z = document.getElementById('filt-z');
+  const zVal = document.getElementById('filt-z-val');
+  z.addEventListener('input', () => {
+    STATE.filters.zMin = +z.value;
+    zVal.textContent = (+z.value).toFixed(1);
+    rerenderForFilters();
+  });
+  const c = document.getElementById('filt-conf');
+  const cVal = document.getElementById('filt-conf-val');
+  c.addEventListener('input', () => {
+    STATE.filters.confMin = (+c.value) / 100;
+    cVal.textContent = (+c.value) + '%';
+    rerenderForFilters();
+  });
+  document.querySelectorAll('#filt-character .chip').forEach(chip => {
+    chip.addEventListener('click', () => {
+      const c = chip.dataset.c;
+      if (STATE.filters.characters.has(c)) STATE.filters.characters.delete(c);
+      else STATE.filters.characters.add(c);
+      chip.classList.toggle('on');
+      rerenderForFilters();
+    });
+  });
+  document.querySelectorAll('#filt-direction .chip').forEach(chip => {
+    chip.addEventListener('click', () => {
+      const d = chip.dataset.d;
+      if (STATE.filters.directions.has(d)) STATE.filters.directions.delete(d);
+      else STATE.filters.directions.add(d);
+      chip.classList.toggle('on');
+      rerenderForFilters();
+    });
+  });
+  document.getElementById('filt-reset').addEventListener('click', resetFilters);
+})();
+function resetFilters() {
+  STATE.filters = { zMin: 0, confMin: 0, characters: new Set(['structural','transient','mixed','unclear']), directions: new Set(['up','down']) };
+  document.getElementById('filt-z').value = 0;
+  document.getElementById('filt-z-val').textContent = '0.0';
+  document.getElementById('filt-conf').value = 0;
+  document.getElementById('filt-conf-val').textContent = '0%';
+  document.querySelectorAll('#filt-character .chip').forEach(c => c.classList.add('on'));
+  document.querySelectorAll('#filt-direction .chip').forEach(c => c.classList.add('on'));
+  rerenderForFilters();
+}
+
+/* ════════════════════════════════════════════════════════════════
+   06 · Keyboard navigation + ? overlay
+   ══════════════════════════════════════════════════════════════ */
+const TABS_ORDER = ['dimensions', 'evidence', 'sources'];
+function jumpMove(delta) {
+  if (!STATE.bundle) return;
+  const vis = STATE.visibleMoveIdx;
+  if (!vis.length) return;
+  const cur = STATE.selectedMoveIdx;
+  let pos = vis.indexOf(cur);
+  if (pos === -1) pos = 0;
+  else pos = Math.max(0, Math.min(vis.length - 1, pos + delta));
+  selectMove(vis[pos]);
+}
+function cycleTab(delta = 1) {
+  const i = TABS_ORDER.indexOf(STATE.activeTab);
+  STATE.activeTab = TABS_ORDER[(i + delta + TABS_ORDER.length) % TABS_ORDER.length];
+  renderTabs(); renderActiveTab();
+}
+function setOnlyCharacter(c) {
+  STATE.filters.characters = new Set([c]);
+  document.querySelectorAll('#filt-character .chip').forEach(chip => chip.classList.toggle('on', chip.dataset.c === c));
+  rerenderForFilters();
+}
+const kbdOverlay = document.getElementById('kbd-overlay');
+function openKbd() { kbdOverlay.classList.add('open'); }
+function closeKbd() { kbdOverlay.classList.remove('open'); }
+kbdOverlay.addEventListener('click', e => { if (e.target === kbdOverlay) closeKbd(); });
+document.getElementById('kbd-hint-pill').addEventListener('click', openKbd);
+
+document.addEventListener('keydown', (e) => {
+  // Don't intercept while typing in any input/textarea.
+  const t = e.target;
+  const typing = t && (t.tagName === 'INPUT' || t.tagName === 'TEXTAREA' || t.isContentEditable);
+  if (e.key === 'Escape') {
+    if (kbdOverlay.classList.contains('open')) { closeKbd(); return; }
+  }
+  if (typing) return;
+  if (e.metaKey || e.ctrlKey || e.altKey) return;
+
+  if (e.key === '/') {
+    e.preventDefault();
+    document.getElementById('search-input').focus();
+    document.getElementById('search-input').select();
+  } else if (e.key === '?') {
+    e.preventDefault();
+    openKbd();
+  } else if (e.key === 'j') {
+    e.preventDefault(); jumpMove(+1);
+  } else if (e.key === 'k') {
+    e.preventDefault(); jumpMove(-1);
+  } else if (e.key === 't') {
+    e.preventDefault(); cycleTab(+1);
+  } else if (e.key === 'f') {
+    e.preventDefault(); setOnlyCharacter('transient');
+  } else if (e.key === 'l') {
+    e.preventDefault(); setOnlyCharacter('structural');
+  } else if (e.key === 'a') {
+    e.preventDefault(); resetFilters();
+  }
+});
+
+(async function init() {
+  try {
+    const idx = await fetchJSON('data/index.json');
+    STATE.tickers = idx.tickers;
+    renderTickerStrip();
+    const initial = idx.tickers.find(t => t.ticker === 'AMD')?.ticker || idx.tickers[0]?.ticker;
+    if (initial) await selectTicker(initial);
+    // TEMP screenshot: select case 14 + inject mock cited_evidence so we can see rich render.
+    if (STATE.bundle?.moves?.length > 13) {
+      const m = STATE.bundle.moves[13];
+      // Disable auto-fire of /api/attribute (server is pre-merge so it'd wipe our mocks).
+      m.chunks_available = {};
+      selectMove(13);
+      // Inject mock cited_evidence into the live STATE.attribution after select runs.
+      if (STATE.attribution?.dimensions) {
+        for (const dimName of Object.keys(STATE.attribution.dimensions)) {
+          const dim = STATE.attribution.dimensions[dimName];
+          if (dim.evidence_chunk_ids?.length) {
+            dim.cited_evidence = dim.evidence_chunk_ids.map((cid) => ({
+              chunk_id: cid,
+              quote: "Total revenue grew 36% YoY driven by Data Center segment, with Instinct MI300X demand exceeding production capacity through year-end.",
+              reasoning: "Direct evidence of structural demand: Data Center growth is sustained capex, not a one-quarter reversal.",
+            }));
+          }
+        }
+      }
+      // Auto-open the Demand row's first chip so screenshots show the rich render.
+      setTimeout(() => {
+        const demandRow = document.querySelector('.dim-row[data-dim="demand"]');
+        if (demandRow) {
+          const firstChip = demandRow.querySelector('code[data-chunk-id]');
+          if (firstChip) firstChip.click();
+        }
+      }, 200);
+    }
+  } catch (err) { console.error(err); }
+})();
+</script>
+
+</body>
+</html>
