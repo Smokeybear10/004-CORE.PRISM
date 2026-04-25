@@ -504,3 +504,103 @@ def test_live_path_no_notes_when_nothing_dropped(monkeypatch):
 
     attr = model.attribute(_move(), chunks_in, _config())
     assert "hallucinated" not in (attr.model_notes or "")
+
+
+# ---------- Per-citation reasoning (cited_evidence) ----------
+
+
+def _attr_with_cited(citations: dict[str, list[dict]]):
+    """Hand-build an Attribution where each dim cites richly via cited_evidence."""
+    from schema import CitedEvidence
+    move = _move()
+    def _dim(entries):
+        return DimensionScore(
+            weight=0.2, direction="negative",
+            rationale="stub",
+            evidence_chunk_ids=[e["chunk_id"] for e in entries],
+            cited_evidence=[CitedEvidence(**e) for e in entries],
+        )
+    return Attribution(
+        ticker=move.ticker,
+        move_date=move.move_date,
+        return_pct=move.return_pct,
+        predicted_return_pct=move.return_pct,
+        demand=_dim(citations.get("demand", [])),
+        pricing=_dim(citations.get("pricing", [])),
+        competitive=_dim(citations.get("competitive", [])),
+        management_credibility=_dim(citations.get("management_credibility", [])),
+        macro=_dim(citations.get("macro", [])),
+        move_character="structural", confidence=0.8,
+        ablation_name="test", sources_used=[SourceType.NEWS],
+        chunks_considered=2,
+    )
+
+
+def test_sanitizer_drops_hallucinated_cited_evidence_too():
+    chunks = _chunks(2)
+    real_id = chunks[0].chunk_id
+    evidence = _evidence_for(_move(), chunks)
+    attr = _attr_with_cited({
+        "demand": [
+            {"chunk_id": real_id, "quote": "demand grew", "reasoning": "real evidence"},
+            {"chunk_id": "fake_id_002", "quote": "made up", "reasoning": "hallucinated"},
+        ],
+        "pricing": [
+            {"chunk_id": real_id, "quote": "price up", "reasoning": "ok"},
+        ],
+        "competitive": [
+            {"chunk_id": "fake_id_003", "quote": "fake", "reasoning": "hallucinated"},
+        ],
+        "management_credibility": [
+            {"chunk_id": real_id, "quote": "ok", "reasoning": "ok"},
+        ],
+        "macro": [
+            {"chunk_id": real_id, "quote": "ok", "reasoning": "ok"},
+        ],
+    })
+    dropped = model._sanitize_chunk_citations(attr, evidence)
+    # 1 hallucinated demand entry + 1 hallucinated competitive entry
+    assert dropped == 2
+    # Demand: hallucinated stripped, real one kept
+    assert len(attr.demand.cited_evidence) == 1
+    assert attr.demand.cited_evidence[0].quote == "demand grew"
+    # Competitive: zero valid → fallback to top-relevance chunk with empty quote
+    assert len(attr.competitive.cited_evidence) == 1
+    assert attr.competitive.cited_evidence[0].chunk_id == real_id
+    assert attr.competitive.cited_evidence[0].quote == ""
+
+
+def test_assemble_attribution_derives_evidence_chunk_ids_from_cited_evidence():
+    """When the model returns the new cited_evidence shape, run.py should
+    populate evidence_chunk_ids from it for backward compat."""
+    from datetime import date as _date
+    from model.attribution.run import _assemble_attribution
+    from schema import JoinedEvidence, PriceMove
+
+    chunks = _chunks(2)
+    move = _move()
+    evidence = JoinedEvidence(
+        move=move,
+        window_start=move.move_date,
+        window_end=move.move_date,
+        events=[],
+        text_chunks=chunks,
+    )
+    cid = chunks[0].chunk_id
+    rich_dim = {
+        "weight": 0.2, "direction": "negative",
+        "rationale": "stub",
+        "cited_evidence": [
+            {"chunk_id": cid, "quote": "the quote", "reasoning": "the why"}
+        ],
+    }
+    tool_input = {name: dict(rich_dim) for name in (
+        "demand","pricing","competitive","management_credibility","macro"
+    )}
+    tool_input["move_character"] = "structural"
+    tool_input["confidence"] = 0.8
+    tool_input["predicted_return_pct"] = move.return_pct
+    attr = _assemble_attribution(tool_input, evidence, ablation_name="test")
+    assert attr.demand.evidence_chunk_ids == [cid]
+    assert attr.demand.cited_evidence[0].quote == "the quote"
+    assert attr.demand.cited_evidence[0].reasoning == "the why"

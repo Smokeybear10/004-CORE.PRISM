@@ -585,12 +585,26 @@ function renderAttributionDetails(move) {
     const body = document.createElement('div');
     body.className = 'evidence-body';
     body.innerHTML = `<div class="evidence-rationale">${escapeHtml(d.rationale)}</div>`;
-    for (const cid of d.evidence_chunk_ids) {
-      const chunk = chunkMap.get(cid);
+
+    // Prefer the rich `cited_evidence` shape (per-citation quote +
+    // reasoning) when available; fall back to bare chunk_ids + raw text
+    // for placeholder attributions or older bundles that don't carry it.
+    const richCitations = Array.isArray(d.cited_evidence) ? d.cited_evidence : [];
+    const useRich = richCitations.length > 0;
+    const iter = useRich
+      ? richCitations.map(ce => ({
+          cid: ce.chunk_id,
+          quote: ce.quote || '',
+          reasoning: ce.reasoning || '',
+        }))
+      : (d.evidence_chunk_ids || []).map(cid => ({ cid, quote: '', reasoning: '' }));
+
+    for (const it of iter) {
+      const chunk = chunkMap.get(it.cid);
       const div = document.createElement('div');
       div.className = 'citation';
       if (!chunk) {
-        div.innerHTML = `<div class="citation-missing">Missing chunk <code>${cid}</code> — coherence check would reject this attribution.</div>`;
+        div.innerHTML = `<div class="citation-missing">Missing chunk <code>${it.cid}</code> — coherence check would reject this attribution.</div>`;
       } else {
         const metaBits = [
           `<code>${escapeHtml(chunk.chunk_id)}</code>`,
@@ -602,10 +616,27 @@ function renderAttributionDetails(move) {
         if (chunk.section_name) {
           metaBits.push(`<span class="sep">·</span>`, `<em>${escapeHtml(chunk.section_name)}</em>`);
         }
-        div.innerHTML =
-          `<div class="citation-meta">${metaBits.join(' ')}</div>` +
-          `<div class="citation-text">${escapeHtml(chunk.text)}</div>` +
-          (chunk.source_url ? `<a class="citation-link" href="${chunk.source_url}" target="_blank" rel="noopener">source ↗</a>` : '');
+
+        let bodyHtml = `<div class="citation-meta">${metaBits.join(' ')}</div>`;
+        if (it.quote) {
+          // Rich shape: render the quote as a blockquote-style excerpt and
+          // the reasoning as the why-this-mattered note. Drop the full
+          // chunk text — that's the whole point of the upgrade.
+          bodyHtml +=
+            `<blockquote class="citation-quote">${escapeHtml(it.quote)}</blockquote>`;
+          if (it.reasoning) {
+            bodyHtml +=
+              `<div class="citation-reasoning">${escapeHtml(it.reasoning)}</div>`;
+          }
+        } else {
+          // Fallback to raw chunk text when no quote was provided.
+          bodyHtml += `<div class="citation-text">${escapeHtml(chunk.text)}</div>`;
+        }
+        if (chunk.source_url) {
+          bodyHtml +=
+            `<a class="citation-link" href="${chunk.source_url}" target="_blank" rel="noopener">source ↗</a>`;
+        }
+        div.innerHTML = bodyHtml;
       }
       body.appendChild(div);
     }
