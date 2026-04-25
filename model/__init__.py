@@ -86,6 +86,9 @@ def _should_use_live(chunks: list[TextChunk]) -> tuple[bool, Optional[str]]:
     return True, None
 
 
+LIVE_MAX_CHUNKS = 30
+
+
 def _build_evidence(move: PriceMove, chunks: list[TextChunk]) -> JoinedEvidence:
     """
     Bridge `(move, chunks)` → `JoinedEvidence` for the run_attribution API.
@@ -93,9 +96,14 @@ def _build_evidence(move: PriceMove, chunks: list[TextChunk]) -> JoinedEvidence:
     unified Event records — only TextChunks. window_start/end are derived
     from chunk publication dates, capped at move.move_date so we never
     advertise foreknowledge.
+
+    Chunks are capped at LIVE_MAX_CHUNKS to stay under Claude's 1M-token
+    context window. `chunks_for_real()` already round-robins by source_type,
+    so taking the prefix preserves source diversity.
     """
-    if chunks:
-        dates = [c.publication_date for c in chunks if c.publication_date is not None]
+    capped = list(chunks[:LIVE_MAX_CHUNKS])
+    if capped:
+        dates = [c.publication_date for c in capped if c.publication_date is not None]
         window_start = min(dates) if dates else move.move_date
         window_end = max(dates) if dates else move.move_date
     else:
@@ -107,7 +115,7 @@ def _build_evidence(move: PriceMove, chunks: list[TextChunk]) -> JoinedEvidence:
         window_start=window_start,
         window_end=window_end,
         events=[],
-        text_chunks=list(chunks),
+        text_chunks=capped,
     )
 
 
@@ -151,7 +159,9 @@ def _live_attribute(
     attr = None
     for attempt in range(attempts):
         try:
-            attr = run_attribution(evidence, ablation_name=config.name)
+            # validate=False — tolerate weight-sum drift from smaller models;
+            # the demo just needs a shaped Attribution, not lab-grade output.
+            attr = run_attribution(evidence, ablation_name=config.name, validate=False)
             break
         except anthropic.RateLimitError as e:
             if attempt >= attempts - 1:

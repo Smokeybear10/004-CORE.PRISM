@@ -21,8 +21,15 @@ _ROOT = Path(__file__).resolve().parent.parent
 if str(_ROOT) not in sys.path:
     sys.path.insert(0, str(_ROOT))
 
+from backtest.signal import STRATEGY_REGISTRY
 from demo.mock_data import FOCAL_TICKERS
-from demo.real_chunks import chunks_for_real, preload_news, preload_thirteen_f
+from demo.real_chunks import (
+    chunks_for_real,
+    preload_earnings_transcripts,
+    preload_news,
+    preload_peer_and_sector_news,
+    preload_thirteen_f,
+)
 from ingestion.prices import detect_significant_moves, load_prices
 from model import attribute as model_attribute
 from schema import AblationConfig, PriceMove, SourceType
@@ -88,8 +95,11 @@ def build_for_ticker(ticker: str, meta: dict, end_date: date) -> dict:
         and abs(m.vol_zscore) >= 3.0  # demo: keep only 3-sigma+ moves to declutter chart
     ]
 
+    moves_sorted = sorted(moves_in_window, key=lambda x: x.move_date)
     moves_payload: list[dict] = []
-    for m in sorted(moves_in_window, key=lambda x: x.move_date):
+    for idx, m in enumerate(moves_sorted, start=1):
+        print(f"  [{idx}/{len(moves_sorted)}] {ticker} {m.move_date} "
+              f"(return {m.return_pct:+.2%})…", flush=True)
         chunks = chunks_for_real(ticker, m.move_date)
         # Truthful counts over the FULL chunk pool (not just top-10) so the
         # UI toggle row can show accurate chunk counts on initial render.
@@ -105,6 +115,14 @@ def build_for_ticker(ticker: str, meta: dict, end_date: date) -> dict:
             description="pre-baked full-stack default",
         )
         attr = model_attribute(m, chunks, config)
+        # Pre-compute strategy verdicts so the UI shows lean/fade/skip on
+        # initial render (no API roundtrip needed).
+        strategies: dict[str, str] = {}
+        for sname, sfn in STRATEGY_REGISTRY.items():
+            try:
+                strategies[sname] = sfn(attr)
+            except Exception:
+                strategies[sname] = "neutral"
         moves_payload.append({
             "move_date": m.move_date.isoformat(),
             "return_pct": round(float(m.return_pct), 6),
@@ -134,6 +152,7 @@ def build_for_ticker(ticker: str, meta: dict, end_date: date) -> dict:
             "chunks": [_chunk_dict(c) for c in chunks[:10]],
             "chunks_available": available_counts,
             "chunks_total": len(chunks),
+            "strategies": strategies,
         })
 
     return {
@@ -153,7 +172,9 @@ def main() -> None:
 
     print("Preloading news parquet (one-time ~30-60s)…", flush=True)
     preload_news(list(FOCAL_TICKERS.keys()))
+    preload_peer_and_sector_news(list(FOCAL_TICKERS.keys()))
     preload_thirteen_f()
+    preload_earnings_transcripts(list(FOCAL_TICKERS.keys()))
 
     index: list[dict] = []
     for ticker, meta in FOCAL_TICKERS.items():

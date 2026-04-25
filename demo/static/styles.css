@@ -131,7 +131,7 @@ code { font-family: var(--mono); font-size: 0.85em; }
 .stat-value { font: 500 1.15rem var(--mono); color: var(--text); margin-top: 2px; }
 
 /* ---------- Cards ---------- */
-.chart-card, .attribution-card, .sources-card {
+.chart-card, .attribution-card, .sources-card, .strategies-card {
   background: var(--surface);
   border: 1px solid var(--border);
   border-radius: var(--radius);
@@ -241,6 +241,67 @@ code { font-family: var(--mono); font-size: 0.85em; }
   padding: 1px 8px;
   font-size: 0.74rem;
   margin-right: 4px;
+}
+
+/* ---------- Strategies card ---------- */
+.strategy-row {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 8px;
+}
+.strategy-pill {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 10px 12px;
+  cursor: pointer;
+  transition: background 0.12s, border-color 0.12s, transform 0.06s;
+}
+.strategy-pill:hover { background: var(--surface-3); border-color: var(--border-strong); }
+.strategy-pill.active {
+  background: rgba(94, 181, 255, 0.08);
+  border-color: var(--accent);
+}
+.strategy-pill input { display: none; }
+.strategy-pill .name {
+  font: 500 0.78rem var(--sans);
+  color: var(--text);
+}
+.strategy-pill .verdict {
+  font: 500 0.74rem var(--mono);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+.strategy-pill .verdict.lean    { color: var(--positive); }
+.strategy-pill .verdict.fade    { color: var(--negative); }
+.strategy-pill .verdict.neutral { color: var(--text-muted); }
+
+.strategy-verdict {
+  margin-top: 14px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+.verdict-pill {
+  display: inline-flex;
+  align-items: center;
+  font: 600 0.95rem var(--mono);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  border-radius: 999px;
+  padding: 6px 14px;
+  border: 1px solid transparent;
+}
+.verdict-pill.lean    { background: rgba(111, 197, 138, 0.12); color: var(--positive); border-color: rgba(111, 197, 138, 0.4); }
+.verdict-pill.fade    { background: rgba(239, 100, 89, 0.12);  color: var(--negative); border-color: rgba(239, 100, 89, 0.4); }
+.verdict-pill.neutral { background: var(--surface-3); color: var(--text-muted); border-color: var(--border-strong); }
+
+@media (max-width: 720px) {
+  .strategy-row { grid-template-columns: repeat(2, 1fr); }
 }
 
 /* ---------- KPI extras ---------- */

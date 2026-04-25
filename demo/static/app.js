@@ -30,6 +30,8 @@ const STATE = {
   enabledSources: new Set(ALL_SOURCE_IDS),  // full stack by default
   lastFullStack: null,  // last full-stack reference attribution
   fetchSeq: 0,          // monotonic to cancel stale fetches
+  selectedStrategy: 'fundamental_vs_nonfundamental',
+  lastStrategies: {},   // {strategy_name: 'lean'|'fade'|'neutral'}
 };
 
 const DIM_LABEL = {
@@ -40,6 +42,22 @@ const DIM_LABEL = {
   macro: 'Macro',
 };
 const ARROW = { positive: '↑', negative: '↓', neutral: '→' };
+
+// ---------- Strategies ----------
+// Strategy verdicts are computed by backtest.signal.STRATEGY_REGISTRY in
+// Python — server.py runs them per-request, build_static.py bakes them into
+// the static bundles. The frontend never recomputes them. STRATEGIES below
+// is UI metadata only (labels + blurbs); IDs MUST match Python registry keys.
+const STRATEGIES = [
+  { id: 'fundamental_vs_nonfundamental', label: 'Fundamental vs Non',
+    blurb: 'structural → lean, transient → fade.' },
+  { id: 'expected_vs_realized',          label: 'Expected vs Realized',
+    blurb: 'realized overshoots predicted → fade. Undershoots → lean.' },
+  { id: 'dimension_weighted',            label: 'Dimension-weighted',
+    blurb: 'weighted by per-dim persistence (demand+, macro−).' },
+  { id: 'hybrid',                        label: 'Hybrid',
+    blurb: 'fundamentality gate → expected/realized → dim sanity.' },
+];
 
 // ---------- Fetch helpers ----------
 async function fetchJSON(path) {
@@ -218,6 +236,54 @@ function renderToggleRow(availableCounts) {
   }
 }
 
+// ---------- Strategy row + verdict ----------
+function renderStrategyRow() {
+  const row = document.getElementById('strategy-row');
+  row.innerHTML = '';
+  for (const s of STRATEGIES) {
+    const verdict = STATE.lastStrategies[s.id];
+    const verdictClass = verdict || 'pending';
+    const verdictText = verdict || '—';
+    const active = s.id === STATE.selectedStrategy;
+    const wrapper = document.createElement('label');
+    wrapper.className = 'strategy-pill' + (active ? ' active' : '');
+    wrapper.setAttribute('role', 'radio');
+    wrapper.setAttribute('aria-checked', active);
+    wrapper.innerHTML =
+      `<input type="radio" name="strategy" value="${s.id}" ${active ? 'checked' : ''}>` +
+      `<span class="name">${s.label}</span>` +
+      `<span class="verdict ${verdictClass}">${verdictText}</span>`;
+    wrapper.addEventListener('click', () => selectStrategy(s.id));
+    row.appendChild(wrapper);
+  }
+  renderStrategyVerdict();
+}
+
+function renderStrategyVerdict() {
+  const label = document.getElementById('strategy-verdict-label');
+  const pill = document.getElementById('verdict-pill');
+  const explain = document.getElementById('strategy-verdict-explain');
+  const verdict = STATE.lastStrategies[STATE.selectedStrategy];
+  if (!verdict) {
+    label.textContent = 'Pick a flagged move to see a verdict.';
+    pill.hidden = true;
+    explain.textContent = '';
+    return;
+  }
+  const meta = STRATEGIES.find(s => s.id === STATE.selectedStrategy);
+  label.textContent = `${meta.label} says:`;
+  pill.hidden = false;
+  pill.className = `verdict-pill ${verdict}`;
+  pill.textContent = verdict === 'neutral' ? 'skip' : verdict;
+  explain.textContent = meta.blurb;
+}
+
+function selectStrategy(id) {
+  if (id === STATE.selectedStrategy) return;
+  STATE.selectedStrategy = id;
+  renderStrategyRow();
+}
+
 function renderToggleCaption(enabledCount, totalCount, chunksConsidered) {
   const el = document.getElementById('toggle-caption');
   if (enabledCount === 0) {
@@ -329,6 +395,8 @@ function renderAttributionFromResponse(move, response) {
     },
     chunks: response.chunks,
   };
+  STATE.lastStrategies = response.strategies || {};
+  renderStrategyRow();
   renderAttributionDetails(renderableMove);
 }
 
@@ -336,6 +404,8 @@ function renderAttributionFromResponse(move, response) {
 function renderAttribution(bundle, moveIdx) {
   const card = document.getElementById('attribution-card');
   if (moveIdx === null || moveIdx === undefined) {
+    STATE.lastStrategies = {};
+    renderStrategyRow();
     document.getElementById('attr-title').textContent = 'Attribution';
     document.getElementById('attr-sub').textContent = 'Pick a flagged move to begin.';
     document.getElementById('kpis').hidden = true;
@@ -350,6 +420,9 @@ function renderAttribution(bundle, moveIdx) {
 
   // Cache the full-stack pre-baked attribution for the "vs full stack" reference.
   STATE.lastFullStack = bundle.moves[moveIdx].attribution;
+
+  STATE.lastStrategies = bundle.moves[moveIdx].strategies || {};
+  renderStrategyRow();
 
   renderAttributionDetails(bundle.moves[moveIdx]);
   card.scrollIntoView({ behavior: 'smooth', block: 'nearest' });

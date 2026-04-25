@@ -14,9 +14,13 @@ Design notes:
 """
 from __future__ import annotations
 
+import os
+
 from schema import JoinedEvidence
 
-MODEL_ID = "claude-opus-4-7"
+# Default to Opus for live attribution; allow override via env for cost
+# control during bulk rebuilds (e.g. BW_ATTRIBUTION_MODEL=claude-haiku-4-5-20251001).
+MODEL_ID = os.environ.get("BW_ATTRIBUTION_MODEL", "claude-opus-4-7")
 ATTRIBUTION_TOOL_NAME = "emit_attribution"
 
 
