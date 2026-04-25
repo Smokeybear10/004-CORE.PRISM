@@ -23,6 +23,7 @@ if str(_ROOT) not in sys.path:
 
 from backtest.signal import STRATEGY_REGISTRY
 from demo.mock_data import FOCAL_TICKERS
+from demo.pnl_summary import build_pnl_summary
 from demo.real_chunks import (
     chunks_for_real,
     preload_earnings_transcripts,
@@ -44,6 +45,31 @@ FULL_STACK_SOURCES = [
     SourceType.MACRO,
     SourceType.THIRTEEN_F,
 ]
+
+# Mirrors backtest.fixtures.ABLATION_BUNDLES but swaps RESEARCH_13F →
+# THIRTEEN_F because chunks_for_real produces THIRTEEN_F-tagged chunks
+# (demo/real_chunks.py:236). Without the swap, the +positioning filter
+# would zero out and the chart-overlay's full-stack predicted line
+# would equal the +macro one. Keep this dict in (count → ablation)
+# order — must match COUNT_TO_BUNDLE in app.js.
+DEMO_ABLATION_BUNDLES: dict[str, list[SourceType]] = {
+    "base_news":    [SourceType.NEWS],
+    "+sec":         [SourceType.NEWS, SourceType.SEC_10K, SourceType.SEC_8K],
+    "+earnings":    [SourceType.NEWS, SourceType.SEC_10K, SourceType.SEC_8K,
+                     SourceType.EARNINGS_TRANSCRIPT],
+    "+peer_news":   [SourceType.NEWS, SourceType.SEC_10K, SourceType.SEC_8K,
+                     SourceType.EARNINGS_TRANSCRIPT, SourceType.PEER_NEWS],
+    "+sector_news": [SourceType.NEWS, SourceType.SEC_10K, SourceType.SEC_8K,
+                     SourceType.EARNINGS_TRANSCRIPT, SourceType.PEER_NEWS,
+                     SourceType.SECTOR_NEWS],
+    "+macro":       [SourceType.NEWS, SourceType.SEC_10K, SourceType.SEC_8K,
+                     SourceType.EARNINGS_TRANSCRIPT, SourceType.PEER_NEWS,
+                     SourceType.SECTOR_NEWS, SourceType.MACRO],
+    "+positioning": [SourceType.NEWS, SourceType.SEC_10K, SourceType.SEC_8K,
+                     SourceType.EARNINGS_TRANSCRIPT, SourceType.PEER_NEWS,
+                     SourceType.SECTOR_NEWS, SourceType.MACRO,
+                     SourceType.THIRTEEN_F],
+}
 
 OUT_DIR = _ROOT / "demo" / "static" / "data"
 WINDOW_YEARS = 5
@@ -150,6 +176,28 @@ def build_for_ticker(ticker: str, meta: dict, end_date: date) -> dict:
             except Exception:
                 strategies[sname] = "neutral"
 
+        # Per-ablation predicted_return_pct, baked once at build time so the
+        # chart-overlay in app.js can switch source filters without round
+        # trips. Each ablation re-filters the same `chunks` pool by source
+        # type and re-attributes — synthetic path is fast (~ms per call).
+        predictions_by_ablation: dict[str, "float | None"] = {}
+        for ab_name, ab_sources in DEMO_ABLATION_BUNDLES.items():
+            ab_filtered = [c for c in chunks if c.source_type in ab_sources]
+            if not ab_filtered:
+                # Match server.py behavior on zero-source-after-filter: no
+                # prediction, UI hides this ablation's overlay if selected.
+                predictions_by_ablation[ab_name] = None
+                continue
+            ab_attr = model_attribute(
+                m, ab_filtered,
+                AblationConfig(name=ab_name, sources=list(ab_sources),
+                               description="pre-baked ablation"),
+            )
+            predictions_by_ablation[ab_name] = (
+                round(float(ab_attr.predicted_return_pct), 6)
+                if ab_attr.predicted_return_pct is not None else None
+            )
+
         # Bundle's `chunks` field must include every chunk_id the attribution
         # cites, otherwise the UI flags valid citations as "Missing chunk".
         # `chunks_for_real` returns chunks in stratified round-robin order;
@@ -199,7 +247,19 @@ def build_for_ticker(ticker: str, meta: dict, end_date: date) -> dict:
             "chunks_available": available_counts,
             "chunks_total": len(chunks),
             "strategies": strategies,
+            # Used by app.js renderChart to draw the predicted-price overlay.
+            # Keyed by ablation name; values are the model's expected return
+            # for this move under that source bundle.
+            "predictions_by_ablation": predictions_by_ablation,
         })
+
+    # Closes the loop: dollar P&L for the model + 4 baselines over a 5-day
+    # window per flagged event. Failure here must not break the bundle build.
+    try:
+        pnl = build_pnl_summary(ticker, moves_payload, prices_df)
+    except Exception as exc:
+        print(f"  WARN: pnl summary failed for {ticker}: {exc}", flush=True)
+        pnl = None
 
     return {
         "ticker": ticker,
@@ -209,6 +269,7 @@ def build_for_ticker(ticker: str, meta: dict, end_date: date) -> dict:
         "end_date": end_date.isoformat(),
         "prices": prices,
         "moves": moves_payload,
+        "pnl": pnl,
     }
 
 
