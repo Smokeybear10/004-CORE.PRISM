@@ -2055,74 +2055,49 @@ function buildOutcomeSentence(verdict, ref, bundle, moveDate) {
   return '';
 }
 function buildStrategyReasoning(strategyId, verdict, ref, tag) {
+  // Each framework reads ONE signal; the explanation surfaces THAT signal,
+  // not a generic "so the strategy says X" suffix. Keeps the three reasonings
+  // visibly distinct on the same move.
   if (strategyId === 'fundamental_vs_nonfundamental') {
-    if (ref.character === 'structural') {
-      return `Because the model judged the cause durable rather than narrative, ` +
-             `this strategy says ${tag} — bet the move keeps working.`;
-    }
-    if (ref.character === 'transient') {
-      return `Because the model judged the cause sentiment-driven (a single news ` +
-             `cycle, not a real business change), this strategy says ${tag} — bet ` +
-             `the move unwinds.`;
-    }
-    return `Because the model couldn't cleanly call the cause fundamental or ` +
-           `sentiment, this strategy stays out: ${tag}.`;
+    const c = ref.character || 'unclear';
+    if (c === 'structural') return `Cause read as <b>structural</b> → ${tag}.`;
+    if (c === 'transient')  return `Cause read as <b>transient</b> → ${tag}.`;
+    return `Cause read as <b>${c}</b> → ${tag}.`;
   }
+
   if (strategyId === 'expected_vs_realized') {
-    const realized = ref.realized;
-    const predicted = ref.predicted;
-    const hasPred = predicted !== null && predicted !== undefined;
-    if (!hasPred) {
-      return `With no expected-return baseline to compare against, this strategy is forced to ${tag}.`;
-    }
-    if (predicted === 0) {
-      return `With expected return at zero, there's no magnitude to ratio against — the strategy is forced to ${tag}.`;
-    }
-    if (predicted * realized < 0) {
-      return `Since actual and expected pointed opposite directions, the strategy refuses to call it: ${tag}.`;
-    }
-    const ratio = Math.abs(realized) / Math.abs(predicted);
-    if (ratio >= 1.5) {
-      return `The stock moved roughly <span class="num">${ratio.toFixed(2)}×</span> ` +
-             `more than the news justified — that looks like overreaction, so this ` +
-             `strategy says ${tag} (bet on a pullback).`;
-    }
-    if (ratio <= 0.5) {
-      return `The stock moved only <span class="num">${ratio.toFixed(2)}×</span> ` +
-             `the magnitude the news justified — the price hasn't caught up, so ` +
-             `this strategy says ${tag} (bet on more move in the same direction).`;
-    }
-    return `Realized and expected magnitudes are within the neutral band — the ` +
-           `news already looks priced in, so this strategy says ${tag}.`;
+    const r = ref.realized, p = ref.predicted;
+    if (p === null || p === undefined) return `No predicted return → ${tag}.`;
+    if (p === 0) return `Predicted return = 0, no ratio → ${tag}.`;
+    if (p * r < 0) return `Realized ${pct(r,1)} and predicted ${pct(p,1)} disagree on sign → ${tag}.`;
+    const ratio = Math.abs(r) / Math.abs(p);
+    const tail =
+      ratio >= 1.5 ? 'overshoot' :
+      ratio <= 0.5 ? 'undershoot' :
+      'within band';
+    return `Realized ${pct(r,1)} vs predicted ${pct(p,1)} ` +
+           `(<b>${ratio.toFixed(2)}×</b>, ${tail}) → ${tag}.`;
   }
+
   if (strategyId === 'hybrid') {
-    const char = ref.character;
-    const realized = ref.realized;
-    const predicted = ref.predicted;
-    const domName = _dominantDimension(ref);
-    const domPhrase = domName ? (DIM_PHRASE[domName] || domName) : '—';
-    const domPersist = domName ? (PERSISTENCE[domName] ?? 0) : 0;
-    if (char === 'transient') {
-      return `Layer 1 caught it: the cause is sentiment-driven, so this strategy says ${tag} immediately.`;
+    const c = ref.character;
+    const r = ref.realized, p = ref.predicted;
+    if (c === 'transient')              return `L1 stop · transient → ${tag}.`;
+    if (c === 'mixed' || c === 'unclear') return `L1 stop · ${c} → ${tag}.`;
+    const hasPred = p !== null && p !== undefined && p !== 0 && p * r > 0;
+    if (hasPred && Math.abs(r) >= 1.5 * Math.abs(p)) {
+      const ratio = Math.abs(r) / Math.abs(p);
+      return `L1 ✓ structural · L2 stop · overshoot ${ratio.toFixed(2)}× → ${tag}.`;
     }
-    if (char === 'mixed' || char === 'unclear') {
-      return `Layer 1 caught it: the cause is too unclear to act on, so this strategy says ${tag}.`;
-    }
-    const hasPred = predicted !== null && predicted !== undefined && predicted !== 0
-                    && predicted * realized > 0;
-    if (hasPred && Math.abs(realized) >= 1.5 * Math.abs(predicted)) {
-      return `The cause is fundamental, but Layer 2 caught an overshoot — the price ` +
-             `moved well beyond what the news justified. So this strategy says ${tag}.`;
-    }
+    const dom = _dominantDimension(ref);
+    const domLabel = dom ? (DIM_LABEL[dom] || dom) : '—';
+    const domPersist = dom ? (PERSISTENCE[dom] ?? 0) : 0;
     if (domPersist < 0) {
-      return `The cause is fundamental and there's no overshoot, but the strongest ` +
-             `driver was <span class="num">${domPhrase}</span> — historically that ` +
-             `kind of move reverses, so Layer 3 backs off to ${tag}.`;
+      return `L1 ✓ · L2 ✓ · L3 stop · top driver <b>${domLabel}</b> reverts historically → ${tag}.`;
     }
-    return `All three checks passed — fundamental cause, no overshoot, and the ` +
-           `strongest driver (<span class="num">${domPhrase}</span>) has a strong ` +
-           `record of continuing. So this strategy says ${tag}.`;
+    return `L1 ✓ · L2 ✓ · L3 ✓ · top driver <b>${domLabel}</b> persists → ${tag}.`;
   }
+
   return `Strategy concluded ${tag}.`;
 }
 function buildVerdictConclusion(strategyId, verdict, ref, bundle, moveDate) {

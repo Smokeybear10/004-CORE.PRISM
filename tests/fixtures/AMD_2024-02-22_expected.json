@@ -1,0 +1,13 @@
+{
+  "ticker": "AMD",
+  "move_date": "2024-02-22",
+  "known_cause": "NON-FUNDAMENTAL: AMD rose 10.7% to close at $181.86 the day after Nvidia reported blowout fiscal Q4 earnings. No AMD-specific news; the move was pure read-through optimism that AI capex strength would benefit AMD as the #2 GPU vendor. Non-fundamental — a near-replay of the May 2023 Nvidia-sympathy pattern, where AMD reacted to a competitor's earnings rather than to any change in AMD's contracts, products, or guidance.",
+  "expected": {
+    "dominant_dimension": ["macro", "competitive"],
+    "direction": "positive",
+    "move_character": "transient",
+    "fade_or_lean": "fade",
+    "must_cite_source_type": ["peer_news"],
+    "must_not_be_dominant": ["demand", "pricing", "management_credibility"]
+  }
+}

@@ -1,0 +1,13 @@
+{
+  "ticker": "AMD",
+  "move_date": "2025-04-09",
+  "known_cause": "NON-FUNDAMENTAL: AMD climbed ~18% during the week the Trump administration announced a short-term postponement of U.S. tariffs on Chinese electronics, with the entire semiconductor complex rallying together on the macro headline. No AMD-specific announcement accompanied the move. Non-fundamental — AMD's products, customer commitments, and guidance didn't change; the rally was a sector-wide policy unwind that hit every chip name regardless of company-specific fundamentals, and it largely reversed within days when tariff anxiety returned.",
+  "expected": {
+    "dominant_dimension": ["macro"],
+    "direction": "positive",
+    "move_character": "transient",
+    "fade_or_lean": "fade",
+    "must_cite_source_type": ["macro", "news"],
+    "must_not_be_dominant": ["demand", "pricing", "management_credibility"]
+  }
+}
