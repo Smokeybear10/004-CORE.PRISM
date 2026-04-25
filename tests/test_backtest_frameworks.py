@@ -253,3 +253,194 @@ def test_default_persistence_macro_negative_demand_positive():
     """Mentor brief: macro tends to revert, demand tends to persist."""
     assert DEFAULT_DIMENSION_PERSISTENCE["macro"] < 0
     assert DEFAULT_DIMENSION_PERSISTENCE["demand"] > 0
+
+
+# ---------- Research-grounded priors ----------
+
+
+def test_research_priors_match_literature_directions():
+    """Each dimension's prior must agree with the bibliography in
+    backtest.frameworks.RESEARCH_REFERENCES.
+
+      - PEAD literature (Bernard & Thomas 1989, Foster et al. 1984,
+        Engelberg/McLean/Pontiff 2018): demand and pricing PERSIST.
+      - Cohen & Frazzini 2008 economic links: competitive PERSISTS (modestly).
+      - Bordalo et al. 2019 diagnostic expectations: management_credibility
+        REVERTS.
+      - De Bondt & Thaler 1985, Tetlock 2007, Daniel et al. 1998: macro REVERTS.
+    """
+    from backtest.frameworks import RESEARCH_GROUNDED_PERSISTENCE
+    p = RESEARCH_GROUNDED_PERSISTENCE
+    # Persists (lean is right):
+    assert p["demand"] > 0.5, "PEAD literature demands strong demand-side persistence"
+    assert p["pricing"] > 0.4, "PEAD literature implies pricing persists"
+    assert p["competitive"] > 0.0, "Cohen & Frazzini: real competitive shifts persist"
+    # Reverts (fade is right):
+    assert p["management_credibility"] < 0.0, (
+        "Bordalo et al. 2019: management surprises overreact and revert"
+    )
+    assert p["macro"] < -0.5, (
+        "DeBondt & Thaler 1985 + Tetlock 2007: macro/sentiment reverts strongly"
+    )
+
+
+def test_research_priors_ordering_matches_evidence_strength():
+    """Strongest persistence belongs to demand (most direct PEAD evidence).
+    Strongest reversion belongs to macro (multiple converging studies)."""
+    from backtest.frameworks import RESEARCH_GROUNDED_PERSISTENCE
+    p = RESEARCH_GROUNDED_PERSISTENCE
+    persisters = [p["demand"], p["pricing"], p["competitive"]]
+    assert max(persisters) == p["demand"], (
+        "demand must have the strongest persistence — PEAD is the most-cited "
+        "anomaly in the literature"
+    )
+    assert p["macro"] < p["management_credibility"] < 0, (
+        "macro reverts more strongly than management_credibility per the lit"
+    )
+
+
+def test_research_references_present_for_each_prior():
+    """Every dimension whose prior is non-zero must be backed by at least one
+    citation tagged with that dimension in RESEARCH_REFERENCES."""
+    from backtest.frameworks import (
+        RESEARCH_GROUNDED_PERSISTENCE,
+        RESEARCH_REFERENCES,
+    )
+    blob = " ".join(RESEARCH_REFERENCES.values()).lower()
+    for dim, val in RESEARCH_GROUNDED_PERSISTENCE.items():
+        if val == 0.0:
+            continue
+        assert dim.lower().split("_")[0] in blob, (
+            f"no citation in RESEARCH_REFERENCES mentions {dim}"
+        )
+
+
+# ---------- Empirical calibration ----------
+
+
+def _events_frame_for(attributions: list[Attribution], fwd_returns_5d: list[float]):
+    """Build a 1:1-aligned events_df for calibrate_persistence."""
+    import pandas as pd
+    rows = []
+    for i, (a, fwd) in enumerate(zip(attributions, fwd_returns_5d)):
+        rows.append({
+            "event_id": f"ev_{i}",
+            "ticker": a.ticker,
+            "reaction_return": float(a.return_pct),
+            "fwd_5d": float(fwd),
+            "fwd_5d_excess": float(fwd),
+        })
+    return pd.DataFrame(rows)
+
+
+def test_calibrate_persistence_recovers_demand_persists_macro_reverts():
+    """Construct a synthetic dataset where demand-driven moves continue and
+    macro-driven moves reverse; the calibrator must produce
+    persistence[demand] > 0 and persistence[macro] < 0."""
+    from backtest.frameworks import calibrate_persistence
+
+    n = 80
+    attrs: list[Attribution] = []
+    fwd: list[float] = []
+    for i in range(n):
+        is_demand = (i % 2 == 0)
+        # Demand-driven: dim.weight=0.7 on demand, sign matches a -3% move,
+        # forward 5d return continues at -1% (move persists -> lean right).
+        # Macro-driven: dim.weight=0.7 on macro, sign matches a +3% move,
+        # forward 5d return reverses at -2% (overreaction -> fade right).
+        if is_demand:
+            attrs.append(_attr(
+                weights={"demand": 0.7, "macro": 0.05},
+                directions={"demand": "negative"},
+                move_character="structural",
+                return_pct=-0.03, predicted_return_pct=-0.025,
+            ))
+            fwd.append(-0.012)  # continues -> sign(reaction)=-1, target = +0.012
+        else:
+            attrs.append(_attr(
+                weights={"macro": 0.7, "demand": 0.05},
+                directions={"macro": "positive"},
+                move_character="transient",
+                return_pct=+0.03, predicted_return_pct=+0.005,
+            ))
+            fwd.append(-0.020)  # reverses -> sign(reaction)=+1, target = -0.020
+
+    events = _events_frame_for(attrs, fwd)
+    coeffs = calibrate_persistence(events, attrs, horizon=5, use_excess=True)
+    assert coeffs["demand"] > 0, f"demand should persist: {coeffs}"
+    assert coeffs["macro"] < 0, f"macro should revert: {coeffs}"
+    # Outputs must respect the [-1, +1] clip
+    for v in coeffs.values():
+        assert -1.0 <= v <= 1.0
+
+
+def test_calibrate_persistence_returns_prior_when_underdetermined():
+    """With fewer rows than features+1, regression is unstable and we should
+    fall back to the prior."""
+    from backtest.frameworks import (
+        DEFAULT_DIMENSION_PERSISTENCE,
+        calibrate_persistence,
+    )
+    attrs = [_attr() for _ in range(2)]  # underdetermined: 5 features, 2 rows
+    events = _events_frame_for(attrs, [0.01, -0.01])
+    coeffs = calibrate_persistence(events, attrs)
+    assert coeffs == DEFAULT_DIMENSION_PERSISTENCE
+
+
+def test_calibrate_persistence_misaligned_inputs_raise():
+    """Mismatched lengths must raise — a silent zip-truncation would fit on
+    a quiet partial dataset."""
+    from backtest.frameworks import calibrate_persistence
+    attrs = [_attr() for _ in range(5)]
+    events = _events_frame_for(attrs, [0.0] * 3)
+    events = events.iloc[:3].reset_index(drop=True)
+    with pytest.raises(ValueError, match="align 1:1"):
+        calibrate_persistence(events, attrs)
+
+
+def test_calibrate_persistence_missing_column_raises():
+    """An events_df without the requested forward-return column must raise."""
+    import pandas as pd
+    from backtest.frameworks import calibrate_persistence
+    attrs = [_attr() for _ in range(10)]
+    bad = pd.DataFrame([{"event_id": f"ev_{i}", "reaction_return": 0.01} for i in range(10)])
+    with pytest.raises(ValueError, match="fwd_5d_excess"):
+        calibrate_persistence(bad, attrs, horizon=5, use_excess=True)
+
+
+def test_calibrate_persistence_invalid_horizon_raises():
+    from backtest.frameworks import calibrate_persistence
+    attrs = [_attr() for _ in range(10)]
+    events = _events_frame_for(attrs, [0.0] * 10)
+    with pytest.raises(ValueError, match="horizon"):
+        calibrate_persistence(events, attrs, horizon=42)
+
+
+def test_calibrate_persistence_empty_returns_prior():
+    from backtest.frameworks import (
+        DEFAULT_DIMENSION_PERSISTENCE,
+        calibrate_persistence,
+    )
+    import pandas as pd
+    out = calibrate_persistence(pd.DataFrame(), [])
+    assert out == DEFAULT_DIMENSION_PERSISTENCE
+
+
+def test_calibrate_persistence_output_plugs_into_dimension_weighted():
+    """The dict returned by calibrate_persistence must be drop-in compatible
+    with strategy_dimension_weighted(persistence=...)."""
+    from backtest.frameworks import calibrate_persistence
+    n = 40
+    attrs = [
+        _attr(
+            weights={"demand": 0.7, "macro": 0.05},
+            directions={"demand": "negative"},
+            return_pct=-0.05, predicted_return_pct=-0.04,
+        )
+        for _ in range(n)
+    ]
+    events = _events_frame_for(attrs, [-0.02] * n)
+    coeffs = calibrate_persistence(events, attrs)
+    # No exception when plugged in
+    out = strategy_dimension_weighted(attrs[0], persistence=coeffs)
+    assert out in ("lean", "fade", "neutral")
