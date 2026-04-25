@@ -40,6 +40,11 @@ _NEWS_DF: Optional[pd.DataFrame] = None
 _NEWS_BY_TICKER: dict[str, pd.DataFrame] = {}
 _THIRTEEN_F_BY_TICKER: dict[str, list[TextChunk]] = {}
 _TRANSCRIPTS_BY_TICKER: dict[str, list[TextChunk]] = {}
+# Finnhub-fetched supplemental news, populated when FINNHUB_API_KEY is set.
+# Two indices: focal-ticker NEWS chunks (key = focal), and per-focal peer-
+# ticker PEER_NEWS chunks (key = focal). Empty otherwise.
+_FINNHUB_NEWS_BY_TICKER: dict[str, list[TextChunk]] = {}
+_FINNHUB_PEER_BY_FOCAL: dict[str, list[TextChunk]] = {}
 
 _REPO_ROOT = Path(__file__).resolve().parent.parent
 _THIRTEEN_F_JSONL = _REPO_ROOT / "data" / "thirteen_f" / "focal_chunks.jsonl"
@@ -134,20 +139,37 @@ def _row_to_chunk(
 
 
 def _news_chunks_for(ticker: str, as_of: date) -> list[TextChunk]:
+    """Yahoo-parquet news for `ticker` AS_OF, plus Finnhub supplemental
+    chunks when FINNHUB_API_KEY is set (covers older dates the parquet
+    misses). Dedup is by source_url since the same article can appear in
+    both feeds."""
     df = _news_rows_for(ticker, as_of)
-    if df is None:
-        return []
     out: list[TextChunk] = []
-    for _, row in df.iterrows():
-        c = _row_to_chunk(
-            row,
-            chunk_prefix="news",
-            chunk_seq=len(out) + 1,
-            out_ticker=ticker.upper(),
-            source_type=SourceType.NEWS,
-        )
-        if c is not None:
-            out.append(c)
+    seen_urls: set[str] = set()
+    if df is not None:
+        for _, row in df.iterrows():
+            c = _row_to_chunk(
+                row,
+                chunk_prefix="news",
+                chunk_seq=len(out) + 1,
+                out_ticker=ticker.upper(),
+                source_type=SourceType.NEWS,
+            )
+            if c is not None:
+                if c.source_url and c.source_url in seen_urls:
+                    continue
+                if c.source_url:
+                    seen_urls.add(c.source_url)
+                out.append(c)
+    # Finnhub supplemental — older history the Yahoo parquet doesn't cover.
+    for fc in _FINNHUB_NEWS_BY_TICKER.get(ticker.upper(), []):
+        if fc.publication_date > as_of:
+            continue
+        if fc.source_url and fc.source_url in seen_urls:
+            continue
+        if fc.source_url:
+            seen_urls.add(fc.source_url)
+        out.append(fc)
     return out
 
 
@@ -189,10 +211,22 @@ def _aggregate_news_chunks_from_symbols(
 
 
 def _peer_chunks_for(ticker: str, as_of: date) -> list[TextChunk]:
-    return _aggregate_news_chunks_from_symbols(
+    yahoo = _aggregate_news_chunks_from_symbols(
         ticker, _PEERS.get(ticker.upper(), []), as_of,
         source_type=SourceType.PEER_NEWS, chunk_prefix="peer_news",
     )
+    # Add Finnhub peer-news supplemental when available.
+    seen_urls = {c.source_url for c in yahoo if c.source_url}
+    out = list(yahoo)
+    for fc in _FINNHUB_PEER_BY_FOCAL.get(ticker.upper(), []):
+        if fc.publication_date > as_of:
+            continue
+        if fc.source_url and fc.source_url in seen_urls:
+            continue
+        if fc.source_url:
+            seen_urls.add(fc.source_url)
+        out.append(fc)
+    return out
 
 
 def _sector_chunks_for(ticker: str, as_of: date) -> list[TextChunk]:
@@ -213,6 +247,53 @@ def preload_peer_and_sector_news(focal_tickers: list[str]) -> None:
         extra.update(s.upper() for s in _SECTOR_PROXIES.get(u, []))
     if extra:
         preload_news(sorted(extra))
+
+
+def preload_finnhub_news(
+    focal_tickers: list[str],
+    *,
+    start_date: Optional[date] = None,
+    end_date: Optional[date] = None,
+) -> None:
+    """Pull Finnhub historical news for each focal + its peers, indexed for
+    fast per-move slicing. No-op when FINNHUB_API_KEY isn't set.
+
+    Defaults to fetching the last 5 years up to today, which fills the
+    pre-2025 gap in the bundled Yahoo parquet without overshooting the
+    free-tier rate limit (one request per ticker, deduped to focals + peers).
+    """
+    from ingestion.earnings_news.finnhub import (
+        fetch_finnhub_news,
+        is_finnhub_available,
+    )
+
+    if not is_finnhub_available():
+        return  # silently skip when FINNHUB_API_KEY not set
+
+    today = date.today()
+    end = end_date or today
+    start = start_date or date(today.year - 5, today.month, today.day)
+
+    for focal in focal_tickers:
+        focal_upper = focal.upper()
+        if focal_upper not in _FINNHUB_NEWS_BY_TICKER:
+            _FINNHUB_NEWS_BY_TICKER[focal_upper] = fetch_finnhub_news(
+                [focal_upper], start, end,
+                source_type=SourceType.NEWS, chunk_prefix="news",
+            )
+        if focal_upper not in _FINNHUB_PEER_BY_FOCAL:
+            peers = _PEERS.get(focal_upper, [])
+            if peers:
+                # Match the Yahoo peer convention: chunks tagged with the
+                # focal's ticker, with "via <peer>" in section_name.
+                _FINNHUB_PEER_BY_FOCAL[focal_upper] = fetch_finnhub_news(
+                    peers, start, end,
+                    out_ticker=focal_upper,
+                    source_type=SourceType.PEER_NEWS, chunk_prefix="peer_news",
+                    via_focal=True,
+                )
+            else:
+                _FINNHUB_PEER_BY_FOCAL[focal_upper] = []
 
 
 def preload_thirteen_f() -> None:
