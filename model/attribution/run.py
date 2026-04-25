@@ -153,13 +153,20 @@ def _assemble_attribution(
         raw = tool_input.get(name)
         if not isinstance(raw, dict):
             # Model occasionally emits a bare string (or None) for a dimension —
-            # treat that as "no signal" and fill with neutral defaults.
+            # treat that as "no signal" and fill with neutral defaults. Populate
+            # cited_evidence too so the UI's rich shape always renders.
+            from schema import CitedEvidence
             dims[name] = DimensionScore(
                 weight=0.0,
                 direction="neutral",
                 rationale=(raw if isinstance(raw, str)
                            else f"model omitted {name}; no signal in evidence"),
                 evidence_chunk_ids=[fallback_chunk],
+                cited_evidence=[CitedEvidence(
+                    chunk_id=fallback_chunk,
+                    quote="",
+                    reasoning=f"Model omitted {name}; falling back to top-relevance chunk.",
+                )],
             )
             continue
         # Coerce out-of-schema fields the model occasionally returns:

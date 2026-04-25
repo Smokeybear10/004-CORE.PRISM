@@ -947,11 +947,18 @@ function selectMove(idx) {
   STATE.enabledSources = new Set(
     ALL_SOURCE_IDS.filter(id => (counts[id] ?? 0) > 0)
   );
+  // Render the pre-baked attribution as a fast first paint, then fire the
+  // live /api/attribute call so the per-citation quote + reasoning shape
+  // arrives without the user having to toggle a source. The live call's
+  // result replaces the placeholder when it lands.
   renderAttribution(STATE.bundle, idx);
   renderToggleRow(counts);
   const totalAvailable = Object.keys(counts).filter(k => counts[k] > 0).length;
   renderToggleCaption(STATE.enabledSources.size, totalAvailable,
                       move.attribution?.chunks_considered ?? 0);
+  if (STATE.enabledSources.size > 0) {
+    recomputeAttribution();
+  }
 }
 
 function resetToggles() {
