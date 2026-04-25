@@ -39,6 +39,7 @@ from __future__ import annotations
 
 import logging
 import os
+import time
 from typing import Optional
 
 from schema import (
@@ -58,6 +59,16 @@ log = logging.getLogger(__name__)
 LIVE_ENV_VAR = "BW_USE_LIVE_ATTRIBUTION"
 LIVE_NOTE_PREFIX = "live attribution"
 PLACEHOLDER_NOTE_PREFIX = "synthetic fixture"
+
+# Rate-limit retry config. The Anthropic SDK retries 429s once internally,
+# but for batch jobs (build_static, eval matrix) we want to ride through
+# brief cap windows instead of immediately falling back to placeholder.
+# The base delay is doubled per attempt (30s, 60s, …) and is capped at
+# RATE_LIMIT_MAX_DELAY_S. If the 429 response carries a Retry-After header
+# we honor that instead, also capped.
+RATE_LIMIT_MAX_RETRIES = 2
+RATE_LIMIT_BASE_DELAY_S = 30.0
+RATE_LIMIT_MAX_DELAY_S = 90.0
 
 
 def _should_use_live(chunks: list[TextChunk]) -> tuple[bool, Optional[str]]:
@@ -100,16 +111,59 @@ def _build_evidence(move: PriceMove, chunks: list[TextChunk]) -> JoinedEvidence:
     )
 
 
+def _retry_delay_for(err: "Exception", attempt: int) -> float:
+    """Honor a Retry-After response header when present; otherwise back off
+    exponentially from RATE_LIMIT_BASE_DELAY_S. Always capped at
+    RATE_LIMIT_MAX_DELAY_S so a misbehaving server can't park us forever."""
+    response = getattr(err, "response", None)
+    if response is not None:
+        try:
+            ra = response.headers.get("retry-after") or response.headers.get("Retry-After")
+            if ra:
+                seconds = float(ra)
+                if seconds > 0:
+                    return min(seconds, RATE_LIMIT_MAX_DELAY_S)
+        except (AttributeError, ValueError):
+            pass
+    return min(RATE_LIMIT_BASE_DELAY_S * (2 ** attempt), RATE_LIMIT_MAX_DELAY_S)
+
+
 def _live_attribute(
     move: PriceMove,
     chunks: list[TextChunk],
     config: AblationConfig,
 ) -> Attribution:
-    """Wrap run_attribution and pin contract fields the demo/runner expect."""
+    """Wrap run_attribution, retry on 429s, and pin contract fields the
+    demo / runner expect.
+
+    On `anthropic.RateLimitError` we sleep (Retry-After header if present,
+    else exponential backoff) and retry up to RATE_LIMIT_MAX_RETRIES times.
+    On the final attempt the error propagates and the outer `attribute()`
+    falls back to the placeholder with an honest model_notes tag.
+    """
+    import anthropic
+
     from model.attribution import run_attribution
 
     evidence = _build_evidence(move, chunks)
-    attr = run_attribution(evidence, ablation_name=config.name)
+
+    attempts = RATE_LIMIT_MAX_RETRIES + 1
+    attr = None
+    for attempt in range(attempts):
+        try:
+            attr = run_attribution(evidence, ablation_name=config.name)
+            break
+        except anthropic.RateLimitError as e:
+            if attempt >= attempts - 1:
+                raise
+            delay = _retry_delay_for(e, attempt)
+            log.warning(
+                "rate-limited on %s %s; sleeping %.0fs before retry %d/%d",
+                move.ticker, move.move_date, delay, attempt + 2, attempts,
+            )
+            time.sleep(delay)
+
+    assert attr is not None  # loop either set it or raised
 
     attr.ablation_name = config.name
     attr.sources_used = list(config.sources)

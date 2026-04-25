@@ -5,15 +5,39 @@ The `patched_loader` fixture monkeypatches `ingestion.prices.hf_loader` so
 tests never touch HuggingFace and never pollute the real data/cache
 directory. The fake `_read_hf_parquet` reads local fixture parquets while
 honoring pyarrow pushdown filters — same code path as production.
+
+Also: a session-scoped autouse fixture force-disables LIVE attribution
+mode in `model.attribute()` for the entire test run, regardless of what's
+in the developer's `.env`. Reason: importing `demo.analyze_ticker`
+(which `tests/test_orchestrator.py` does) calls `load_dotenv()` at import
+time, which would otherwise leak `BW_USE_LIVE_ATTRIBUTION=1` and
+`ANTHROPIC_API_KEY` into the test environment and cause `model.attribute`
+to hit the real Anthropic API mid-suite. Tests that need to exercise live
+mode use `monkeypatch.setenv` per-test (see test_model_attribute_bridge.py).
 """
 from __future__ import annotations
 
+import os
 from pathlib import Path
 
 import pyarrow.parquet as pq
 import pytest
 
 from ingestion.prices import hf_loader as yahoo_loader
+
+
+@pytest.fixture(autouse=True, scope="session")
+def _disable_live_attribution_for_tests():
+    """Force model.attribute() into placeholder mode for the whole session."""
+    prior_live = os.environ.pop("BW_USE_LIVE_ATTRIBUTION", None)
+    prior_key = os.environ.pop("ANTHROPIC_API_KEY", None)
+    os.environ["BW_USE_LIVE_ATTRIBUTION"] = "0"
+    yield
+    os.environ.pop("BW_USE_LIVE_ATTRIBUTION", None)
+    if prior_live is not None:
+        os.environ["BW_USE_LIVE_ATTRIBUTION"] = prior_live
+    if prior_key is not None:
+        os.environ["ANTHROPIC_API_KEY"] = prior_key
 
 FIXTURE_DIR = Path(__file__).parent / "fixtures"
 
