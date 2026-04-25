@@ -65,7 +65,15 @@ def _news_coverage_start(ticker: str) -> "date | None":
 
 
 def _dim_dict(score) -> dict:
+    cited = []
+    for ce in (score.cited_evidence or []):
+        cited.append({
+            "chunk_id": ce.chunk_id,
+            "quote": ce.quote,
+            "reasoning": ce.reasoning,
+        })
     return {
+        "cited_evidence": cited,
         "weight": round(float(score.weight), 4),
         "direction": score.direction,
         "rationale": score.rationale,
@@ -204,18 +212,50 @@ def build_for_ticker(ticker: str, meta: dict, end_date: date) -> dict:
     }
 
 
+def _resolve_ticker_order() -> list[str]:
+    """Honor BW_TICKER_ORDER=AAA,BBB,... to rebuild only a subset (or reorder).
+    Tickers not in FOCAL_TICKERS are dropped with a warning."""
+    import os
+    raw = os.environ.get("BW_TICKER_ORDER", "").strip()
+    if not raw:
+        return list(FOCAL_TICKERS.keys())
+    requested = [t.strip().upper() for t in raw.split(",") if t.strip()]
+    valid = [t for t in requested if t in FOCAL_TICKERS]
+    skipped = [t for t in requested if t not in FOCAL_TICKERS]
+    if skipped:
+        print(f"BW_TICKER_ORDER: skipping unknown tickers {skipped}", flush=True)
+    print(f"BW_TICKER_ORDER set; building only: {valid}", flush=True)
+    return valid
+
+
 def main() -> None:
     OUT_DIR.mkdir(parents=True, exist_ok=True)
     end_date = date.today()
 
-    print("Preloading news parquet (one-time ~30-60s)…", flush=True)
-    preload_news(list(FOCAL_TICKERS.keys()))
-    preload_peer_and_sector_news(list(FOCAL_TICKERS.keys()))
-    preload_thirteen_f()
-    preload_earnings_transcripts(list(FOCAL_TICKERS.keys()))
+    ticker_order = _resolve_ticker_order()
 
-    index: list[dict] = []
-    for ticker, meta in FOCAL_TICKERS.items():
+    print("Preloading news parquet (one-time ~30-60s)…", flush=True)
+    preload_news(ticker_order)
+    preload_peer_and_sector_news(ticker_order)
+    preload_thirteen_f()
+    preload_earnings_transcripts(ticker_order)
+
+    # When BW_TICKER_ORDER is set, preserve other tickers' index entries by
+    # seeding from the existing index.json. We only overwrite entries for
+    # tickers we're rebuilding this run.
+    existing_index: dict[str, dict] = {}
+    index_path = OUT_DIR / "index.json"
+    if len(ticker_order) < len(FOCAL_TICKERS) and index_path.exists():
+        try:
+            prior = json.loads(index_path.read_text())
+            for entry in prior.get("tickers", []):
+                existing_index[entry["ticker"]] = entry
+        except (json.JSONDecodeError, KeyError):
+            pass
+
+    rebuilt: dict[str, dict] = {}
+    for ticker in ticker_order:
+        meta = FOCAL_TICKERS[ticker]
         print(f"Building {ticker} ({meta['name']}, {meta['sector']})…", flush=True)
         bundle = build_for_ticker(ticker, meta, end_date)
         path = OUT_DIR / f"{ticker}.json"
@@ -224,19 +264,24 @@ def main() -> None:
         print(f"  → {path.name}  "
               f"({len(bundle['prices'])} bars, {len(bundle['moves'])} moves, "
               f"{size_kb:.1f} KB)")
-        index.append({
+        rebuilt[ticker] = {
             "ticker": ticker,
             "name": meta["name"],
             "sector": meta["sector"],
             "moves": len(bundle["moves"]),
-        })
+        }
 
-    (OUT_DIR / "index.json").write_text(json.dumps({
+    # Merge: rebuilt entries win over existing; preserve untouched tickers.
+    merged = {**existing_index, **rebuilt}
+    # Keep FOCAL_TICKERS' canonical alphabetical order in the index.
+    index_out = [merged[t] for t in FOCAL_TICKERS if t in merged]
+
+    index_path.write_text(json.dumps({
         "generated_at": end_date.isoformat(),
         "window_years": WINDOW_YEARS,
-        "tickers": index,
+        "tickers": index_out,
     }, indent=2))
-    print(f"\nDone. {len(index)} tickers written to {OUT_DIR.relative_to(_ROOT)}/")
+    print(f"\nDone. {len(rebuilt)} ticker(s) rebuilt; index has {len(index_out)} total.")
 
 
 if __name__ == "__main__":

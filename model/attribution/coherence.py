@@ -16,11 +16,13 @@ from __future__ import annotations
 
 from typing import Any
 
+import os
+
 import anthropic
 
 from schema import Attribution, CoherenceCheck, JoinedEvidence
 
-COHERENCE_MODEL_ID = "claude-opus-4-7"
+COHERENCE_MODEL_ID = os.environ.get("BW_COHERENCE_MODEL", "claude-haiku-4-5-20251001")
 COHERENCE_TOOL_NAME = "emit_coherence_check"
 
 
