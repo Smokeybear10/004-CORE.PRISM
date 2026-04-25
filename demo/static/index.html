@@ -354,6 +354,16 @@
       font: italic 500 12px var(--serif);
       color: var(--ink-quiet);
     }
+    /* Sub-pill announcing the active model-overlay ablation. Sits to the
+       right of the existing #chart-meta pill so the chart header reads
+       "ticker · sector · range  |  Model overlay · +sec". */
+    .chart-h .pill.overlay {
+      color: #7a1f1f;            /* oxblood — matches the predicted line */
+      letter-spacing: 0.04em;
+    }
+    .chart-h .pill.overlay.muted {
+      color: var(--ink-quiet);
+    }
     #chart {
       width: 100%;
       height: 280px;
@@ -1568,6 +1578,7 @@
       <div>
         <h3 style="display:inline">Figure I · Price action</h3>
         <span class="pill" id="chart-meta">—</span>
+        <span class="pill overlay" id="ablation-pill">—</span>
       </div>
       <span class="hint">Step 2 · click any annotated dot</span>
     </div>

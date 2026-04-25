@@ -22,6 +22,19 @@ const SOURCE_TYPES = [
 ];
 const ALL_SOURCE_IDS = SOURCE_TYPES.map(s => s.id);
 
+// Mirrors demo/server.py:_COUNT_TO_BUNDLE — drives the chart-overlay
+// predicted-price line so it matches the per-event panel's API choice.
+// Keys are the count of currently-enabled sources; values are the
+// canonical ablation_name baked in build_static.predictions_by_ablation.
+const COUNT_TO_BUNDLE = {
+  0: 'base_news', 1: 'base_news', 2: '+sec', 3: '+earnings',
+  4: '+peer_news', 5: '+sector_news', 6: '+macro', 7: '+positioning',
+};
+function pickAblationName(enabledSet) {
+  const n = enabledSet.size ?? enabledSet.length ?? 0;
+  return COUNT_TO_BUNDLE[Math.min(n, 7)] ?? '+positioning';
+}
+
 const STATE = {
   tickers: [],          // [{ticker, name, sector, moves}]
   currentTicker: null,  // 'AMD'
@@ -167,6 +180,50 @@ function renderOverview(bundle) {
 }
 
 // ---------- Chart ----------
+// Build a "what the model expected" price series from the actual close
+// series + each event's predicted_return_pct under the active ablation.
+//
+// Construction (cumulative-gap formulation):
+//   predicted_close[i] = actual_close[i] × cumulative_gap[i]
+//   cumulative_gap[i]  = ∏ over events e with e.date ≤ date[i]
+//                          of (1 + predicted_return(e)) / (1 + actual_return(e))
+//
+// Effect: predicted overlaps actual until the first event, then drifts
+// proportionally to how wrong the model has been so far. Between events
+// the two lines move in lockstep — meaningful, since the model only
+// makes claims at events. If predicted is null for an event (no chunks
+// of the right type), the gap factor stays unchanged (predicted tracks
+// actual through that event).
+function computePredictedSeries(bundle, ablationName) {
+  // Sort events by date once; we walk the price series in order and
+  // bump cumGap as we cross each event date.
+  const eventByDate = new Map();
+  const eventsSorted = bundle.moves
+    .map((m, idx) => ({ idx, ...m }))
+    .sort((a, b) => a.move_date.localeCompare(b.move_date));
+
+  let cumGap = 1.0;
+  for (const e of eventsSorted) {
+    const pred = e.predictions_by_ablation?.[ablationName];
+    const denom = 1 + e.return_pct;
+    if (pred !== null && pred !== undefined && denom !== 0) {
+      cumGap *= (1 + pred) / denom;
+    }
+    eventByDate.set(e.move_date, { cumGap, idx: e.idx, predicted: pred });
+  }
+
+  let runningGap = 1.0;
+  const dates = [];
+  const predicted = [];
+  for (const p of bundle.prices) {
+    const ev = eventByDate.get(p.date);
+    if (ev) runningGap = ev.cumGap;
+    dates.push(p.date);
+    predicted.push(p.close * runningGap);
+  }
+  return { dates, predicted, eventByDate };
+}
+
 function renderChart(bundle) {
   const priceByDate = new Map(bundle.prices.map(p => [p.date, p.close]));
   const hoverText = (m) =>
@@ -178,7 +235,11 @@ function renderChart(bundle) {
   bundle.moves.forEach((m, i) => {
     (m.return_pct < 0 ? selloffIdx : rallyIdx).push(i);
   });
-  const buildMarkerTrace = (idx, color, name) => ({
+
+  // Bolded actual markers — bigger + thicker outer ring so the
+  // "clickable affordance" is obvious. Keep symbol = circle to match the
+  // pre-existing chart's visual language.
+  const buildActualMarkerTrace = (idx, color, name) => ({
     x: idx.map(i => bundle.moves[i].move_date),
     y: idx.map(i => priceByDate.get(bundle.moves[i].move_date) ?? null),
     customdata: idx,
@@ -186,13 +247,80 @@ function renderChart(bundle) {
     hovertemplate: '%{text}<extra></extra>',
     mode: 'markers',
     marker: {
-      size: 10,
+      size: 12,
       color,
-      line: { color: COLOR.surface, width: 1.5 },
+      line: { color: COLOR.text, width: 2.5 },
       symbol: 'circle',
     },
     name,
   });
+
+  const ablationName = pickAblationName(STATE.enabledSources);
+  const hasOverlay = (STATE.enabledSources.size ?? 0) > 0;
+  const overlay = hasOverlay
+    ? computePredictedSeries(bundle, ablationName)
+    : null;
+
+  // Predicted markers at event dates, placed at predicted-y so the line
+  // and dots line up. Hollow diamond distinguishes from the solid actual
+  // circles. customdata routes click → selectMove(idx).
+  const buildPredictedMarkerTrace = (idx, color, name) => {
+    const xs = [], ys = [], cd = [], txt = [];
+    for (const i of idx) {
+      const m = bundle.moves[i];
+      const ev = overlay?.eventByDate.get(m.move_date);
+      if (!ev || ev.predicted === null || ev.predicted === undefined) continue;
+      const actualY = priceByDate.get(m.move_date);
+      if (actualY === undefined) continue;
+      const predY = actualY * ev.cumGap;
+      xs.push(m.move_date);
+      ys.push(predY);
+      cd.push(i);
+      const gap = predY - actualY;
+      txt.push(
+        `<b>${m.move_date}</b> · model<br>` +
+        `predicted close $${predY.toFixed(2)}<br>` +
+        `actual close $${actualY.toFixed(2)}<br>` +
+        `gap ${gap >= 0 ? '+' : ''}$${gap.toFixed(2)}<br>` +
+        `predicted return ${pct(ev.predicted)}`
+      );
+    }
+    return {
+      x: xs, y: ys, customdata: cd, text: txt,
+      hovertemplate: '%{text}<extra></extra>',
+      mode: 'markers',
+      marker: {
+        size: 12,
+        color,
+        line: { color: COLOR.text, width: 2 },
+        symbol: 'diamond-open',
+      },
+      name,
+    };
+  };
+
+  // Layout shapes: a thin dashed vertical line connecting actual and
+  // predicted markers when divergence > 2% — under that, it's noise and
+  // would just clutter the chart.
+  const gapShapes = [];
+  if (overlay) {
+    for (let i = 0; i < bundle.moves.length; i++) {
+      const m = bundle.moves[i];
+      const ev = overlay.eventByDate.get(m.move_date);
+      if (!ev || ev.predicted === null || ev.predicted === undefined) continue;
+      const actualY = priceByDate.get(m.move_date);
+      if (actualY === undefined) continue;
+      const predY = actualY * ev.cumGap;
+      if (Math.abs(predY - actualY) / Math.abs(actualY) < 0.02) continue;
+      gapShapes.push({
+        type: 'line',
+        x0: m.move_date, x1: m.move_date,
+        y0: actualY, y1: predY,
+        line: { color: COLOR.muted, width: 1, dash: 'dot' },
+        layer: 'below',
+      });
+    }
+  }
 
   const traces = [
     {
@@ -200,12 +328,31 @@ function renderChart(bundle) {
       y: bundle.prices.map(p => p.close),
       mode: 'lines',
       line: { color: COLOR.accent, width: 1.4 },
-      name: 'Close',
+      name: 'Close (actual)',
       hovertemplate: '%{x}<br>$%{y:.2f}<extra></extra>',
     },
-    buildMarkerTrace(rallyIdx, COLOR.positive, 'Rally (up move)'),
-    buildMarkerTrace(selloffIdx, COLOR.negative, 'Selloff (down move)'),
   ];
+
+  if (overlay) {
+    traces.push({
+      x: overlay.dates,
+      y: overlay.predicted,
+      mode: 'lines',
+      line: { color: '#d97a4f', width: 1.4, dash: 'dash' },
+      name: `Model prediction (${ablationName})`,
+      hovertemplate: '%{x}<br>predicted $%{y:.2f}<extra></extra>',
+      opacity: 0.85,
+    });
+  }
+
+  traces.push(buildActualMarkerTrace(rallyIdx, COLOR.positive, 'Rally (up move)'));
+  traces.push(buildActualMarkerTrace(selloffIdx, COLOR.negative, 'Selloff (down move)'));
+  if (overlay) {
+    traces.push(buildPredictedMarkerTrace(rallyIdx, COLOR.positive,
+      'Predicted (up move)'));
+    traces.push(buildPredictedMarkerTrace(selloffIdx, COLOR.negative,
+      'Predicted (down move)'));
+  }
 
   const layout = {
     paper_bgcolor: 'rgba(0,0,0,0)',
@@ -231,6 +378,7 @@ function renderChart(bundle) {
       zeroline: false,
       tickprefix: '$',
     },
+    shapes: gapShapes,
     showlegend: true,
     legend: {
       orientation: 'h',
@@ -245,12 +393,33 @@ function renderChart(bundle) {
 
   Plotly.react('chart', traces, layout, config);
 
-  // Click handler: attach once. Reads current STATE so it works across ticker switches.
+  // Update the small "ablation name · chunk caption" pill near the chart
+  // header so the active source set is always legible without reading the
+  // legend. Empty selection collapses to a "no overlay" hint.
+  const pill = document.getElementById('ablation-pill');
+  if (pill) {
+    if (!hasOverlay) {
+      pill.textContent = 'No overlay — enable a source below';
+      pill.classList.add('muted');
+    } else {
+      pill.textContent = `Model overlay · ${ablationName}`;
+      pill.classList.remove('muted');
+    }
+  }
+
+  // Click handler: attach once. Reads current STATE so it works across
+  // ticker switches. Curve 0 = actual close line, curve 1 = predicted
+  // line (when present) — both are line traces with no per-point meaning,
+  // so skip clicks on them. Marker traces all carry customdata=move_idx.
   const chartDiv = document.getElementById('chart');
   if (!chartDiv._clickHandlerAttached) {
     chartDiv.on('plotly_click', (ev) => {
       const pt = ev.points[0];
-      if (!pt || pt.curveNumber === 0) return;   // skip the close-price line
+      if (!pt) return;
+      // Marker traces always have customdata; line traces don't. Trust
+      // that, rather than hard-coding curveNumber indices that shift as
+      // overlay traces appear/disappear.
+      if (pt.customdata === undefined || pt.customdata === null) return;
       selectMove(pt.customdata);
     });
     chartDiv._clickHandlerAttached = true;
@@ -293,6 +462,9 @@ function renderToggleRow(availableCounts) {
       else STATE.enabledSources.delete(src.id);
       renderToggleRow(availableCounts);
       recomputeAttribution();
+      // Re-render chart so the predicted-overlay line and divergence
+      // shapes track the active source set, not just the per-event panel.
+      if (STATE.bundle) renderChart(STATE.bundle);
     });
 
     const box = document.createElement('span');
@@ -1171,6 +1343,9 @@ function selectMove(idx) {
   if (STATE.enabledSources.size > 0) {
     recomputeAttribution();
   }
+  // selectMove can change enabledSources (different chunks_available per
+  // move), so the chart's predicted overlay needs to refresh too.
+  renderChart(STATE.bundle);
 }
 
 function resetToggles() {
@@ -1182,6 +1357,7 @@ function resetToggles() {
   );
   renderToggleRow(counts);
   renderAttribution(STATE.bundle, STATE.selectedMoveIdx);
+  if (STATE.bundle) renderChart(STATE.bundle);
 }
 
 // ---------- HTML escape ----------
