@@ -136,18 +136,62 @@ def _retry_delay_for(err: "Exception", attempt: int) -> float:
     return min(RATE_LIMIT_BASE_DELAY_S * (2 ** attempt), RATE_LIMIT_MAX_DELAY_S)
 
 
+_DIM_FIELDS = (
+    "demand",
+    "pricing",
+    "competitive",
+    "management_credibility",
+    "macro",
+)
+
+
+def _sanitize_chunk_citations(
+    attr: Attribution,
+    evidence: JoinedEvidence,
+) -> int:
+    """Drop hallucinated chunk_ids from each DimensionScore.
+
+    Mid-sized Claude models sometimes pattern-complete chunk_ids — they see
+    `..._article_002` is valid and emit `..._article_003` / `_004` that
+    don't exist. We can't run the full validator on the live path because
+    it would also fail weight-sum drift, so this is a targeted defense:
+    keep only IDs that resolve to a real chunk. If a dimension ends up
+    with no valid citations, fall back to the first (highest-relevance,
+    by virtue of model.relevance ordering) chunk so the citation contract
+    stays satisfied. Returns the count of citations dropped, for logging.
+    """
+    valid_ids = {c.chunk_id for c in evidence.text_chunks}
+    fallback = (
+        evidence.text_chunks[0].chunk_id if evidence.text_chunks else None
+    )
+    dropped = 0
+    for name in _DIM_FIELDS:
+        dim = getattr(attr, name)
+        original = list(dim.evidence_chunk_ids)
+        kept = [cid for cid in original if cid in valid_ids]
+        dropped += len(original) - len(kept)
+        if not kept and fallback is not None:
+            kept = [fallback]
+        dim.evidence_chunk_ids = kept
+    return dropped
+
+
 def _live_attribute(
     move: PriceMove,
     chunks: list[TextChunk],
     config: AblationConfig,
 ) -> Attribution:
-    """Wrap run_attribution, retry on 429s, and pin contract fields the
-    demo / runner expect.
+    """Wrap run_attribution, retry on 429s, sanitize hallucinated chunk_ids,
+    and pin contract fields the demo / runner expect.
 
     On `anthropic.RateLimitError` we sleep (Retry-After header if present,
     else exponential backoff) and retry up to RATE_LIMIT_MAX_RETRIES times.
     On the final attempt the error propagates and the outer `attribute()`
     falls back to the placeholder with an honest model_notes tag.
+
+    After a successful call we run `_sanitize_chunk_citations` to strip any
+    hallucinated chunk_ids the model may have invented (validate=False is
+    needed for weight-sum drift, so we can't lean on the validator for this).
     """
     import anthropic
 
@@ -175,12 +219,23 @@ def _live_attribute(
 
     assert attr is not None  # loop either set it or raised
 
+    dropped = _sanitize_chunk_citations(attr, evidence)
+    if dropped:
+        log.info(
+            "scrubbed %d hallucinated chunk_id(s) from %s %s",
+            dropped, move.ticker, move.move_date,
+        )
+
     attr.ablation_name = config.name
     attr.sources_used = list(config.sources)
     attr.chunks_considered = len(chunks)
     attr.model_notes = (attr.model_notes or LIVE_NOTE_PREFIX)
     if not attr.model_notes.startswith(LIVE_NOTE_PREFIX):
         attr.model_notes = f"{LIVE_NOTE_PREFIX}: {attr.model_notes}"
+    if dropped:
+        attr.model_notes = (
+            f"{attr.model_notes}; scrubbed {dropped} hallucinated chunk_id(s)"
+        )
     return attr
 
 
@@ -223,6 +278,14 @@ def attribute(
     Attribute `move` across the 5 dimensions using `chunks` (already filtered
     to source types in config.sources and to publication_date <= move.move_date).
 
+    PRE-LLM WEIGHTING (mentor ask):
+        Before any attribution path runs, chunks are scored by source quality
+        + recency decay + ticker alignment (see model.relevance). The bottom
+        tier is dropped; the survivors are re-ranked and get an
+        `[EVIDENCE_WEIGHT ...]` tag prepended to their text so the LLM sees
+        which evidence to trust most. Set BW_DISABLE_CHUNK_FILTER=1 to run
+        the unfiltered baseline for ablation.
+
     LIVE PATH (default OFF; enable with BW_USE_LIVE_ATTRIBUTION=1):
         Builds a JoinedEvidence and calls model.attribution.run_attribution,
         which hits the Anthropic API via the schema's tool_use contract and
@@ -236,21 +299,38 @@ def attribute(
     Either way, attribution.model_notes carries a short tag explaining which
     path produced the result. Downstream reports should surface that tag.
     """
-    use_live, skip_reason = _should_use_live(chunks)
+    from model.relevance import annotate_with_weights, filter_and_rank
+
+    raw_count = len(chunks)
+    scored = filter_and_rank(chunks, move)
+    annotated = annotate_with_weights(scored)
+    filter_note = (
+        None if len(annotated) == raw_count
+        else f"filtered to top {len(annotated)} of {raw_count} chunks by relevance"
+    )
+
+    use_live, skip_reason = _should_use_live(annotated)
     if use_live:
         try:
-            return _live_attribute(move, chunks, config)
+            attr = _live_attribute(move, annotated, config)
         except Exception as e:  # noqa: BLE001 — fall back on any live error
             log.warning(
                 "live attribute failed for %s %s (%s: %s); using placeholder",
                 move.ticker, move.move_date, type(e).__name__, e,
             )
-            return _placeholder_attribute(
-                move, chunks, config,
+            attr = _placeholder_attribute(
+                move, annotated, config,
                 note_suffix=f"live call failed ({type(e).__name__})",
             )
+    else:
+        attr = _placeholder_attribute(move, annotated, config, note_suffix=skip_reason)
 
-    return _placeholder_attribute(move, chunks, config, note_suffix=skip_reason)
+    if filter_note:
+        attr.model_notes = (
+            f"{attr.model_notes}; {filter_note}"
+            if attr.model_notes else filter_note
+        )
+    return attr
 
 
 def predict_expected_return(move: PriceMove, chunks: list[TextChunk]) -> float:

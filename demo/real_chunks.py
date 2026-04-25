@@ -310,7 +310,7 @@ def preload_earnings_transcripts(tickers: list[str]) -> None:
                     source_type=SourceType.EARNINGS_TRANSCRIPT,
                     publication_date=pub_date,
                     period_end=None,
-                    source_url=None,
+                    source_url=f"https://finance.yahoo.com/quote/{ticker}/history/",
                     section_name=section_name,
                     text=chunk_body,
                     token_count=tok_count,
@@ -324,9 +324,63 @@ def _earnings_chunks_for(ticker: str, as_of: date) -> list[TextChunk]:
     return [c for c in pool if c.publication_date <= as_of]
 
 
+def _macro_chunks_for(as_of: date) -> list[TextChunk]:
+    """Curated FOMC + geopolitical + market-structure events <= as_of.
+    Cheap: ingestion.macro caches to .cache/macro.json."""
+    from ingestion.macro import get_macro_as_of
+    return get_macro_as_of(as_of)
+
+
+_SEC_DATA_DIR = _REPO_ROOT / "data" / "sec"
+
+
+def _sec_chunks_from_data_dir(ticker: str, as_of: date) -> list[TextChunk]:
+    """Read SEC chunks written by ingestion.sec.filings.run_sec_pipeline.
+
+    The HF-backed `prep_ticker` pipeline writes
+    `data/sec/chunks_<TICKER>_<as_of>.jsonl`; the legacy EDGAR scrapers used
+    by `get_filings_as_of` look elsewhere (ingestion/sec/.cache/{10k,8k}/),
+    so without this helper the JSONL output never reaches the demo. We pick
+    the most-recent JSONL per ticker, parse each line into a TextChunk,
+    and filter by publication_date <= as_of.
+
+    Dedup by chunk_id when callers also include `get_filings_as_of` output.
+    """
+    if not _SEC_DATA_DIR.exists():
+        return []
+    t_upper = ticker.upper()
+    files = sorted(_SEC_DATA_DIR.glob(f"chunks_{t_upper}_*.jsonl"))
+    if not files:
+        return []
+    out: list[TextChunk] = []
+    seen_ids: set[str] = set()
+    # Read latest snapshot only — earlier snapshots are subsumed by it.
+    with files[-1].open() as f:
+        for line in f:
+            line = line.strip()
+            if not line:
+                continue
+            try:
+                rec = json.loads(line)
+            except json.JSONDecodeError:
+                continue
+            try:
+                chunk = TextChunk.model_validate(rec)
+            except Exception:
+                continue
+            if chunk.publication_date > as_of:
+                continue
+            if chunk.chunk_id in seen_ids:
+                continue
+            seen_ids.add(chunk.chunk_id)
+            out.append(chunk)
+    return out
+
+
 def chunks_for_real(ticker: str, as_of: date) -> list[TextChunk]:
     """
-    Real SEC filings + news + 13F chunks for (ticker, as_of).
+    Real SEC filings + news + 13F + earnings transcripts + peer/sector news
+    + curated macro chunks for (ticker, as_of).
 
     Chunks are *stratified* by source_type: within each source we sort
     recent-first, then we round-robin one chunk per source until all are
@@ -336,16 +390,24 @@ def chunks_for_real(ticker: str, as_of: date) -> list[TextChunk]:
     Pure-recency sort was crowding out SEC + 13F on recent moves where
     daily news dominates the timeline — the toggle would show
     `sec_10k: 94 available` but the evidence panel only ever cited news.
+    The same stratification now also makes room for macro events.
     """
-    sec = get_filings_as_of(ticker, as_of)
+    sec_legacy = get_filings_as_of(ticker, as_of)        # tenk.py + eightk.py EDGAR caches
+    sec_hf = _sec_chunks_from_data_dir(ticker, as_of)    # prep_ticker HF pipeline output
+    # Dedup — chunk_id is the stable key. Prefer the legacy EDGAR scraper's
+    # output when both have a chunk_id (it has explicit Item 1A / 7 sectioning
+    # the HF pipeline doesn't always preserve).
+    legacy_ids = {c.chunk_id for c in sec_legacy}
+    sec = list(sec_legacy) + [c for c in sec_hf if c.chunk_id not in legacy_ids]
     news = _news_chunks_for(ticker, as_of)
     thirteen_f = _thirteen_f_chunks_for(ticker, as_of)
     transcripts = _earnings_chunks_for(ticker, as_of)
     peer = _peer_chunks_for(ticker, as_of)
     sector = _sector_chunks_for(ticker, as_of)
+    macro = _macro_chunks_for(as_of)
 
     by_type: dict[SourceType, list[TextChunk]] = {}
-    for c in sec + news + thirteen_f + transcripts + peer + sector:
+    for c in sec + news + thirteen_f + transcripts + peer + sector + macro:
         by_type.setdefault(c.source_type, []).append(c)
     for bucket in by_type.values():
         bucket.sort(key=lambda c: c.publication_date, reverse=True)
