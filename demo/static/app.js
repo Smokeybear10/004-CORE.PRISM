@@ -46,8 +46,8 @@ const ARROW = { positive: '↑', negative: '↓', neutral: '→' };
 // ---------- Strategies ----------
 // Strategy verdicts are computed by backtest.signal.STRATEGY_REGISTRY in
 // Python — server.py runs them per-request, build_static.py bakes them into
-// the static bundles. The frontend never recomputes them. STRATEGIES below
-// is UI metadata only (labels + blurbs); IDs MUST match Python registry keys.
+// the static bundles. STRATEGIES below is UI metadata only (labels + blurbs);
+// IDs MUST match Python registry keys.
 const STRATEGIES = [
   { id: 'fundamental_vs_nonfundamental', label: 'Fundamental vs Non',
     blurb: 'structural → lean, transient → fade.' },
@@ -58,6 +58,59 @@ const STRATEGIES = [
   { id: 'hybrid',                        label: 'Hybrid',
     blurb: 'fundamentality gate → expected/realized → dim sanity.' },
 ];
+
+// JS mirror of backtest/frameworks.py — used ONLY as a fallback when a
+// pre-baked bundle predates the strategies field. Once build_static.py
+// bakes strategies into the JSON, that takes precedence and this never runs.
+const DIM_PERSISTENCE = {
+  demand: +0.80, pricing: +0.60, competitive: +0.40,
+  management_credibility: 0.0, macro: -0.70,
+};
+function deriveStrategiesFromAttribution(attr) {
+  if (!attr) return {};
+  const realized = attr.realized;
+  const predicted = attr.predicted;
+  const character = attr.character;
+  const dims = attr.dimensions || {};
+
+  const fund = character === 'structural' ? 'lean'
+             : character === 'transient'  ? 'fade'
+             : 'neutral';
+
+  let exp = 'neutral';
+  if (predicted != null && predicted !== 0 && predicted * realized >= 0) {
+    const ratio = Math.abs(realized) / Math.abs(predicted);
+    if (ratio >= 1.5) exp = 'fade';
+    else if (ratio <= 0.5) exp = 'lean';
+  }
+
+  let score = 0;
+  for (const [k, c] of Object.entries(DIM_PERSISTENCE)) {
+    score += ((dims[k] || {}).weight ?? 0) * c;
+  }
+  const dimW = score >= 0.20 ? 'lean' : score <= -0.20 ? 'fade' : 'neutral';
+
+  let hybrid;
+  if (character === 'transient') hybrid = 'fade';
+  else if (character === 'mixed' || character === 'unclear') hybrid = 'neutral';
+  else if (predicted != null && predicted !== 0 && predicted * realized > 0
+           && Math.abs(realized) >= 1.5 * Math.abs(predicted)) hybrid = 'fade';
+  else {
+    let domName = null, domWeight = -1;
+    for (const k of Object.keys(DIM_PERSISTENCE)) {
+      const w = (dims[k] || {}).weight ?? 0;
+      if (w > domWeight) { domWeight = w; domName = k; }
+    }
+    hybrid = domName && (DIM_PERSISTENCE[domName] ?? 0) < 0 ? 'neutral' : 'lean';
+  }
+
+  return {
+    fundamental_vs_nonfundamental: fund,
+    expected_vs_realized: exp,
+    dimension_weighted: dimW,
+    hybrid: hybrid,
+  };
+}
 
 // ---------- Fetch helpers ----------
 async function fetchJSON(path) {
@@ -429,7 +482,9 @@ function renderAttributionFromResponse(move, response) {
     },
     chunks: response.chunks,
   };
-  STATE.lastStrategies = response.strategies || {};
+  STATE.lastStrategies = (response.strategies && Object.keys(response.strategies).length > 0)
+    ? response.strategies
+    : deriveStrategiesFromAttribution(renderableMove.attribution);
   renderStrategyRow();
   renderAttributionDetails(renderableMove);
 }
@@ -455,7 +510,12 @@ function renderAttribution(bundle, moveIdx) {
   // Cache the full-stack pre-baked attribution for the "vs full stack" reference.
   STATE.lastFullStack = bundle.moves[moveIdx].attribution;
 
-  STATE.lastStrategies = bundle.moves[moveIdx].strategies || {};
+  // Prefer pre-baked (server-computed) strategies; fall back to JS mirror so
+  // older bundles still show verdicts immediately.
+  const baked = bundle.moves[moveIdx].strategies;
+  STATE.lastStrategies = (baked && Object.keys(baked).length > 0)
+    ? baked
+    : deriveStrategiesFromAttribution(bundle.moves[moveIdx].attribution);
   renderStrategyRow();
 
   renderAttributionDetails(bundle.moves[moveIdx]);
