@@ -1540,6 +1540,67 @@
       .radar { grid-template-columns: 1fr; gap: 18px; }
       .radar svg { max-width: 280px; margin: 0 auto; display: block; }
     }
+
+    /* ─── Ablation Toggle — preset source bundles ─── */
+    .abl-strip {
+      display: flex;
+      gap: 6px;
+      flex-wrap: wrap;
+      align-items: center;
+      padding: 14px 22px 16px;
+      border-bottom: 1px dashed var(--rule);
+      background: var(--paper);
+    }
+    .abl-strip .abl-label {
+      font: 600 9.5px var(--mono);
+      color: var(--ink-quiet);
+      letter-spacing: 0.22em;
+      text-transform: uppercase;
+      margin-right: 8px;
+    }
+    .abl-chip {
+      background: transparent;
+      border: 1px solid var(--rule);
+      border-radius: 999px;
+      padding: 6px 13px 7px;
+      font: 500 11.5px var(--sans);
+      color: var(--ink-2);
+      letter-spacing: -0.005em;
+      cursor: pointer;
+      transition: background 160ms, border-color 160ms, color 160ms;
+      white-space: nowrap;
+    }
+    .abl-chip:hover {
+      color: var(--ink);
+      border-color: var(--rule-strong);
+      background: var(--paper-2);
+    }
+    .abl-chip.active {
+      background: var(--navy);
+      color: #ffffff;
+      border-color: var(--navy);
+    }
+    .abl-chip.disabled,
+    .abl-chip[disabled] {
+      opacity: 0.45;
+      cursor: not-allowed;
+      pointer-events: none;
+    }
+    .abl-strip .abl-foot {
+      margin-left: auto;
+      font: italic 500 11.5px var(--serif);
+      color: var(--ink-quiet);
+    }
+    .abl-strip .abl-foot b {
+      color: var(--oxblood);
+      font-style: normal;
+      font-weight: 600;
+      font-family: var(--mono);
+      font-size: 11px;
+    }
+    @media (max-width: 760px) {
+      .abl-strip .abl-foot { display: none; }
+    }
   </style>
 </head>
 <body>
@@ -2388,6 +2449,8 @@ function renderEventCard() {
       <div class="date">${dateStr}</div>
     </div>
 
+    <div class="abl-strip" id="abl-strip"></div>
+
     ${notesHtml}
     ${zeroHtml}
 
@@ -2472,6 +2535,91 @@ function renderEventCard() {
   renderTabs();
   renderActiveTab();
   renderDimensionRadar();
+  renderAblationStrip();
+}
+
+/* ─── Ablation Toggle ───
+ * Mentor's "demo gold": click a chip → preset source bundle is sent to
+ * /api/attribute → the verdict / character / predicted return / radar
+ * polygon all move. The same source toggles in the Sources tab still
+ * work for granular exploration; this strip is for the demo narrative.
+ *
+ * Each preset is the additive-ablation roadmap from CLAUDE.md:
+ *   base_news → +sec → +earnings → +peers → +macro → +positioning
+ */
+const ABLATIONS = [
+  { id: 'base_news',     label: 'News only',
+    sources: ['news'] },
+  { id: '+sec',          label: '+ SEC',
+    sources: ['news', 'sec_10k', 'sec_8k'] },
+  { id: '+earnings',     label: '+ Earnings',
+    sources: ['news', 'sec_10k', 'sec_8k', 'earnings_transcript'] },
+  { id: '+peers',        label: '+ Peers',
+    sources: ['news', 'sec_10k', 'sec_8k', 'earnings_transcript', 'peer_news'] },
+  { id: '+macro',        label: '+ Macro',
+    sources: ['news', 'sec_10k', 'sec_8k', 'earnings_transcript', 'peer_news', 'macro'] },
+  { id: '+positioning',  label: '+ Positioning',
+    sources: ['news', 'sec_10k', 'sec_8k', 'earnings_transcript', 'peer_news', 'macro', 'thirteen_f'] },
+];
+
+function _setEqual(a, b) {
+  if (a.size !== b.size) return false;
+  for (const v of a) if (!b.has(v)) return false;
+  return true;
+}
+
+function _activeAblationId() {
+  // Match current STATE.enabledSources against the FULL preset (not
+  // intersected with chunks_available) so a chip lights up as soon as the
+  // user clicks it, even when some preset sources have zero chunks for
+  // this particular move (e.g. macro for an older date).
+  const enabled = STATE.enabledSources;
+  for (const abl of ABLATIONS) {
+    const presetSet = new Set(abl.sources);
+    if (_setEqual(presetSet, enabled)) return abl.id;
+  }
+  return null;
+}
+
+function renderAblationStrip() {
+  const strip = document.getElementById('abl-strip');
+  if (!strip) return;
+  if (STATE.selectedMoveIdx == null) { strip.innerHTML = ''; return; }
+
+  const activeId = _activeAblationId();
+
+  const label = '<span class="abl-label">Sources</span>';
+  const chips = ABLATIONS.map(abl => {
+    const eligible = abl.sources.filter(s => (STATE.chunksAvailable[s] || 0) > 0);
+    const disabled = eligible.length === 0;
+    const cls = 'abl-chip' +
+      (abl.id === activeId ? ' active' : '') +
+      (disabled ? ' disabled' : '');
+    const title = disabled
+      ? `No chunks available for: ${abl.sources.join(', ')}`
+      : `${abl.label} · ${eligible.length} source${eligible.length === 1 ? '' : 's'}`;
+    return `<button type="button" class="${cls}" data-abl-id="${abl.id}" title="${escapeHtml(title)}"${disabled ? ' disabled' : ''}>${escapeHtml(abl.label)}</button>`;
+  }).join('');
+
+  const foot = activeId
+    ? `<span class="abl-foot">Ablation: <b>${activeId}</b></span>`
+    : `<span class="abl-foot">Custom mix · use chips for preset bundles</span>`;
+
+  strip.innerHTML = label + chips + foot;
+
+  strip.querySelectorAll('.abl-chip').forEach(chip => {
+    chip.addEventListener('click', () => {
+      const id = chip.dataset.ablId;
+      const abl = ABLATIONS.find(a => a.id === id);
+      if (!abl) return;
+      // Send the full preset to the server. The server already filters by
+      // what's available; sending sources with zero chunks is harmless and
+      // means the user's click matches the chip's label exactly (so the
+      // active highlight lands on the chip they clicked).
+      STATE.enabledSources = new Set(abl.sources);
+      recomputeAttribution();
+    });
+  });
 }
 
 /* ─── Dimension Radar — this event vs ticker peer median ───
@@ -2862,7 +3010,11 @@ function renderSources(panel) {
   grid.className = 'src-grid';
   for (const s of SOURCE_TYPES) {
     const count = STATE.chunksAvailable[s.id] ?? 0;
-    const checked = STATE.enabledSources.has(s.id) && count > 0;
+    // `checked` reflects user intent (selected via chip or toggle), independent
+    // of whether this move has chunks for it. `disabled` handles the "no data"
+    // visual. Keeps chip-strip ↔ sources-tab in sync when an ablation includes
+    // a source that has zero chunks for this particular move.
+    const checked = STATE.enabledSources.has(s.id);
     const disabled = count === 0;
     const node = document.createElement('label');
     node.className = 'src-toggle' + (checked ? ' checked' : '') + (disabled ? ' disabled' : '');
