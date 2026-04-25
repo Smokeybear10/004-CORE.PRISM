@@ -1,0 +1,579 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>PRISM — About</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&family=Source+Serif+4:ital,opsz,wght@0,8..60,400;0,8..60,500;0,8..60,600;0,8..60,700;1,8..60,400;1,8..60,500;1,8..60,600&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --paper: #f5efe1;
+      --paper-2: #ede6d3;
+      --paper-3: #e3dcc8;
+      --rule: #cfc7b2;
+      --rule-strong: #b9b09a;
+
+      --navy: #0a1d36;
+      --navy-2: #1a2c47;
+      --navy-soft: rgba(10, 29, 54, 0.06);
+      --navy-line: rgba(10, 29, 54, 0.18);
+
+      --ink: #0d1320;
+      --ink-2: #2c3344;
+      --ink-quiet: #6a6e7c;
+      --ink-dim: #989384;
+
+      --oxblood: #7a1f1f;
+      --oxblood-2: #5a1414;
+      --oxblood-soft: rgba(122, 31, 31, 0.08);
+      --oxblood-line: rgba(122, 31, 31, 0.30);
+
+      --up: #2e6f48;
+      --down: #8c2f2f;
+
+      --serif: 'Source Serif 4', 'Iowan Old Style', 'Charter', Georgia, serif;
+      --sans: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+      --mono: 'JetBrains Mono', ui-monospace, monospace;
+
+      --radius: 6px;
+      --radius-sm: 4px;
+    }
+
+    *, *::before, *::after { box-sizing: border-box; }
+    html, body { margin: 0; padding: 0; }
+    body {
+      background: var(--paper);
+      color: var(--ink);
+      font-family: var(--sans);
+      font-size: 14px;
+      line-height: 1.5;
+      -webkit-font-smoothing: antialiased;
+      font-feature-settings: 'tnum' 1;
+    }
+
+    /* ─── Masthead (mirrors the dashboard) ─── */
+    .masthead {
+      position: sticky; top: 0; z-index: 10;
+      background: rgba(245, 239, 225, 0.94);
+      backdrop-filter: blur(12px) saturate(150%);
+      -webkit-backdrop-filter: blur(12px) saturate(150%);
+      border-bottom: 2px solid var(--navy);
+    }
+    .masthead-inner {
+      max-width: 1240px; margin: 0 auto;
+      padding: 18px 28px 14px;
+      display: flex; justify-content: space-between; align-items: baseline;
+      gap: 24px; flex-wrap: wrap;
+    }
+    .mast-title { display: flex; flex-direction: column; gap: 4px; }
+    .mast-name {
+      display: inline-flex; align-items: center; gap: 0;
+      font-family: var(--serif); font-weight: 700; font-size: 1.55rem;
+      letter-spacing: 0.18em; text-transform: uppercase; line-height: 1;
+      color: var(--navy);
+    }
+    .prism-spectrum { display: inline-flex; gap: 2px; vertical-align: middle; margin-left: 14px; }
+    .prism-spectrum > span { display: block; width: 4px; height: 16px; }
+    .mast-meta {
+      font-family: var(--serif); font-style: italic; font-weight: 400;
+      font-size: 13px; color: var(--ink-quiet);
+    }
+    .page-spectrum { display: flex; height: 4px; }
+    .page-spectrum > span { flex: 1; }
+    .page-spectrum > span:nth-child(1) { background: #C8442C; }
+    .page-spectrum > span:nth-child(2) { background: #E89B4A; }
+    .page-spectrum > span:nth-child(3) { background: #D4B85A; }
+    .page-spectrum > span:nth-child(4) { background: #5A8DA8; }
+    .page-spectrum > span:nth-child(5) { background: #3D4A6B; }
+    .mast-status {
+      display: flex; align-items: center; gap: 18px;
+      font: 500 11px var(--mono); color: var(--ink-quiet); letter-spacing: 0.06em;
+    }
+    .mast-status .iso { color: var(--navy); font-weight: 600; }
+    .mast-status .dot {
+      width: 6px; height: 6px; border-radius: 999px; background: var(--up);
+      display: inline-block; margin-right: 4px; vertical-align: middle;
+    }
+    .topnav {
+      max-width: 1240px; margin: 0 auto; padding: 0 28px;
+      display: flex; gap: 4px; border-top: 1px solid var(--rule);
+    }
+    .topnav a {
+      font: 600 11px var(--mono); color: var(--ink-quiet);
+      letter-spacing: 0.18em; text-transform: uppercase;
+      padding: 12px 18px 11px; text-decoration: none;
+      border-bottom: 2px solid transparent; margin-bottom: -1px;
+      transition: color 140ms, border-color 140ms;
+    }
+    .topnav a:hover { color: var(--ink); }
+    .topnav a.current { color: var(--oxblood); border-bottom-color: var(--oxblood); }
+
+    /* ─── About-page layout ─── */
+    .container {
+      max-width: 1240px; margin: 0 auto;
+      padding: 28px 28px 80px;
+      display: flex; flex-direction: column; gap: 20px;
+    }
+
+    .about-hero {
+      background: #fbf6e8;
+      border: 1px solid var(--rule);
+      border-radius: var(--radius);
+      padding: 44px 48px 40px;
+    }
+    .about-hero .kicker {
+      font: 600 10px var(--mono);
+      color: var(--oxblood);
+      letter-spacing: 0.28em;
+      text-transform: uppercase;
+    }
+    .about-hero h1 {
+      font-family: var(--serif);
+      font-weight: 600;
+      font-size: clamp(2rem, 4.4vw, 3.2rem);
+      letter-spacing: -0.02em;
+      margin: 10px 0 14px;
+      color: var(--navy);
+      line-height: 1.05;
+    }
+    .about-hero .lede {
+      font: italic 400 1.15rem var(--serif);
+      color: var(--ink-2);
+      max-width: 64ch;
+      margin: 0;
+      line-height: 1.55;
+    }
+    .about-hero .lede b {
+      color: var(--oxblood);
+      font-style: normal;
+      font-weight: 600;
+    }
+
+    .about-block {
+      background: var(--paper);
+      border: 1px solid var(--rule);
+      border-radius: var(--radius);
+      padding: 32px 40px 34px;
+    }
+    .about-block .kicker {
+      font: 600 10px var(--mono);
+      color: var(--oxblood);
+      letter-spacing: 0.22em;
+      text-transform: uppercase;
+      margin-bottom: 6px;
+      display: block;
+    }
+    .about-block h2 {
+      font-family: var(--serif);
+      font-weight: 600;
+      font-size: 1.6rem;
+      letter-spacing: -0.01em;
+      margin: 0 0 14px;
+      color: var(--ink);
+    }
+    .about-block p {
+      font-family: var(--serif);
+      font-size: 1.02rem;
+      line-height: 1.65;
+      color: var(--ink-2);
+      margin: 0 0 14px;
+      max-width: 72ch;
+    }
+    .about-block p:last-child { margin-bottom: 0; }
+    .about-block p .num {
+      font-family: var(--mono); font-weight: 600;
+      color: var(--ink); font-size: 0.92em;
+    }
+    .about-block p b {
+      color: var(--oxblood); font-weight: 600;
+    }
+    .about-block p em {
+      color: var(--ink); font-style: italic;
+    }
+
+    /* Two-column "principle" rows */
+    .principles {
+      display: grid;
+      grid-template-columns: 200px 1fr;
+      gap: 28px 36px;
+      margin-top: 8px;
+    }
+    .principles dt {
+      font-family: var(--serif);
+      font-style: italic;
+      font-weight: 500;
+      font-size: 0.95rem;
+      color: var(--oxblood);
+      padding-top: 4px;
+      border-top: 1px solid var(--oxblood-line);
+    }
+    .principles dd {
+      font-family: var(--serif);
+      font-size: 1rem;
+      line-height: 1.6;
+      color: var(--ink-2);
+      margin: 0;
+      padding-top: 4px;
+      border-top: 1px solid var(--rule);
+    }
+    .principles dd b { color: var(--ink); font-weight: 600; }
+
+    /* The five-dimension grid */
+    .dim-grid {
+      display: grid;
+      grid-template-columns: repeat(5, 1fr);
+      gap: 12px;
+      margin-top: 18px;
+    }
+    .dim-cell {
+      background: #fbf6e8;
+      border: 1px solid var(--rule);
+      border-radius: var(--radius-sm);
+      padding: 14px 14px 16px;
+    }
+    .dim-cell .name {
+      font: 600 10px var(--mono);
+      color: var(--oxblood);
+      letter-spacing: 0.18em;
+      text-transform: uppercase;
+      margin-bottom: 6px;
+    }
+    .dim-cell .desc {
+      font: 400 12.5px var(--serif);
+      color: var(--ink-2);
+      line-height: 1.45;
+    }
+
+    /* Pull-quote */
+    .pullquote {
+      font-family: var(--serif);
+      font-style: italic;
+      font-size: 1.4rem;
+      line-height: 1.45;
+      color: var(--navy);
+      max-width: 56ch;
+      margin: 22px 0 6px;
+      padding-left: 22px;
+      border-left: 3px solid var(--oxblood);
+    }
+    .pullquote-attr {
+      font: 500 11px var(--mono);
+      color: var(--ink-quiet);
+      letter-spacing: 0.18em;
+      text-transform: uppercase;
+      margin: 6px 0 0 22px;
+    }
+
+    /* Stats strip — used to set up scope */
+    .stats-strip {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 0;
+      margin-top: 24px;
+      border-top: 1px solid var(--rule);
+      border-bottom: 1px solid var(--rule);
+    }
+    .stats-strip > div {
+      padding: 18px 16px 16px;
+      border-right: 1px solid var(--rule);
+    }
+    .stats-strip > div:last-child { border-right: none; }
+    .stats-strip .num {
+      font-family: var(--mono);
+      font-weight: 600;
+      font-size: 1.7rem;
+      color: var(--navy);
+      letter-spacing: -0.01em;
+    }
+    .stats-strip .lbl {
+      font: 500 10px var(--mono);
+      color: var(--ink-quiet);
+      letter-spacing: 0.16em;
+      text-transform: uppercase;
+      margin-top: 4px;
+    }
+
+    .footer {
+      max-width: 1240px; margin: 36px auto 0;
+      padding: 22px 28px 28px;
+      border-top: 1px solid var(--rule);
+      font: 500 11px var(--mono);
+      letter-spacing: 0.18em; color: var(--ink-quiet);
+      text-transform: uppercase;
+      display: flex; justify-content: space-between; flex-wrap: wrap; gap: 12px;
+    }
+
+    @media (max-width: 880px) {
+      .principles { grid-template-columns: 1fr; gap: 8px 0; }
+      .principles dt { border-top: 1px solid var(--oxblood-line); padding-top: 14px; }
+      .principles dd { border-top: none; padding-top: 4px; padding-bottom: 14px; }
+      .dim-grid { grid-template-columns: repeat(2, 1fr); }
+      .stats-strip { grid-template-columns: repeat(2, 1fr); }
+      .stats-strip > div:nth-child(2) { border-right: none; }
+      .stats-strip > div:nth-child(1), .stats-strip > div:nth-child(2) {
+        border-bottom: 1px solid var(--rule);
+      }
+      .about-hero { padding: 32px 28px 28px; }
+      .about-block { padding: 26px 28px 26px; }
+    }
+  </style>
+</head>
+<body>
+
+<header class="masthead">
+  <div class="page-spectrum"><span></span><span></span><span></span><span></span><span></span></div>
+  <div class="masthead-inner">
+    <div class="mast-title">
+      <span class="mast-name">
+        PRISM
+        <span class="prism-spectrum">
+          <span style="background:#C8442C"></span>
+          <span style="background:#E89B4A"></span>
+          <span style="background:#D4B85A"></span>
+          <span style="background:#5A8DA8"></span>
+          <span style="background:#3D4A6B"></span>
+        </span>
+      </span>
+      <span class="mast-meta">Persistence Reasoning over Idiosyncratic Stock Moves</span>
+    </div>
+    <div class="mast-status">
+      <span><span class="dot"></span><span class="iso">2026-04-25</span> · LIVE</span>
+      <span>MODEL · CLAUDE-HAIKU-4-5</span>
+    </div>
+  </div>
+  <nav class="topnav" aria-label="Primary">
+    <a href="/">Dashboard</a>
+    <a href="/about.html" class="current">About</a>
+  </nav>
+</header>
+
+<main class="container">
+
+  <!-- ─── Hero ─── -->
+  <section class="about-hero">
+    <span class="kicker">A note from the team · April 2026</span>
+    <h1>Most price moves are noise. The ones that aren't, are stories.</h1>
+    <p class="lede">
+      PRISM reads the story around a stock move, decomposes it into five
+      measurable dimensions of cause, and decides whether to <b>lean</b>
+      with the move or <b>fade</b> it. We're not chasing alpha. We're
+      asking a sharper question — <b>what did the market actually hear,
+      and is what it heard durable?</b>
+    </p>
+  </section>
+
+  <!-- ─── Thesis ─── -->
+  <section class="about-block">
+    <span class="kicker">I · The thesis</span>
+    <h2>Decompose language, then test whether the decomposition pays.</h2>
+    <p>
+      Markets price information. Information arrives in language —
+      earnings calls, SEC filings, analyst notes, news. The price reaction
+      to that language is what we want to understand. Two questions
+      follow, and they are the only two questions PRISM tries to answer:
+    </p>
+
+    <div class="principles">
+      <dt>What did the market actually hear?</dt>
+      <dd>
+        Not the headline. The <b>structural read</b>. Was the move driven
+        by demand growth, by pricing power, by a competitive shift, by
+        management losing credibility, or by a macro shock the company
+        happened to sit in front of? The cause matters more than the
+        magnitude.
+      </dd>
+
+      <dt>Is what it heard durable?</dt>
+      <dd>
+        Some causes persist — demand cycles, margin expansion, share
+        gains. Others revert — single-quarter mgmt stumbles, macro fears,
+        sector-wide sympathy moves. The same 10% drop can be a buy or a
+        sell depending on which bucket the cause sits in.
+      </dd>
+    </div>
+  </section>
+
+  <!-- ─── Five dimensions ─── -->
+  <section class="about-block">
+    <span class="kicker">II · The decomposition</span>
+    <h2>Five dimensions. Cited evidence per dimension. No exceptions.</h2>
+    <p>
+      Sentiment flattens reasoning into a single scalar from <span class="num">−1</span>
+      to <span class="num">+1</span>. PRISM decomposes the same text into
+      five named dimensions, each with a direction, a weight, and at
+      least one citation back to a chunk of source text. Without the
+      citation, the score is dropped. <b>No uncited dimension survives.</b>
+    </p>
+
+    <div class="dim-grid">
+      <div class="dim-cell">
+        <div class="name">Demand</div>
+        <div class="desc">Unit volume, customer count, market share shifts.</div>
+      </div>
+      <div class="dim-cell">
+        <div class="name">Pricing</div>
+        <div class="desc">Price changes, mix, discounting, margin moves.</div>
+      </div>
+      <div class="dim-cell">
+        <div class="name">Competitive</div>
+        <div class="desc">New entrants, competitor moves, moat erosion.</div>
+      </div>
+      <div class="dim-cell">
+        <div class="name">Mgmt credibility</div>
+        <div class="desc">Guidance changes, execution, leadership comments.</div>
+      </div>
+      <div class="dim-cell">
+        <div class="name">Macro</div>
+        <div class="desc">Rates, FX, commodities, geopolitics, sector flows.</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ─── Pull quote ─── -->
+  <section class="about-block">
+    <span class="kicker">III · The pitch in one line</span>
+    <p class="pullquote">
+      "We're not building a sentiment classifier. We're building a
+      <b>financial historian</b> — one that reads the text around a price
+      move and tells you which cause is doing the work, with the
+      receipts."
+    </p>
+    <p class="pullquote-attr">— Project brief, Mentor Meeting #1</p>
+  </section>
+
+  <!-- ─── How we score ─── -->
+  <section class="about-block">
+    <span class="kicker">IV · How we judge ourselves</span>
+    <h2>Ablations, baselines, and a hand-authored ground truth.</h2>
+    <p>
+      A model that scores well on cherry-picked cases isn't a model.
+      Three checks keep us honest:
+    </p>
+
+    <div class="principles">
+      <dt>Ablations</dt>
+      <dd>
+        Each event runs through the model with progressively more
+        context — news only, then SEC filings, then earnings transcripts,
+        then peer news, then macro, then institutional positioning. The
+        deltas across runs tell us which sources actually move the
+        verdict. <b>Sources that don't move it don't earn a slot.</b>
+      </dd>
+
+      <dt>Baselines</dt>
+      <dd>
+        The verdict has to beat <em>random attribution</em>, <em>always
+        lean</em>, <em>always fade</em>, and a <em>sentiment-only
+        classifier</em> on the same text. Anything less and we're dressing
+        up sentiment in a longer prompt.
+      </dd>
+
+      <dt>Ground truth</dt>
+      <dd>
+        Six hand-authored cases — moves the team understands well enough
+        to write the expected verdict <em>before</em> running the model.
+        The harness reports X / N. Today we're at <span class="num">4 / 6</span>.
+        The two misses are both Nvidia-sympathy patterns the model insists
+        are fundamental — a useful failure to point at, not paper over.
+      </dd>
+    </div>
+  </section>
+
+  <!-- ─── Scope ─── -->
+  <section class="about-block">
+    <span class="kicker">V · What's in the build</span>
+    <h2>Five tickers, five years, five dimensions, four strategies.</h2>
+    <p>
+      Hackathon scope, deliberately narrow. The point of a small universe
+      is that mistakes are obvious — when the model misreads an event we
+      remember, we know to ask why.
+    </p>
+
+    <div class="stats-strip">
+      <div>
+        <div class="num">5</div>
+        <div class="lbl">Focal tickers</div>
+      </div>
+      <div>
+        <div class="num">5y</div>
+        <div class="lbl">Price history</div>
+      </div>
+      <div>
+        <div class="num">7</div>
+        <div class="lbl">Source streams</div>
+      </div>
+      <div>
+        <div class="num">4</div>
+        <div class="lbl">Lean / fade strategies</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ─── Limits ─── -->
+  <section class="about-block">
+    <span class="kicker">VI · What we won't claim</span>
+    <h2>Honest about the failure modes.</h2>
+
+    <div class="principles">
+      <dt>Foreknowledge</dt>
+      <dd>
+        The model was trained on financial journalism that post-dates many
+        events. We can't fully strip that out; we acknowledge it and lean
+        on the ablation deltas — those <em>are</em> within-model and
+        compare cleanly.
+      </dd>
+
+      <dt>Survivorship</dt>
+      <dd>
+        Yahoo's panel doesn't carry delisted firms. Our universe is biased
+        toward survivors. Reported hit rates are upper bounds.
+      </dd>
+
+      <dt>Coverage gaps</dt>
+      <dd>
+        The bundled news parquet starts in early 2025; older moves rely on
+        filings and transcripts. The toggles in the dashboard make this
+        explicit per event.
+      </dd>
+
+      <dt>One-shot prompts</dt>
+      <dd>
+        No reflection, no debate, no multi-turn reasoning. The model gets
+        one chance per move. Improvements there are obvious next steps,
+        not hidden tricks.
+      </dd>
+    </div>
+  </section>
+
+  <!-- ─── Closing ─── -->
+  <section class="about-block">
+    <span class="kicker">VII · The story</span>
+    <h2>Tagging is the product. The trade is the stress test.</h2>
+    <p>
+      The deliverable is <em>not</em> a trading strategy. It's the
+      decomposition, the citations, and the framework for testing whether
+      the decomposition pays. If a desk used PRISM the morning after a
+      flagged move, the question they should be asking is not <b>what's
+      the verdict?</b> — it's <b>which cause is doing the work, what's
+      the citation, and is that the kind of cause that lasts?</b>
+    </p>
+    <p>
+      Click <a href="/" style="color: var(--oxblood); font-weight: 600; text-decoration: underline;">Dashboard</a>
+      and try it on AMD's 2025-04-09 rally. The model reads it as
+      fundamental. The team's hand-authored answer says it's
+      Nvidia-sympathy and Trump-tariff news, not real demand. The
+      disagreement is the kind of thing this project exists to surface.
+    </p>
+  </section>
+
+</main>
+
+<footer class="footer">
+  <span>© PRISM — Bridgewater Hackathon Build, 2026</span>
+  <span>Concept · DESK</span>
+</footer>
+
+</body>
+</html>

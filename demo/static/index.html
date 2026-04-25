@@ -159,6 +159,31 @@
       margin-right: 4px;
       vertical-align: middle;
     }
+    /* ─── Top nav (sits inside the masthead, below the title row) ─── */
+    .topnav {
+      max-width: 1240px;
+      margin: 0 auto;
+      padding: 0 28px;
+      display: flex;
+      gap: 4px;
+      border-top: 1px solid var(--rule);
+    }
+    .topnav a {
+      font: 600 11px var(--mono);
+      color: var(--ink-quiet);
+      letter-spacing: 0.18em;
+      text-transform: uppercase;
+      padding: 12px 18px 11px;
+      text-decoration: none;
+      border-bottom: 2px solid transparent;
+      margin-bottom: -1px;
+      transition: color 140ms, border-color 140ms;
+    }
+    .topnav a:hover { color: var(--ink); }
+    .topnav a.current {
+      color: var(--oxblood);
+      border-bottom-color: var(--oxblood);
+    }
 
     /* ─── Container ─── */
     .container {
@@ -1503,6 +1528,10 @@
       <span>MODEL · CLAUDE-HAIKU-4-5</span>
     </div>
   </div>
+  <nav class="topnav" aria-label="Primary">
+    <a href="/" class="current">Dashboard</a>
+    <a href="/about.html">About</a>
+  </nav>
 </header>
 
 <main class="container">
@@ -1574,10 +1603,15 @@
     <div id="chart"></div>
   </section>
 
+  <section class="event-card empty" id="event-card">
+    <div class="label">No event selected</div>
+    <div class="body">Pick a ticker above, then click any annotated dot in the chart to load the lean/fade reading and the cited evidence.</div>
+  </section>
+
   <section class="eval-harness" id="eval-harness" hidden>
     <div class="eh-head">
       <div>
-        <span class="kicker">Eval Harness</span>
+        <span class="kicker">Figure II · Eval harness</span>
         <h3 id="eval-headline">—</h3>
         <p class="eh-sub" id="eval-sub">
           Each case has a hand-authored ground-truth verdict. The harness
@@ -1591,11 +1625,6 @@
     </div>
     <div class="eval-cases" id="eval-cases"></div>
     <p class="eval-disclaimer" id="eval-disclaimer">—</p>
-  </section>
-
-  <section class="event-card empty" id="event-card">
-    <div class="label">No event selected</div>
-    <div class="body">Pick a ticker above, then click any annotated dot in the chart to load the lean/fade reading and the cited evidence.</div>
   </section>
 
 </main>
@@ -1885,7 +1914,7 @@ function renderChart(bundle) {
       x: moveX, y: moveY,
       customdata: visible.map(x => x.i),
       mode: 'markers',
-      marker: { size: 7, color: moveColors, line: { color: '#fbf6e8', width: 1.4 } },
+      marker: { size: 11, color: moveColors, line: { color: '#fbf6e8', width: 1.8 } },
       text: visible.map(x => `<b>${x.m.move_date}</b><br>${pct(x.m.return_pct)} · z ${x.m.vol_zscore.toFixed(1)}σ`),
       hovertemplate: '%{text}<extra></extra>',
       name: 'Flagged',
