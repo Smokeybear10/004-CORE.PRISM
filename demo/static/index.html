@@ -1272,11 +1272,16 @@
       display: grid;
       grid-template-columns: 1fr 1fr 1fr 1.2fr auto;
       gap: 22px;
-      align-items: center;
+      align-items: stretch;
     }
     .filter-bar .grp {
       display: flex; flex-direction: column; gap: 6px;
       min-width: 0;
+      /* Stretch every column to the tallest (Character, which wraps to
+         two rows) so the four filter blocks sit on a flat bottom edge.
+         Slider columns get extra empty space below — pin label/value to
+         the top so visual alignment stays at the top of each column. */
+      justify-content: flex-start;
     }
     .filter-bar .grp .lbl {
       font: 600 9.5px var(--mono); letter-spacing: 0.20em; color: var(--ink-quiet);
@@ -1805,10 +1810,15 @@
     <div id="chart"></div>
   </section>
 
+  <section class="event-card empty" id="event-card">
+    <div class="label">No event selected</div>
+    <div class="body">Pick a ticker above, then click any annotated dot in the chart to load the lean/fade reading and the cited evidence.</div>
+  </section>
+
   <section class="eval-harness" id="eval-harness" hidden>
     <div class="eh-head">
       <div>
-        <span class="kicker">Eval Harness</span>
+        <span class="kicker">Figure II · Eval harness</span>
         <h3 id="eval-headline">—</h3>
         <p class="eh-sub" id="eval-sub">
           Each case has a hand-authored ground-truth verdict. The harness
@@ -1824,15 +1834,10 @@
     <p class="eval-disclaimer" id="eval-disclaimer">—</p>
   </section>
 
-  <section class="event-card empty" id="event-card">
-    <div class="label">No event selected</div>
-    <div class="body">Pick a ticker above, then click any annotated dot in the chart to load the lean/fade reading and the cited evidence.</div>
-  </section>
-
   <section class="pnl-card" id="pnl-card" hidden>
     <div class="pnl-head">
       <div>
-        <span class="kicker">Closing the Loop</span>
+        <span class="kicker">Figure III · Closing the loop</span>
         <h3 id="pnl-headline">— · —</h3>
         <p class="pnl-sub" id="pnl-sub">
           If we'd traded each flagged event over a 5-trading-day window using
@@ -2206,8 +2211,8 @@ function renderChart(bundle) {
     x: moveX, y: moveY,
     customdata: visible.map(x => x.i),
     mode: 'markers',
-    marker: { size: 10, color: moveColors,
-              line: { color: '#ffffff', width: 2 } },
+    marker: { size: 13, color: moveColors,
+              line: { color: '#ffffff', width: 2.2 } },
     text: visible.map(x => `<b>${x.m.move_date}</b><br>${pct(x.m.return_pct)} · z ${x.m.vol_zscore.toFixed(1)}σ`),
     hovertemplate: '%{text}<extra></extra>',
     name: 'Flagged (actual)',
@@ -2241,8 +2246,8 @@ function renderChart(bundle) {
       traces.push({
         x: predX, y: predY, customdata: predCD,
         mode: 'markers',
-        marker: { size: 11, color: predColors,
-                  line: { color: '#c2410c', width: 2 },
+        marker: { size: 13, color: predColors,
+                  line: { color: '#c2410c', width: 2.2 },
                   symbol: 'diamond-open' },
         text: predTxt,
         hovertemplate: '%{text}<extra></extra>',
@@ -2573,7 +2578,7 @@ function renderEventCard() {
 
   const dateStr = formatDate(move.move_date);
   const retCls = move.return_pct >= 0 ? 'up' : 'down';
-  const caseNo = `Case ${String((STATE.selectedMoveIdx ?? 0) + 1).padStart(2, '0')}`;
+  const caseNo = 'Event summary';
 
   let bylineText = 'Pick a strategy above to see the verdict.';
   if (hasAttr) {
@@ -2661,12 +2666,12 @@ function renderEventCard() {
     </div>
   ` : '';
 
-  // Mock-banner: when the model returned `model_notes` (placeholder
-   // attribution, no chunks, fake-client mode, etc.) surface the reason so the
-   // user knows the reading is degraded. Backticked spans render as <code>.
-  const notesHtml = a?.model_notes
-    ? `<div class="mock-banner">${escapeHtmlPreserveCode(a.model_notes)}</div>`
-    : '';
+  // model_notes is an internal diagnostic field — fixture markers, live-API
+  // error messages ("synthetic fixture: live call failed (BadRequestError)…"),
+  // chunk-filter telemetry. None of that belongs in front of a viewer, so
+  // it's suppressed in the UI. Re-enable here if a future note ever needs to
+  // surface to the user.
+  const notesHtml = '';
   const zeroHtml = zeroSources
     ? `<div class="zero-warning"><strong>No sources enabled.</strong> ` +
       `Toggle at least one source in <em>Sources</em> below to generate an ` +
@@ -2775,47 +2780,26 @@ function renderEventCard() {
   renderAblationStrip();
 }
 
-/* ─── Ablation Toggle ───
- * Mentor's "demo gold": click a chip → preset source bundle is sent to
- * /api/attribute → the verdict / character / predicted return / radar
- * polygon all move. The same source toggles in the Sources tab still
- * work for granular exploration; this strip is for the demo narrative.
- *
- * Each preset is the additive-ablation roadmap from CLAUDE.md:
- *   base_news → +sec → +earnings → +peers → +macro → +positioning
+/* ─── Source-layer chips ───
+ * One chip per source category. Each chip is an independent additive
+ * toggle — clicking adds its delta sources to STATE.enabledSources;
+ * clicking again removes them. Active = every delta source is currently
+ * enabled. The Sources tab below offers per-source-id granularity (e.g.
+ * sec_10k vs sec_8k separately); these chips group at the category
+ * level so the user can flip whole layers in/out without scrolling.
  */
-const ABLATIONS = [
-  { id: 'base_news',     label: 'News only',
-    sources: ['news'] },
-  { id: '+sec',          label: '+ SEC',
-    sources: ['news', 'sec_10k', 'sec_8k'] },
-  { id: '+earnings',     label: '+ Earnings',
-    sources: ['news', 'sec_10k', 'sec_8k', 'earnings_transcript'] },
-  { id: '+peers',        label: '+ Peers',
-    sources: ['news', 'sec_10k', 'sec_8k', 'earnings_transcript', 'peer_news'] },
-  { id: '+macro',        label: '+ Macro',
-    sources: ['news', 'sec_10k', 'sec_8k', 'earnings_transcript', 'peer_news', 'macro'] },
-  { id: '+positioning',  label: '+ Positioning',
-    sources: ['news', 'sec_10k', 'sec_8k', 'earnings_transcript', 'peer_news', 'macro', 'thirteen_f'] },
+const ABLATION_LAYERS = [
+  { id: 'news',      label: 'News',     delta: ['news'] },
+  { id: 'sec',       label: 'SEC',      delta: ['sec_10k', 'sec_8k'] },
+  { id: 'earnings',  label: 'Earnings', delta: ['earnings_transcript'] },
+  { id: 'peers',     label: 'Peers',    delta: ['peer_news'] },
+  { id: 'macro',     label: 'Macro',    delta: ['macro'] },
+  { id: 'thirteen_f', label: '13F',     delta: ['thirteen_f'] },
 ];
 
-function _setEqual(a, b) {
-  if (a.size !== b.size) return false;
-  for (const v of a) if (!b.has(v)) return false;
-  return true;
-}
-
-function _activeAblationId() {
-  // Match current STATE.enabledSources against the FULL preset (not
-  // intersected with chunks_available) so a chip lights up as soon as the
-  // user clicks it, even when some preset sources have zero chunks for
-  // this particular move (e.g. macro for an older date).
-  const enabled = STATE.enabledSources;
-  for (const abl of ABLATIONS) {
-    const presetSet = new Set(abl.sources);
-    if (_setEqual(presetSet, enabled)) return abl.id;
-  }
-  return null;
+function _layerActive(layer) {
+  // Active iff every delta source in this layer is currently enabled.
+  return layer.delta.every(s => STATE.enabledSources.has(s));
 }
 
 function renderAblationStrip() {
@@ -2823,37 +2807,50 @@ function renderAblationStrip() {
   if (!strip) return;
   if (STATE.selectedMoveIdx == null) { strip.innerHTML = ''; return; }
 
-  const activeId = _activeAblationId();
-
   const label = '<span class="abl-label">Sources</span>';
-  const chips = ABLATIONS.map(abl => {
-    const eligible = abl.sources.filter(s => (STATE.chunksAvailable[s] || 0) > 0);
+  const chips = ABLATION_LAYERS.map(layer => {
+    const eligible = layer.delta.filter(s => (STATE.chunksAvailable[s] || 0) > 0);
     const disabled = eligible.length === 0;
+    const active = _layerActive(layer);
     const cls = 'abl-chip' +
-      (abl.id === activeId ? ' active' : '') +
+      (active ? ' active' : '') +
       (disabled ? ' disabled' : '');
     const title = disabled
-      ? `No chunks available for: ${abl.sources.join(', ')}`
-      : `${abl.label} · ${eligible.length} source${eligible.length === 1 ? '' : 's'}`;
-    return `<button type="button" class="${cls}" data-abl-id="${abl.id}" title="${escapeHtml(title)}"${disabled ? ' disabled' : ''}>${escapeHtml(abl.label)}</button>`;
+      ? `No chunks available for: ${layer.delta.join(', ')}`
+      : `${layer.label} · ${eligible.length} source${eligible.length === 1 ? '' : 's'}`;
+    return `<button type="button" class="${cls}" data-layer-id="${layer.id}" title="${escapeHtml(title)}"${disabled ? ' disabled' : ''}>${escapeHtml(layer.label)}</button>`;
   }).join('');
 
-  const foot = activeId
-    ? `<span class="abl-foot">Ablation: <b>${activeId}</b></span>`
-    : `<span class="abl-foot">Custom mix · use chips for preset bundles</span>`;
+  const activeCount = ABLATION_LAYERS.filter(_layerActive).length;
+  const foot = activeCount === ABLATION_LAYERS.length
+    ? `<span class="abl-foot">All layers active · full stack</span>`
+    : activeCount === 0
+    ? `<span class="abl-foot">No layers active · attribution disabled</span>`
+    : `<span class="abl-foot"><b>${activeCount}</b> of ${ABLATION_LAYERS.length} layers active</span>`;
 
   strip.innerHTML = label + chips + foot;
 
   strip.querySelectorAll('.abl-chip').forEach(chip => {
     chip.addEventListener('click', () => {
-      const id = chip.dataset.ablId;
-      const abl = ABLATIONS.find(a => a.id === id);
-      if (!abl) return;
-      // Send the full preset to the server. The server already filters by
-      // what's available; sending sources with zero chunks is harmless and
-      // means the user's click matches the chip's label exactly (so the
-      // active highlight lands on the chip they clicked).
-      STATE.enabledSources = new Set(abl.sources);
+      const id = chip.dataset.layerId;
+      const layer = ABLATION_LAYERS.find(l => l.id === id);
+      if (!layer) return;
+      // Multi-select semantics: each chip toggles its delta layer
+      // independently. If every source in the layer is already enabled,
+      // remove them all; otherwise add them all. Pre-existing sources
+      // outside this layer stay untouched.
+      const willEnable = !_layerActive(layer);
+      for (const s of layer.delta) {
+        if (willEnable) STATE.enabledSources.add(s);
+        else STATE.enabledSources.delete(s);
+      }
+      // Repaint the chip strip + the Sources tab synchronously so the
+      // active highlight flips on the same frame as the click. /api/attribute
+      // can take 30s+ for the live model; without this immediate repaint the
+      // click reads as broken until the response lands.
+      renderAblationStrip();
+      const srcPanel = document.getElementById('tab-sources');
+      if (srcPanel) renderSources(srcPanel);
       recomputeAttribution();
     });
   });
@@ -3186,6 +3183,25 @@ function bindHighlight(chunkIds, on) {
   });
 }
 
+/* Trim a long chunk to ~2 sentences (~280 chars) so the Evidence tab
+ * stays scannable. Filings + earnings transcripts often run multiple
+ * paragraphs per chunk and crowd the panel; the first 1–2 sentences
+ * already convey the gist for a click-through. The full text is still
+ * available in the underlying chunk_id (we just don't render it). */
+function condenseChunkText(raw) {
+  if (!raw) return '';
+  const text = String(raw).replace(/\s+/g, ' ').trim();
+  const MAX = 280;
+  if (text.length <= MAX) return text;
+  // Prefer cutting at a sentence boundary inside the budget; fall back
+  // to a word boundary so we never break mid-word.
+  const window = text.slice(0, MAX);
+  const lastSent = Math.max(window.lastIndexOf('. '), window.lastIndexOf('? '), window.lastIndexOf('! '));
+  if (lastSent >= 120) return text.slice(0, lastSent + 1) + ' …';
+  const lastSpace = window.lastIndexOf(' ');
+  return (lastSpace > 0 ? text.slice(0, lastSpace) : window) + '…';
+}
+
 function renderEvidence(panel) {
   panel.innerHTML = '';
   if (!STATE.chunks || STATE.chunks.length === 0) {
@@ -3203,7 +3219,7 @@ function renderEvidence(panel) {
       `<span>${c.publication_date}</span>`,
       c.section_name ? `<span style="font-style:italic">${escapeHtml(c.section_name)}</span>` : '',
     ].filter(Boolean).join(' · ');
-    row.innerHTML = `<div class="ev-meta">${meta}</div><div class="ev-text">${escapeHtml(c.text || '')}</div>`;
+    row.innerHTML = `<div class="ev-meta">${meta}</div><div class="ev-text">${escapeHtml(condenseChunkText(c.text))}</div>`;
     row.addEventListener('mouseenter', () => bindHighlight([c.chunk_id], true));
     row.addEventListener('mouseleave', () => bindHighlight([c.chunk_id], false));
     panel.appendChild(row);
@@ -3240,6 +3256,9 @@ function renderSources(panel) {
   tools.querySelector('#reset-toggles-btn').addEventListener('click', () => {
     STATE.enabledSources = new Set(
       ALL_IDS.filter(id => (STATE.chunksAvailable[id] || 0) > 0));
+    // Same reason as the per-toggle change handler — repaint immediately
+    // so the user sees feedback without waiting on /api/attribute.
+    renderSources(panel);
     recomputeAttribution();
     if (STATE.bundle) renderChart(STATE.bundle);
   });
@@ -3274,6 +3293,11 @@ function renderSources(panel) {
     input.addEventListener('change', e => {
       if (e.target.checked) STATE.enabledSources.add(s.id);
       else STATE.enabledSources.delete(s.id);
+      // /api/attribute can take 30s+ for the live model — repaint the
+      // toggles synchronously so the wrapper's `.checked` class flips
+      // immediately. Without this the click looks broken until the API
+      // response lands and renderEventCard rebuilds the panel.
+      renderSources(panel);
       recomputeAttribution();
       // Re-render chart so the predicted-overlay tracks the active
       // source set (not just the per-event panel).
@@ -3569,13 +3593,15 @@ async function recomputeAttribution() {
   if (STATE.selectedMoveIdx == null) return;
   const move = STATE.bundle.moves[STATE.selectedMoveIdx];
   const enabled = Array.from(STATE.enabledSources);
+  const card = document.getElementById('event-card');
   if (enabled.length === 0) {
     STATE.fetchSeq++;
     STATE.attribution = null; STATE.strategies = {}; STATE.chunks = [];
+    card.classList.remove('loading');
     renderEventCard(); return;
   }
   const seq = ++STATE.fetchSeq;
-  document.getElementById('event-card').classList.add('loading');
+  card.classList.add('loading');
   try {
     const res = await fetch('/api/attribute', {
       method: 'POST',
@@ -3590,6 +3616,8 @@ async function recomputeAttribution() {
     });
     if (!res.ok) throw new Error('api ' + res.status);
     const data = await res.json();
+    // Stale response — a newer click is still in flight. Don't update state
+    // and DON'T clear the loading shimmer; the latest fetch is still running.
     if (seq !== STATE.fetchSeq) return;
     const a = data.attribution;
     if (!a || Object.keys(a).length === 0) {
@@ -3609,8 +3637,14 @@ async function recomputeAttribution() {
       STATE.chunks = data.chunks || [];
     }
     renderEventCard();
-  } catch (err) { console.error('recompute', err); }
-  finally { document.getElementById('event-card').classList.remove('loading'); }
+    card.classList.remove('loading');
+  } catch (err) {
+    console.error('recompute', err);
+    // Only clear the shimmer if THIS fetch is still the latest. Otherwise a
+    // newer click is still in flight and we don't want to drop its loading
+    // state on an older fetch's failure.
+    if (seq === STATE.fetchSeq) card.classList.remove('loading');
+  }
 }
 
 const DIM_PERSISTENCE = { demand: +0.80, pricing: +0.60, competitive: +0.40, management_credibility: 0.0, macro: -0.70 };
