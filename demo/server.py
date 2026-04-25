@@ -58,6 +58,7 @@ from schema import (  # noqa: E402
 )
 
 STATIC_DIR = Path(__file__).resolve().parent / "static"
+PRESENTATION_DIR = _ROOT / "presentation"
 
 # backtest.fixtures.generate_attribution KeyErrors on unknown ablation names.
 # Map the number of user-enabled sources to the closest pre-defined bundle so
@@ -234,5 +235,14 @@ def compute_attribution(req: AttributeRequest) -> AttributeResponse:
 def _index() -> FileResponse:
     return FileResponse(STATIC_DIR / "index.html")
 
+
+# Pitch deck (intro slides) lives at /presentation/. Mount BEFORE the
+# catch-all static mount so it wins routing for that prefix.
+if PRESENTATION_DIR.is_dir():
+    app.mount(
+        "/presentation",
+        StaticFiles(directory=PRESENTATION_DIR, html=True),
+        name="presentation",
+    )
 
 app.mount("/", StaticFiles(directory=STATIC_DIR, html=True), name="static")

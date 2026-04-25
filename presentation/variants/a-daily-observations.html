@@ -1,0 +1,228 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Variant A — Daily Observations</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&family=Source+Serif+4:ital,opsz,wght@0,8..60,400;0,8..60,500;0,8..60,600;0,8..60,700;1,8..60,400;1,8..60,500;1,8..60,600&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --paper: #ffffff;
+      --paper-2: #f4f5f7;
+      --paper-3: #e8eaef;
+      --rule: #dee1e7;
+      --rule-strong: #b6bac4;
+      --navy: #0a1d36;
+      --navy-2: #1a2c47;
+      --navy-soft: rgba(10, 29, 54, 0.06);
+      --ink: #0d1320;
+      --ink-2: #2c3344;
+      --ink-quiet: #6a6e7c;
+      --ink-dim: #989384;
+      --oxblood: #7a1f1f;
+      --oxblood-soft: rgba(122, 31, 31, 0.08);
+      --gold: #a87c3d;
+      --serif: 'Source Serif 4', 'Iowan Old Style', 'Charter', Georgia, serif;
+      --sans: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+      --mono: 'JetBrains Mono', ui-monospace, monospace;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    html, body { height: 100vh; overflow: hidden; }
+    body {
+      background: var(--paper);
+      color: var(--ink);
+      font-family: var(--sans);
+      font-feature-settings: 'tnum' 1;
+      -webkit-font-smoothing: antialiased;
+      display: grid;
+      grid-template-rows: auto auto 1fr auto;
+      height: 100vh;
+    }
+
+    /* Spectrum ribbon */
+    .spectrum { display: flex; height: 4px; }
+    .spectrum > span { flex: 1; }
+    .spectrum > span:nth-child(1) { background: #C8442C; }
+    .spectrum > span:nth-child(2) { background: #E89B4A; }
+    .spectrum > span:nth-child(3) { background: #D4B85A; }
+    .spectrum > span:nth-child(4) { background: #5A8DA8; }
+    .spectrum > span:nth-child(5) { background: #3D4A6B; }
+
+    /* Masthead */
+    .masthead {
+      padding: 22px 56px 16px;
+      border-bottom: 2px solid var(--navy);
+      display: flex;
+      justify-content: space-between;
+      align-items: baseline;
+      gap: 24px;
+    }
+    .mast-name {
+      font-family: var(--serif);
+      font-weight: 700;
+      font-size: 1.45rem;
+      letter-spacing: 0.18em;
+      text-transform: uppercase;
+      color: var(--navy);
+    }
+    .mast-name .dot { color: var(--oxblood); }
+    .mast-name .obs {
+      margin-left: 14px;
+      font-style: italic;
+      font-weight: 400;
+      letter-spacing: 0.005em;
+      text-transform: none;
+      color: var(--ink-quiet);
+      font-size: 1rem;
+    }
+    .mast-meta {
+      font: 500 11px var(--mono);
+      color: var(--ink-quiet);
+      letter-spacing: 0.18em;
+      text-transform: uppercase;
+      display: flex;
+      gap: 28px;
+      align-items: baseline;
+    }
+    .mast-meta .iso { color: var(--navy); font-weight: 600; }
+    .mast-meta .vol { color: var(--ink-quiet); font-style: italic; font-family: var(--serif); text-transform: none; letter-spacing: 0; font-size: 13px; }
+
+    /* Stage */
+    .stage {
+      display: grid;
+      grid-template-columns: 80px 1fr 80px;
+      align-items: center;
+      padding: 36px 56px;
+    }
+    .stage-num {
+      font-family: var(--serif);
+      font-weight: 500;
+      font-size: 5rem;
+      color: var(--paper-3);
+      line-height: 1;
+      align-self: start;
+      margin-top: 16px;
+    }
+    .stage-body { padding-right: 80px; }
+
+    .kicker {
+      font: 600 11px var(--mono);
+      letter-spacing: 0.22em;
+      text-transform: uppercase;
+      color: var(--oxblood);
+      margin-bottom: 28px;
+      display: inline-block;
+    }
+    .kicker::after {
+      content: '';
+      display: inline-block;
+      width: 36px;
+      height: 1px;
+      background: var(--oxblood);
+      vertical-align: middle;
+      margin-left: 14px;
+    }
+
+    .headline {
+      font-family: var(--serif);
+      font-weight: 600;
+      font-size: clamp(4.5rem, 9vw, 7rem);
+      line-height: 0.96;
+      letter-spacing: -0.025em;
+      color: var(--navy);
+      margin-bottom: 32px;
+    }
+    .headline .em { font-style: italic; font-weight: 500; color: var(--oxblood); }
+
+    .standfirst {
+      font-family: var(--serif);
+      font-style: italic;
+      font-weight: 400;
+      font-size: 1.45rem;
+      line-height: 1.45;
+      color: var(--ink-2);
+      max-width: 720px;
+      letter-spacing: -0.005em;
+    }
+    .standfirst .em { font-style: normal; font-weight: 600; color: var(--navy); }
+    .standfirst .ox { color: var(--oxblood); font-style: normal; font-weight: 600; }
+
+    .byline {
+      margin-top: 36px;
+      font: 500 12px var(--mono);
+      letter-spacing: 0.16em;
+      text-transform: uppercase;
+      color: var(--ink-quiet);
+      display: flex;
+      gap: 18px;
+      align-items: baseline;
+    }
+    .byline .sep { color: var(--ink-dim); }
+
+    /* Footer */
+    .footer {
+      border-top: 1px solid var(--rule);
+      padding: 14px 56px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font: 500 11px var(--mono);
+      letter-spacing: 0.18em;
+      text-transform: uppercase;
+      color: var(--ink-quiet);
+    }
+    .footer .cta { color: var(--navy); animation: blink 2.4s ease-in-out infinite; }
+    @keyframes blink { 0%, 100% { opacity: 0.5; } 50% { opacity: 1; } }
+    .footer .pg { font-family: var(--serif); font-style: italic; text-transform: none; letter-spacing: 0; font-size: 13px; }
+  </style>
+</head>
+<body>
+
+  <div class="spectrum">
+    <span></span><span></span><span></span><span></span><span></span>
+  </div>
+
+  <header class="masthead">
+    <div class="mast-name">
+      PRISM<span class="dot">.</span>
+      <span class="obs">Daily Observations</span>
+    </div>
+    <div class="mast-meta">
+      <span class="iso">2026-04-25</span>
+      <span class="vol">vol. I &nbsp;№ 1</span>
+    </div>
+  </header>
+
+  <main class="stage">
+    <div class="stage-num">01</div>
+    <div class="stage-body">
+      <div class="kicker">BW Hackathon · Track 01</div>
+
+      <h1 class="headline">
+        An <span class="em">intelligent</span><br>
+        financial<br>
+        historian.
+      </h1>
+
+      <p class="standfirst">
+        On decomposing equity price action into <span class="em">five measurable dimensions</span>, each grounded in a real evidence chunk &mdash; and the single question we ask of every move: <span class="ox">lean</span>, or <span class="ox">fade</span>?
+      </p>
+
+      <div class="byline">
+        <span>Srilekha · Sophia · Henry · Thomas</span>
+        <span class="sep">/</span>
+        <span>Track 01 — Equity Price-Action Tagger</span>
+      </div>
+    </div>
+    <div></div>
+  </main>
+
+  <footer class="footer">
+    <span class="cta">Click anywhere to advance →</span>
+    <span class="pg">page 1 of 5</span>
+  </footer>
+
+</body>
+</html>

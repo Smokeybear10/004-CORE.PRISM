@@ -109,6 +109,50 @@
       color: var(--navy);
     }
     .mast-name .dot { color: var(--oxblood); }
+
+    /* Top-right navigation pills — links to intro / closing slide decks */
+    .mast-nav {
+      display: flex;
+      flex-direction: column;
+      align-items: flex-end;
+      gap: 4px;
+    }
+    .mast-link {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 4px 10px 4px 11px;
+      background: var(--navy);
+      color: #ffffff;
+      font: 600 9px var(--mono);
+      letter-spacing: 0.18em;
+      text-transform: uppercase;
+      border-radius: 3px;
+      text-decoration: none;
+      line-height: 1;
+      transition: background 160ms ease, transform 120ms ease, box-shadow 160ms ease;
+    }
+    .mast-link.secondary {
+      background: transparent;
+      color: var(--navy);
+      border: 1px solid var(--navy-line);
+    }
+    .mast-link:hover {
+      background: var(--oxblood);
+      color: #ffffff;
+      border-color: transparent;
+      transform: translateY(-1px);
+      box-shadow: 0 4px 12px rgba(122, 31, 31, 0.22);
+    }
+    .mast-link .arrow {
+      font-family: var(--serif);
+      font-style: italic;
+      font-size: 12px;
+      letter-spacing: 0;
+      line-height: 1;
+      transition: transform 200ms;
+    }
+    .mast-link:hover .arrow { transform: translateX(3px); }
     .prism-spectrum {
       display: inline-flex;
       gap: 2px;
@@ -141,12 +185,14 @@
     .page-spectrum > span:nth-child(5) { background: #3D4A6B; }
     .mast-status {
       display: flex;
-      align-items: center;
-      gap: 18px;
-      font: 500 11px var(--mono);
+      flex-direction: column;
+      align-items: flex-end;
+      gap: 4px;
+      font: 500 10px var(--mono);
       color: var(--ink-quiet);
       letter-spacing: 0.06em;
     }
+    .mast-status > .mast-nav { margin-bottom: 4px; }
     .mast-status .iso {
       color: var(--navy);
       font-weight: 600;
@@ -1729,6 +1775,10 @@
       <span class="mast-meta" id="mast-meta">Persistence Reasoning over Idiosyncratic Stock Moves</span>
     </div>
     <div class="mast-status">
+      <div class="mast-nav">
+        <a href="/presentation/" target="_top" class="mast-link">Intro slides <span class="arrow">→</span></a>
+        <a href="closing.html" target="_top" class="mast-link secondary">Closing slides <span class="arrow">→</span></a>
+      </div>
       <span><span class="dot"></span><span class="iso" id="status-date">2026-04-25</span> · LIVE</span>
       <span>MODEL · CLAUDE-HAIKU-4-5</span>
     </div>

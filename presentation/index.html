@@ -1,0 +1,248 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>PRISM — Pitch Deck · 01 Summary</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&family=Source+Serif+4:ital,opsz,wght@0,8..60,400;0,8..60,500;0,8..60,600;0,8..60,700;1,8..60,400;1,8..60,500;1,8..60,600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+
+  <div class="bg-prism"></div>
+
+  <main class="stage" id="stage">
+
+    <!-- =================================================== -->
+    <!-- STATE 0 — Open                                       -->
+    <!-- =================================================== -->
+    <section class="state state-open" data-state="0" data-active>
+      <div class="eyebrow">BW Hackathon · Track 01</div>
+      <h1 class="headline prism-headline">
+        <span class="letter l-p">P</span><span class="letter l-r">R</span><span class="letter l-i">I</span><span class="letter l-s">S</span><span class="letter l-m">M</span><span class="period">.</span>
+      </h1>
+
+      <div class="acronym">
+        <div class="acronym-cell">
+          <span class="acronym-letter">P</span>
+          <span class="acronym-word">Persistence</span>
+        </div>
+        <div class="acronym-cell">
+          <span class="acronym-letter">R</span>
+          <span class="acronym-word">Reasoning</span>
+        </div>
+        <div class="acronym-cell">
+          <span class="acronym-letter">I</span>
+          <span class="acronym-word">over Idiosyncratic</span>
+        </div>
+        <div class="acronym-cell">
+          <span class="acronym-letter">S</span>
+          <span class="acronym-word">Stock</span>
+        </div>
+        <div class="acronym-cell">
+          <span class="acronym-letter">M</span>
+          <span class="acronym-word">Moves</span>
+        </div>
+      </div>
+
+      <p class="standfirst">
+        An equity price-action tagger &mdash; <span class="em">structural</span> or <span class="ox">transient</span>?
+      </p>
+
+      <div class="byline">
+        <span>Srilekha</span><span class="sep">/</span>
+        <span>Sophia</span><span class="sep">/</span>
+        <span>Henry</span><span class="sep">/</span>
+        <span>Thomas</span>
+      </div>
+    </section>
+
+    <!-- =================================================== -->
+    <!-- STATE 1 — The problem                                -->
+    <!-- =================================================== -->
+    <section class="state state-problem" data-state="1">
+      <div class="eyebrow">The problem</div>
+      <h2 class="headline">
+        Stocks move sharply.
+        <span class="em-block">The market disagrees about why.</span>
+      </h2>
+      <p class="standfirst">
+        Earnings prints. Surprise filings. Sector rotations. Geopolitical shocks. Every day produces moves no one can fully attribute &mdash; and the &ldquo;why&rdquo; is the difference between a structural break and a buyable overreaction.
+      </p>
+    </section>
+
+    <!-- =================================================== -->
+    <!-- STATE 2 — Why current tools fail                     -->
+    <!-- =================================================== -->
+    <section class="state state-gap" data-state="2">
+      <div class="eyebrow">Why current tools fall short</div>
+      <h2 class="headline">Three options &mdash; none of them tell you what to do.</h2>
+
+      <div class="fail-grid">
+        <div class="fail-card">
+          <div class="fail-num">01 / 03</div>
+          <div class="fail-name">Sentiment</div>
+          <div class="fail-quote">&ldquo;The article reads positive. Score: +0.72.&rdquo;</div>
+          <div class="fail-why">→ One scalar. Too coarse to act on.</div>
+        </div>
+        <div class="fail-card">
+          <div class="fail-num">02 / 03</div>
+          <div class="fail-name">Headlines</div>
+          <div class="fail-quote">&ldquo;AMD jumps 11% after AI partnership news.&rdquo;</div>
+          <div class="fail-why">→ Reactive narrative. No analytical structure.</div>
+        </div>
+        <div class="fail-card">
+          <div class="fail-num">03 / 03</div>
+          <div class="fail-name">Naive LLM</div>
+          <div class="fail-quote">&ldquo;Investors saw this as validation of AMD&rsquo;s AI strategy&hellip;&rdquo;</div>
+          <div class="fail-why">→ Confident paragraphs. No citations. No accountability.</div>
+        </div>
+      </div>
+
+      <p class="footnote">
+        None of them tell you whether the move will <span class="em">persist</span> or <span class="em">revert</span>.
+      </p>
+    </section>
+
+    <!-- =================================================== -->
+    <!-- STATE 3 — The prism (methodology)                    -->
+    <!-- =================================================== -->
+    <section class="state state-prism" data-state="3">
+      <div class="eyebrow">Our approach</div>
+      <h2 class="headline">A price move is one signal. The text around it has structure.</h2>
+
+      <main class="prism-stage va-anat">
+        <svg viewBox="0 60 900 280" xmlns="http://www.w3.org/2000/svg">
+          <!-- Incoming single navy bar — the price move signal -->
+          <rect class="anat-in" x="40" y="178" width="280" height="22" fill="#0a1d36" rx="2"/>
+
+          <!-- Prism shape -->
+          <polygon class="anat-prism" points="320,90 320,290 460,190"
+                   fill="rgba(10,29,54,0.04)" stroke="#0a1d36" stroke-width="1.6"/>
+
+          <!-- 5 outgoing beams (one per dimension) -->
+          <line class="anat-out o1" x1="460" y1="190" x2="800" y2="80"
+                stroke="#C8442C" stroke-width="5" stroke-linecap="round"/>
+          <line class="anat-out o2" x1="460" y1="190" x2="800" y2="135"
+                stroke="#E89B4A" stroke-width="5" stroke-linecap="round"/>
+          <line class="anat-out o3" x1="460" y1="190" x2="800" y2="190"
+                stroke="#D4B85A" stroke-width="5" stroke-linecap="round"/>
+          <line class="anat-out o4" x1="460" y1="190" x2="800" y2="245"
+                stroke="#5A8DA8" stroke-width="5" stroke-linecap="round"/>
+          <line class="anat-out o5" x1="460" y1="190" x2="800" y2="300"
+                stroke="#3D4A6B" stroke-width="5" stroke-linecap="round"/>
+
+          <!-- Tags -->
+          <text class="anat-label l1" x="810" y="78" font-family="JetBrains Mono, monospace"
+                font-size="11" font-weight="600" fill="#C8442C" letter-spacing="0.10em">DEMAND</text>
+          <text class="anat-label l2" x="810" y="133" font-family="JetBrains Mono, monospace"
+                font-size="11" font-weight="600" fill="#E89B4A" letter-spacing="0.10em">PRICING</text>
+          <text class="anat-label l3" x="810" y="190" font-family="JetBrains Mono, monospace"
+                font-size="11" font-weight="600" fill="#D4B85A" letter-spacing="0.10em">COMPETITIVE</text>
+          <text class="anat-label l4" x="810" y="247" font-family="JetBrains Mono, monospace"
+                font-size="11" font-weight="600" fill="#5A8DA8" letter-spacing="0.10em">MGMT</text>
+          <text class="anat-label l5" x="810" y="302" font-family="JetBrains Mono, monospace"
+                font-size="11" font-weight="600" fill="#3D4A6B" letter-spacing="0.10em">MACRO</text>
+        </svg>
+      </main>
+
+      <div class="dim-stack">
+        <div class="dim-cell">
+          <div class="dim-name">Demand</div>
+          <div class="dim-blurb">Volume, customers, share.</div>
+        </div>
+        <div class="dim-cell">
+          <div class="dim-name">Pricing</div>
+          <div class="dim-blurb">Price, mix, discounting.</div>
+        </div>
+        <div class="dim-cell">
+          <div class="dim-name">Competitive</div>
+          <div class="dim-blurb">Rivals, moats, entrants.</div>
+        </div>
+        <div class="dim-cell">
+          <div class="dim-name">Mgmt</div>
+          <div class="dim-blurb">Guidance, execution, tone.</div>
+        </div>
+        <div class="dim-cell">
+          <div class="dim-name">Macro</div>
+          <div class="dim-blurb">Rates, FX, geopolitics.</div>
+        </div>
+      </div>
+    </section>
+
+    <!-- =================================================== -->
+    <!-- STATE 4 — The decision                               -->
+    <!-- =================================================== -->
+    <section class="state state-decide" data-state="4">
+      <div class="eyebrow">The decision</div>
+      <h2 class="headline">From the dimensions, we ask one question.</h2>
+
+      <div class="decide-row">
+        <div class="decide-card lean">
+          <div class="decide-tag">Structural</div>
+          <div class="decide-word">LEAN</div>
+          <div class="decide-sub">A real change in the business. Ride the move &mdash; the market is right.</div>
+        </div>
+        <div class="decide-vs">vs.</div>
+        <div class="decide-card fade">
+          <div class="decide-tag">Transient</div>
+          <div class="decide-word">FADE</div>
+          <div class="decide-sub">Overreaction or noise. Bet on reversion &mdash; the market overshot.</div>
+        </div>
+      </div>
+
+      <p class="decide-foot">
+        Not sentiment. Not a headline. <span class="em">A structural verdict, with citations</span>, that you can defend.
+      </p>
+    </section>
+
+    <!-- =================================================== -->
+    <!-- STATE 5 — Handoff                                    -->
+    <!-- =================================================== -->
+    <section class="state state-handoff" data-state="5">
+      <div class="handoff-card" data-go="6" role="button" tabindex="0" aria-label="Go to Human Benchmark">
+        <div class="next-tag">Next · click to open</div>
+        <div class="next-num">Section 02</div>
+        <div class="next-name">Human Benchmark</div>
+        <div class="next-arrow">↓</div>
+      </div>
+    </section>
+
+    <!-- =================================================== -->
+    <!-- STATE 6 — Section 02 · Human Benchmark (live demo) -->
+    <!-- =================================================== -->
+    <section class="state state-demo" data-state="6" data-demo-url="http://localhost:8000/">
+      <div class="demo-toolbar">
+        <button class="back-cue" type="button" data-back aria-label="Back to slides">← back to slides</button>
+        <div class="demo-title">Section 02 · Human Benchmark</div>
+        <div class="demo-actions">
+          <button class="demo-btn" type="button" data-demo-reload aria-label="Reload demo">↻ reload</button>
+          <a class="demo-btn" href="http://localhost:8000/" target="_blank" rel="noopener">open in new tab ↗</a>
+        </div>
+      </div>
+      <div class="demo-frame-wrap">
+        <iframe class="demo-frame" data-demo-frame title="PRISM Demo — Human Benchmark"></iframe>
+        <div class="demo-fallback" data-demo-fallback hidden>
+          <div class="fb-eyebrow">Demo not reachable</div>
+          <div class="fb-msg">
+            Start the static demo first:
+            <code>python -m http.server 8000 --directory demo/static</code>
+            then click <button class="demo-btn inline" type="button" data-demo-reload>↻ reload</button>
+          </div>
+        </div>
+      </div>
+    </section>
+
+  </main>
+
+  <footer class="footrail">
+    <span class="state-label" id="stateLabel">Section 01 · Summary</span>
+    <span class="cta">click anywhere to advance →</span>
+    <span class="pager" id="pager">page 1 of 7</span>
+  </footer>
+
+  <script src="script.js"></script>
+</body>
+</html>
