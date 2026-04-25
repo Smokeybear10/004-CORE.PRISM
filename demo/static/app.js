@@ -260,6 +260,8 @@ async function recomputeAttribution() {
     .filter(k => availableCounts[k] > 0).length;
 
   if (enabled.length === 0) {
+    // Invalidate any in-flight fetch so it can't land and clobber the empty render.
+    STATE.fetchSeq++;
     renderAttributionEmpty(move);
     renderToggleCaption(0, totalAvailable, 0);
     return;
@@ -350,6 +352,7 @@ function renderAttribution(bundle, moveIdx) {
   STATE.lastFullStack = bundle.moves[moveIdx].attribution;
 
   renderAttributionDetails(bundle.moves[moveIdx]);
+  card.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
 }
 
 function renderAttributionDetails(move) {
@@ -497,8 +500,6 @@ function renderAttributionDetails(move) {
     banner.hidden = true;
   }
 
-  // Scroll attribution into view
-  card.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
 }
 
 // ---------- Interactions ----------

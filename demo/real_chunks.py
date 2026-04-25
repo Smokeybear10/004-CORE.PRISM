@@ -39,6 +39,7 @@ from schema import SourceType, TextChunk
 _NEWS_DF: Optional[pd.DataFrame] = None
 _NEWS_BY_TICKER: dict[str, pd.DataFrame] = {}
 _THIRTEEN_F_BY_TICKER: dict[str, list[TextChunk]] = {}
+_TRANSCRIPTS_BY_TICKER: dict[str, list[TextChunk]] = {}
 
 _REPO_ROOT = Path(__file__).resolve().parent.parent
 _THIRTEEN_F_JSONL = _REPO_ROOT / "data" / "thirteen_f" / "focal_chunks.jsonl"
@@ -128,6 +129,91 @@ def _thirteen_f_chunks_for(ticker: str, as_of: date) -> list[TextChunk]:
     return [c for c in pool if c.publication_date <= as_of]
 
 
+def preload_earnings_transcripts(tickers: list[str]) -> None:
+    """Load earnings-call transcripts for the focal tickers and index by ticker.
+
+    The full transcripts parquet is ~1.85GB; reading it whole alongside the
+    628MB news parquet OOMs the server. We use pyarrow with a pushdown
+    `symbol IN (...)` filter so only the focal-ticker rows are materialized.
+    """
+    import pyarrow.parquet as pq
+    from ingestion.earnings_news.transcripts import (
+        _ensure_parquet as _ensure_transcripts_parquet,
+        _flatten_and_section,
+        _paragraphs_as_list,
+        _to_date as _ts_to_date,
+        _chunk_text as _ts_chunk_text,
+    )
+
+    missing = [t.upper() for t in tickers if t.upper() not in _TRANSCRIPTS_BY_TICKER]
+    if not missing:
+        return
+
+    parquet_path = _ensure_transcripts_parquet()
+    table = pq.read_table(
+        str(parquet_path),
+        filters=[("symbol", "in", missing)],
+    )
+    df = table.to_pandas()
+    del table
+
+    for t in missing:
+        _TRANSCRIPTS_BY_TICKER.setdefault(t, [])
+
+    if df.empty:
+        return
+
+    df["_pub_date"] = df["report_date"].map(_ts_to_date)
+
+    for _, row in df.iterrows():
+        ticker = str(row["symbol"]).upper()
+        pub_date = row["_pub_date"]
+        if pub_date is None:
+            continue
+        paragraphs = _paragraphs_as_list(row.get("transcripts"))
+        if not paragraphs:
+            continue
+        sectioned = _flatten_and_section(paragraphs)
+        if not sectioned:
+            continue
+
+        buckets: list[tuple[str, str]] = []
+        cur_section = sectioned[0][0]
+        buf: list[str] = []
+        for sec, speaker, content in sectioned:
+            if sec != cur_section and buf:
+                buckets.append((cur_section, "\n\n".join(buf)))
+                buf = []
+            cur_section = sec
+            buf.append(f"[{speaker}]: {content}" if speaker else content)
+        if buf:
+            buckets.append((cur_section, "\n\n".join(buf)))
+
+        for section_name, section_text in buckets:
+            for idx, (chunk_body, tok_count) in enumerate(_ts_chunk_text(section_text), start=1):
+                _TRANSCRIPTS_BY_TICKER[ticker].append(TextChunk(
+                    chunk_id=(
+                        f"earnings_transcript_{ticker}_{pub_date.isoformat()}"
+                        f"_{section_name}_{idx:03d}"
+                    ),
+                    ticker=ticker,
+                    source_type=SourceType.EARNINGS_TRANSCRIPT,
+                    publication_date=pub_date,
+                    period_end=None,
+                    source_url=None,
+                    section_name=section_name,
+                    text=chunk_body,
+                    token_count=tok_count,
+                ))
+
+
+def _earnings_chunks_for(ticker: str, as_of: date) -> list[TextChunk]:
+    pool = _TRANSCRIPTS_BY_TICKER.get(ticker.upper(), [])
+    if not pool:
+        return []
+    return [c for c in pool if c.publication_date <= as_of]
+
+
 def chunks_for_real(ticker: str, as_of: date) -> list[TextChunk]:
     """
     Real SEC filings + news + 13F chunks for (ticker, as_of).
@@ -144,9 +230,10 @@ def chunks_for_real(ticker: str, as_of: date) -> list[TextChunk]:
     sec = get_filings_as_of(ticker, as_of)
     news = _news_chunks_for(ticker, as_of)
     thirteen_f = _thirteen_f_chunks_for(ticker, as_of)
+    transcripts = _earnings_chunks_for(ticker, as_of)
 
     by_type: dict[SourceType, list[TextChunk]] = {}
-    for c in sec + news + thirteen_f:
+    for c in sec + news + thirteen_f + transcripts:
         by_type.setdefault(c.source_type, []).append(c)
     for bucket in by_type.values():
         bucket.sort(key=lambda c: c.publication_date, reverse=True)

@@ -40,7 +40,12 @@ if str(_ROOT) not in sys.path:
     sys.path.insert(0, str(_ROOT))
 
 from demo.mock_data import FOCAL_TICKERS  # noqa: E402
-from demo.real_chunks import chunks_for_real, preload_news, preload_thirteen_f  # noqa: E402
+from demo.real_chunks import (  # noqa: E402
+    chunks_for_real,
+    preload_earnings_transcripts,
+    preload_news,
+    preload_thirteen_f,
+)
 from model import attribute as model_attribute  # noqa: E402
 from schema import (  # noqa: E402
     AblationConfig,
@@ -62,6 +67,7 @@ _COUNT_TO_BUNDLE = {
     4: "+peer_news",
     5: "+sector_news",
     6: "+macro",
+    7: "+positioning",
 }
 
 app = FastAPI(title="Price Action Tagger", version="0.3")
@@ -77,6 +83,9 @@ def _warm_caches() -> None:
     print("[server] news parquet indexed", flush=True)
     preload_thirteen_f()
     print("[server] 13F chunks loaded", flush=True)
+    print("[server] loading earnings-call transcripts…", flush=True)
+    preload_earnings_transcripts(list(FOCAL_TICKERS.keys()))
+    print("[server] earnings transcripts loaded", flush=True)
 
 
 # ---------- Schemas ----------

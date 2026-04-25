@@ -64,12 +64,22 @@ def attribute(
     """
     from backtest.fixtures import generate_attribution
 
+    # Mix the chunk source-set into the rng seed so toggling any source in the
+    # demo visibly shifts weights / character / confidence — without this, the
+    # placeholder fixture is keyed only on (ticker, move_date) and the UI looks
+    # frozen when sources change. Stable: same chunk set → same output.
+    chunk_sig = "|".join(sorted({c.source_type.value for c in chunks})) or "_empty"
+    chunk_sig += f"|n={len(chunks)}"
+    chunk_seed = hash((move.ticker, move.move_date.toordinal(), chunk_sig)) & 0x7FFFFFFF
+
     attr = generate_attribution(
         ticker=move.ticker,
         move_date=move.move_date,
         return_pct=move.return_pct,
         vol_zscore=move.vol_zscore,
         ablation_name=config.name,
+        seed=chunk_seed,
+        sources_used=list(config.sources),
     )
     # Echo the actual chunk IDs we were given into the evidence slots so the
     # contract "evidence_chunk_ids reference real chunks" holds.
