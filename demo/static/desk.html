@@ -509,6 +509,132 @@
     .strat-pill .verdict.neutral { color: var(--ink-quiet); }
     .strat-pill .verdict.pending { color: var(--ink-dim); }
 
+    /* —— Verdict explainer (How this strategy decides + What the model concluded) —— */
+    .verdict-explainer {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 0;
+      border-bottom: 1px solid var(--rule);
+      background: var(--paper);
+    }
+    .verdict-explainer .vexp-block {
+      padding: 16px 22px 18px;
+    }
+    .verdict-explainer .vexp-block + .vexp-block {
+      border-left: 1px solid var(--rule);
+      background: var(--paper-2);
+    }
+    .verdict-explainer .vexp-label {
+      display: block;
+      font: 600 9.5px var(--mono);
+      letter-spacing: 0.22em;
+      text-transform: uppercase;
+      color: var(--ink-quiet);
+      margin-bottom: 8px;
+    }
+    .verdict-explainer .vexp-body {
+      margin: 0;
+      font: 400 13.5px var(--serif);
+      color: var(--ink);
+      line-height: 1.55;
+      letter-spacing: -0.005em;
+    }
+    .verdict-explainer .vexp-body em {
+      font-style: italic;
+      color: var(--ink-2);
+    }
+    .verdict-explainer .vexp-body .pos { color: var(--up); font-weight: 500; }
+    .verdict-explainer .vexp-body .neg { color: var(--down); font-weight: 500; }
+    .verdict-explainer .vexp-body .muted { color: var(--ink-quiet); }
+    .verdict-explainer .vexp-body .num {
+      font-family: var(--mono); font-weight: 500;
+      font-size: 12.5px; color: var(--ink);
+      letter-spacing: 0;
+    }
+    @media (max-width: 880px) {
+      .verdict-explainer { grid-template-columns: 1fr; }
+      .verdict-explainer .vexp-block + .vexp-block {
+        border-left: none;
+        border-top: 1px solid var(--rule);
+      }
+    }
+
+    /* —— Zero-source warning (every toggle off) —— */
+    .zero-warning {
+      margin: 0 22px 14px;
+      padding: 12px 16px;
+      background: var(--down-soft);
+      border: 1px solid var(--down-line);
+      border-left: 3px solid var(--down);
+      border-radius: var(--radius-sm);
+      font: 500 13px var(--serif);
+      color: var(--ink);
+      line-height: 1.5;
+    }
+    .zero-warning strong { color: var(--down); font-weight: 700; }
+    .zero-warning em { color: var(--ink-2); font-style: italic; }
+    .zero-warning code {
+      font: 500 11.5px var(--mono);
+      background: var(--paper-2);
+      border: 1px solid var(--rule);
+      padding: 1px 5px; border-radius: 3px;
+      letter-spacing: 0;
+    }
+
+    /* —— Mock banner (model_notes / placeholder attribution warnings) —— */
+    .mock-banner {
+      margin: 0 22px 14px;
+      padding: 10px 14px;
+      background: var(--gold-soft);
+      border: 1px solid rgba(168, 124, 61, 0.40);
+      border-left: 3px solid var(--gold);
+      border-radius: var(--radius-sm);
+      font: italic 500 12.5px var(--serif);
+      color: var(--ink-2);
+      line-height: 1.5;
+    }
+    .mock-banner code {
+      font: 500 11.5px var(--mono);
+      background: rgba(168, 124, 61, 0.18);
+      color: var(--gold);
+      padding: 1px 5px; border-radius: 3px;
+      font-style: normal; letter-spacing: 0;
+    }
+
+    /* —— Sources tab: full-stack reference + reset —— */
+    .src-tools {
+      display: flex; align-items: center; justify-content: space-between;
+      gap: 12px; margin: 0 0 10px;
+      padding: 10px 12px;
+      background: var(--paper-2);
+      border: 1px solid var(--rule);
+      border-radius: var(--radius-sm);
+      font: 500 12px var(--sans);
+      color: var(--ink-2);
+    }
+    .src-tools .ref { display: flex; gap: 8px; align-items: baseline; flex-wrap: wrap; }
+    .src-tools .ref .lbl {
+      font: 600 10px var(--mono); letter-spacing: 0.2em;
+      text-transform: uppercase; color: var(--ink-quiet);
+    }
+    .src-tools .ref .num { font: 500 12px var(--mono); color: var(--ink); }
+    .src-tools .ref .sep { color: var(--rule-strong); }
+    .src-tools .reset-btn {
+      background: var(--paper);
+      border: 1px solid var(--rule-strong);
+      border-radius: var(--radius-sm);
+      padding: 6px 12px;
+      font: 600 10.5px var(--mono);
+      letter-spacing: 0.16em; text-transform: uppercase;
+      color: var(--ink-2); cursor: pointer;
+      transition: background 140ms, border-color 140ms, color 140ms;
+    }
+    .src-tools .reset-btn:hover {
+      background: var(--oxblood-soft);
+      border-color: var(--oxblood);
+      color: var(--oxblood);
+    }
+
     /* Tabs */
     .tabs {
       display: flex;
@@ -749,33 +875,41 @@
        Keyboard Nav · Filter Bar
        ══════════════════════════════════════════════════════════ */
 
-    /* —— 01 Reckoning Strip —— */
+    /* —— 01 Reckoning Strip ——
+       Visual port of `desk_concepts.html` §1: one divider between the
+       verdict cell and the rest, even fr units across the three reading
+       cells, italic serif word at 44px with tight 1.0 line-height. */
     .reck {
       display: grid;
-      grid-template-columns: 1.4fr 1fr 0.8fr 0.8fr;
-      gap: 18px;
-      padding: 14px 0 16px;
+      grid-template-columns: 1.4fr 1fr 1fr 1fr;
+      gap: 22px;
+      align-items: start;
+      padding: 16px 4px 18px;
       border-top: 1px solid var(--rule);
       border-bottom: 1px solid var(--rule);
       margin-bottom: 16px;
     }
-    .reck .cell { padding-right: 16px; }
-    .reck .cell + .cell { border-left: 1px solid var(--rule); padding-left: 18px; }
+    .reck .cell { padding-right: 4px; min-width: 0; }
+    .reck .cell:first-child {
+      border-right: 1px solid var(--rule);
+      padding-right: 22px;
+    }
     .reck .lbl {
       font: 600 9.5px var(--mono); letter-spacing: 0.20em; color: var(--ink-quiet);
       text-transform: uppercase; margin: 0 0 8px;
     }
     .reck .word {
       font-family: var(--serif); font-weight: 500; font-style: italic;
-      font-size: 44px; line-height: 1.12; letter-spacing: -0.02em;
-      color: var(--oxblood); margin: 0 0 4px;
+      font-size: 44px; line-height: 1; letter-spacing: -0.02em;
+      color: var(--oxblood); margin: 0 0 6px;
+      padding-bottom: 4px;  /* room for italic descender so the dot/F doesn't clip */
     }
     .reck .word[data-state="fade"]    { color: var(--down); }
     .reck .word[data-state="lean"]    { color: var(--navy); }
     .reck .word[data-state="skip"]    { color: var(--ink-quiet); }
     .reck .word[data-state="idle"]    { color: var(--ink-dim); }
     .reck .word small {
-      display: block; margin-top: 4px;
+      display: block; margin-top: 8px;
       font: 600 11px var(--mono); letter-spacing: 0.18em;
       color: var(--ink-quiet); font-style: normal; text-transform: uppercase;
     }
@@ -784,7 +918,7 @@
     }
     .reck .byline {
       font: italic 400 13.5px var(--serif); color: var(--ink-2);
-      line-height: 1.45; margin: 8px 0 0;
+      line-height: 1.45; margin: 6px 0 0;
     }
     .reck .byline b { color: var(--oxblood); font-weight: 600; font-style: normal; font-family: var(--mono); font-size: 12.5px; }
     .reck .delta-rows { display: flex; flex-direction: column; gap: 8px; margin-top: 2px; }
@@ -821,7 +955,7 @@
       margin: 6px 0 0; padding-top: 6px; border-top: 1px dotted var(--rule);
     }
     .reck .gauge-cell { display: flex; flex-direction: column; align-items: flex-start; }
-    .reck svg.gauge { width: 100%; max-width: 130px; height: auto; }
+    .reck svg.gauge { width: 100%; max-width: 140px; height: auto; }
     .reck svg.gauge .bg { fill: none; stroke: var(--rule); stroke-width: 8; stroke-linecap: round; }
     .reck svg.gauge .fg {
       fill: none; stroke-width: 8; stroke-linecap: round;
@@ -1157,13 +1291,23 @@
       font-family: var(--mono); font-size: 12px;
     }
 
+    @media (max-width: 1100px) {
+      .reck { grid-template-columns: 1.3fr 1fr 1fr 1fr; gap: 16px; }
+      .reck .cell:first-child { padding-right: 16px; }
+    }
     @media (max-width: 900px) {
-      .reck { grid-template-columns: 1fr 1fr; }
-      .reck .cell + .cell { border-left: none; padding-left: 0; }
+      /* 2-col wrap: Finding | Realized vs Predicted on row 1, gauges on row 2.
+         Keep the verdict divider on the first cell — it still separates
+         Finding from Delta in the new layout. */
+      .reck { grid-template-columns: 1fr 1fr; gap: 14px 18px; }
       .filter-bar { grid-template-columns: 1fr 1fr; }
     }
     @media (max-width: 560px) {
       .reck { grid-template-columns: 1fr; }
+      .reck .cell:first-child {
+        border-right: none; padding-right: 0;
+        border-bottom: 1px solid var(--rule); padding-bottom: 14px;
+      }
       .filter-bar { grid-template-columns: 1fr; }
     }
   </style>
@@ -1265,10 +1409,8 @@
 </footer>
 
 <nav class="switcher" aria-label="Switcher">
-  <a href="/">Editorial</a>
-  <a href="/observations.html">Observations</a>
+  <a href="/" class="current">Desk</a>
   <a href="/console.html">Console</a>
-  <a href="/desk.html" class="current">Desk</a>
 </nav>
 
 <button type="button" class="kbd-hint-pill" id="kbd-hint-pill" title="Keyboard shortcuts">
@@ -1313,11 +1455,83 @@ const DIM_FIELDS = [
   { id: 'macro', label: 'Macro' },
 ];
 const STRATEGIES = [
-  { id: 'fundamental_vs_nonfundamental', label: 'Fundamental' },
-  { id: 'expected_vs_realized', label: 'Expected vs Realized' },
-  { id: 'dimension_weighted', label: 'Dimension-weighted' },
-  { id: 'hybrid', label: 'Hybrid' },
+  { id: 'fundamental_vs_nonfundamental', label: 'Fundamental',
+    blurb: 'fundamental cause → lean, sentiment-driven → fade.',
+    description:
+      'Asks one question: did the move come from something <em>real and ' +
+      'durable</em> — a genuine earnings beat, customer growth, pricing ' +
+      'power, a competitive shift — or from something <em>soft</em> like a ' +
+      'fear cycle, hype, or a single news headline? If the cause looks ' +
+      'fundamental, <span class="pos">lean</span> with the move (fundamentals ' +
+      'tend to keep paying off). If it looks like a sentiment reaction, ' +
+      '<span class="neg">fade</span> it (those moves usually unwind). When ' +
+      'the model can\'t tell, sit it out.' },
+  { id: 'expected_vs_realized', label: 'Expected vs Realized',
+    blurb: 'market overreacted → fade. Underreacted → lean.',
+    description:
+      'The model reads the news and filings around the move and estimates ' +
+      'how much the stock <em>should</em> have moved given that evidence. ' +
+      'We compare to what actually happened. If the stock moved <em>much ' +
+      'more</em> than the news justifies, the market overreacted — bet on a ' +
+      'pullback (<span class="neg">fade</span>). If it moved <em>less</em> ' +
+      'than the news justifies, the price hasn\'t caught up yet — bet on ' +
+      'more move in the same direction (<span class="pos">lean</span>). If ' +
+      'they roughly agree, the news is already priced in — skip.' },
+  { id: 'dimension_weighted', label: 'Dimension-weighted',
+    blurb: 'fundamental drivers → lean. Macro/sentiment drivers → fade.',
+    description:
+      'Different <em>kinds</em> of price moves have very different staying ' +
+      'power, going back to the post-earnings drift literature. Moves ' +
+      'driven by real <em>demand</em> (units, customers) or <em>pricing</em> ' +
+      '(margins, price hikes) tend to keep paying off for weeks. Moves ' +
+      'driven by <em>macro</em> shocks (Fed, rates, geopolitics) or single ' +
+      'management-credibility hits tend to fully unwind. This strategy ' +
+      'measures how much of the move came from each cause and weights them: ' +
+      'mostly demand or pricing → <span class="pos">lean</span>; mostly ' +
+      'macro or one-off mgmt noise → <span class="neg">fade</span>.' },
+  { id: 'hybrid', label: 'Hybrid',
+    blurb: 'fundamental check, then overshoot check, then driver sanity check.',
+    description:
+      'Stacks the other three checks in order. <em>First,</em> is the move ' +
+      'fundamental or just narrative? Narrative → ' +
+      '<span class="neg">fade</span>; unclear → skip. <em>Second,</em> for ' +
+      'fundamental moves, did the price still overshoot what the news ' +
+      'justified? If yes → <span class="neg">fade</span> the overshoot. ' +
+      '<em>Third,</em> sanity-check the strongest cause — if the move was ' +
+      'driven mostly by something that historically reverses (like a macro ' +
+      'shock), back off to skip; otherwise <span class="pos">lean</span>.' },
 ];
+const DIM_LABEL = {
+  demand: 'Demand',
+  pricing: 'Pricing',
+  competitive: 'Competitive',
+  management_credibility: 'Management credibility',
+  macro: 'Macro',
+};
+const DIM_PHRASE = {
+  demand:                 'real demand growth (units, customers, market share)',
+  pricing:                'pricing power (margins, price hikes, mix)',
+  competitive:            'competitive dynamics (market share, rivals, moats)',
+  management_credibility: 'management credibility (guidance, execution, leadership)',
+  macro:                  'macro forces (rates, FX, commodities, geopolitics)',
+};
+const DIM_PHRASE_SHORT = {
+  demand:                 'demand growth (units, customers)',
+  pricing:                'pricing power (margins, price hikes)',
+  competitive:            'competitive dynamics (rivals, market share)',
+  management_credibility: 'management credibility (guidance, execution)',
+  macro:                  'macro forces (rates, FX, geopolitics)',
+};
+// Mirrors backtest.frameworks.RESEARCH_GROUNDED_PERSISTENCE — used to
+// reproduce strategy_dimension_weighted's score client-side. Keep in sync if
+// the backend priors are recalibrated.
+const PERSISTENCE = {
+  demand: 0.85,
+  pricing: 0.65,
+  competitive: 0.45,
+  management_credibility: -0.15,
+  macro: -0.75,
+};
 const ARROW = { positive: '↑', negative: '↓', neutral: '·' };
 
 const STATE = {
@@ -1325,6 +1539,9 @@ const STATE = {
   selectedMoveIdx: null, selectedStrategy: 'hybrid',
   enabledSources: new Set(ALL_IDS),
   chunksAvailable: {}, attribution: null, strategies: {}, chunks: [],
+  // Pre-baked full-stack reference, frozen at selectMove time so the
+  // Sources tab can show user's custom selection vs. all-sources-on.
+  lastFullStack: null, lastFullStackStrategies: null,
   fetchSeq: 0, activeTab: 'dimensions',
   searchSelectedIdx: 0,
   // —— upgrade pass ——
@@ -1352,6 +1569,11 @@ function computeCoherence(attr) {
 const pct = (x, d=2) => x == null ? '—' : `${x>=0?'+':''}${(x*100).toFixed(d)}%`;
 async function fetchJSON(p) { const r = await fetch(p); if (!r.ok) throw new Error(r.status); return r.json(); }
 function escapeHtml(s) { return String(s ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+// Preserve `inline code` spans inside model_notes — everything else escaped.
+function escapeHtmlPreserveCode(s) {
+  const parts = String(s ?? '').split(/`([^`]+)`/g);
+  return parts.map((p, i) => i % 2 === 0 ? escapeHtml(p) : `<code>${escapeHtml(p)}</code>`).join('');
+}
 function formatDate(iso) {
   const [y, m, d] = iso.split('-').map(Number);
   return new Date(y, m-1, d).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' });
@@ -1522,6 +1744,233 @@ function judgeVerdict(verdict, moveSign, fwdReturn) {
   return 'na';
 }
 
+/* ── Verdict-explainer helpers ──
+ * Mirror app.js's "model-read + per-strategy reasoning + 5-day outcome"
+ * conclusion paragraph. Reads STATE.attribution as the reference, so it
+ * reflects the live /api/attribute response (or pre-baked bundle on first
+ * paint).
+ */
+function _dimWeightedScore(ref) {
+  let score = 0, top = null, topAbs = 0;
+  for (const [k, v] of Object.entries(ref.dimensions || {})) {
+    const c = (PERSISTENCE[k] ?? 0) * (v?.weight ?? 0);
+    score += c;
+    if (Math.abs(c) > topAbs) { topAbs = Math.abs(c); top = k; }
+  }
+  return { score, top };
+}
+function _dominantDimension(ref) {
+  let domName = null, domWeight = 0;
+  for (const [k, v] of Object.entries(ref.dimensions || {})) {
+    if ((v?.weight ?? 0) > domWeight) { domWeight = v.weight; domName = k; }
+  }
+  return domName;
+}
+function _dirCls(direction) {
+  if (direction === 'positive') return 'pos';
+  if (direction === 'negative') return 'neg';
+  return 'muted';
+}
+function _dirWord(direction) {
+  if (direction === 'positive') return 'positive';
+  if (direction === 'negative') return 'negative';
+  return 'neutral';
+}
+function topDimsByWeight(ref, n) {
+  return Object.entries(ref.dimensions || {})
+    .map(([k, v]) => ({ key: k, weight: v?.weight ?? 0, direction: v?.direction || 'neutral' }))
+    .filter(d => d.weight > 0)
+    .sort((a, b) => b.weight - a.weight)
+    .slice(0, n);
+}
+function getForwardReturn(bundle, moveDate, n) {
+  if (!bundle || !Array.isArray(bundle.prices)) return null;
+  const idx = bundle.prices.findIndex(p => p.date === moveDate);
+  if (idx < 0 || idx + n >= bundle.prices.length) return null;
+  const px0 = bundle.prices[idx].close;
+  const pxN = bundle.prices[idx + n].close;
+  if (!px0) return null;
+  return (pxN - px0) / px0;
+}
+function buildModelReadSentence(ref) {
+  const top = topDimsByWeight(ref, 3);
+  if (top.length === 0) {
+    return `The model couldn't attribute this move to any dimension above zero weight.`;
+  }
+  const parts = top.map(d => {
+    const phrase = DIM_PHRASE_SHORT[d.key] || d.key;
+    const cls = _dirCls(d.direction);
+    const wpct = Math.round(d.weight * 100);
+    return `<span class="${cls}">${phrase}</span> (${_dirWord(d.direction)}, ${wpct}%)`;
+  });
+  let lead;
+  if (parts.length === 1) {
+    lead = `The model attributed this move primarily to ${parts[0]}.`;
+  } else if (parts.length === 2) {
+    lead = `The model attributed this move primarily to ${parts[0]} and ${parts[1]}.`;
+  } else {
+    lead = `The model attributed this move primarily to ${parts[0]} and ${parts[1]}, with ${parts[2]}.`;
+  }
+  const realized = ref.realized;
+  const predicted = ref.predicted;
+  const hasPred = predicted !== null && predicted !== undefined;
+  let tail;
+  if (hasPred) {
+    const directionMatch = (predicted * realized > 0) || (predicted === 0 && realized === 0);
+    const directionNote = directionMatch
+      ? `the model got the direction right`
+      : `<span class="neg">the model got the direction wrong</span>`;
+    tail = ` It expected the move to be about <span class="num">${pct(predicted)}</span>; ` +
+           `the stock actually moved <span class="num">${pct(realized)}</span> — ${directionNote}.`;
+  } else {
+    tail = ` It saw the actual <span class="num">${pct(realized)}</span> move but the ` +
+           `evidence was too thin to ground a precise expected magnitude.`;
+  }
+  return lead + tail;
+}
+function buildOutcomeSentence(verdict, ref, bundle, moveDate) {
+  const fwd = getForwardReturn(bundle, moveDate, 5);
+  if (fwd === null) {
+    return `Not enough price history after this move to score the call against 5-day forward returns.`;
+  }
+  const realized = ref.realized;
+  const moveSign = realized > 0 ? 1 : realized < 0 ? -1 : 0;
+  const fwdSign  = fwd > 0 ? 1 : fwd < 0 ? -1 : 0;
+  const fwdHtml = `<span class="num">${pct(fwd)}</span>`;
+  if (verdict === 'neutral') {
+    if (fwdSign === 0) {
+      return `Over the next 5 trading days the stock was roughly flat (${fwdHtml}); ` +
+             `<span class="muted">staying out was harmless</span>.`;
+    }
+    const wouldHaveBeen = moveSign === fwdSign ? 'a LEAN' : 'a FADE';
+    return `Over the next 5 trading days the stock moved ${fwdHtml}. ` +
+           `<span class="muted">SKIP avoided a position; ${wouldHaveBeen} would have been ` +
+           `the right call in hindsight.</span>`;
+  }
+  if (verdict === 'lean') {
+    if (moveSign === fwdSign && fwdSign !== 0) {
+      return `Over the next 5 trading days the stock continued in the same direction ` +
+             `(${fwdHtml}) — the <span class="pos">LEAN paid off</span>.`;
+    }
+    return `Over the next 5 trading days the stock reversed to ${fwdHtml} — ` +
+           `the <span class="neg">LEAN was wrong</span>; the original move didn't have legs.`;
+  }
+  if (verdict === 'fade') {
+    if (moveSign !== fwdSign && fwdSign !== 0) {
+      return `Over the next 5 trading days the stock pulled back against the move ` +
+             `(${fwdHtml}) — the <span class="pos">FADE paid off</span>.`;
+    }
+    return `Over the next 5 trading days the stock kept moving the same way ` +
+           `(${fwdHtml}) — the <span class="neg">FADE was wrong</span>; the original move ` +
+           `had more juice than the model thought.`;
+  }
+  return '';
+}
+function buildStrategyReasoning(strategyId, verdict, ref, tag) {
+  if (strategyId === 'fundamental_vs_nonfundamental') {
+    if (ref.character === 'structural') {
+      return `Because the model judged the cause durable rather than narrative, ` +
+             `this strategy says ${tag} — bet the move keeps working.`;
+    }
+    if (ref.character === 'transient') {
+      return `Because the model judged the cause sentiment-driven (a single news ` +
+             `cycle, not a real business change), this strategy says ${tag} — bet ` +
+             `the move unwinds.`;
+    }
+    return `Because the model couldn't cleanly call the cause fundamental or ` +
+           `sentiment, this strategy stays out: ${tag}.`;
+  }
+  if (strategyId === 'expected_vs_realized') {
+    const realized = ref.realized;
+    const predicted = ref.predicted;
+    const hasPred = predicted !== null && predicted !== undefined;
+    if (!hasPred) {
+      return `With no expected-return baseline to compare against, this strategy is forced to ${tag}.`;
+    }
+    if (predicted === 0) {
+      return `With expected return at zero, there's no magnitude to ratio against — the strategy is forced to ${tag}.`;
+    }
+    if (predicted * realized < 0) {
+      return `Since actual and expected pointed opposite directions, the strategy refuses to call it: ${tag}.`;
+    }
+    const ratio = Math.abs(realized) / Math.abs(predicted);
+    if (ratio >= 1.5) {
+      return `The stock moved roughly <span class="num">${ratio.toFixed(2)}×</span> ` +
+             `more than the news justified — that looks like overreaction, so this ` +
+             `strategy says ${tag} (bet on a pullback).`;
+    }
+    if (ratio <= 0.5) {
+      return `The stock moved only <span class="num">${ratio.toFixed(2)}×</span> ` +
+             `the magnitude the news justified — the price hasn't caught up, so ` +
+             `this strategy says ${tag} (bet on more move in the same direction).`;
+    }
+    return `Realized and expected magnitudes are within the neutral band — the ` +
+           `news already looks priced in, so this strategy says ${tag}.`;
+  }
+  if (strategyId === 'dimension_weighted') {
+    const { score, top } = _dimWeightedScore(ref);
+    const topPhrase = top ? (DIM_PHRASE[top] || top) : '—';
+    if (score >= 0.20) {
+      return `The dominant driver is <span class="num">${topPhrase}</span> — the kind ` +
+             `of cause that historically keeps paying off in the same direction. So ` +
+             `this strategy says ${tag}.`;
+    }
+    if (score <= -0.20) {
+      return `The dominant driver is <span class="num">${topPhrase}</span> — the kind ` +
+             `of cause that historically tends to fully reverse. So this strategy ` +
+             `says ${tag} (bet against the move).`;
+    }
+    return `No single driver dominates this move clearly enough to call — the mix ` +
+           `washes out, so this strategy says ${tag}.`;
+  }
+  if (strategyId === 'hybrid') {
+    const char = ref.character;
+    const realized = ref.realized;
+    const predicted = ref.predicted;
+    const domName = _dominantDimension(ref);
+    const domPhrase = domName ? (DIM_PHRASE[domName] || domName) : '—';
+    const domPersist = domName ? (PERSISTENCE[domName] ?? 0) : 0;
+    if (char === 'transient') {
+      return `Layer 1 caught it: the cause is sentiment-driven, so this strategy says ${tag} immediately.`;
+    }
+    if (char === 'mixed' || char === 'unclear') {
+      return `Layer 1 caught it: the cause is too unclear to act on, so this strategy says ${tag}.`;
+    }
+    const hasPred = predicted !== null && predicted !== undefined && predicted !== 0
+                    && predicted * realized > 0;
+    if (hasPred && Math.abs(realized) >= 1.5 * Math.abs(predicted)) {
+      return `The cause is fundamental, but Layer 2 caught an overshoot — the price ` +
+             `moved well beyond what the news justified. So this strategy says ${tag}.`;
+    }
+    if (domPersist < 0) {
+      return `The cause is fundamental and there's no overshoot, but the strongest ` +
+             `driver was <span class="num">${domPhrase}</span> — historically that ` +
+             `kind of move reverses, so Layer 3 backs off to ${tag}.`;
+    }
+    return `All three checks passed — fundamental cause, no overshoot, and the ` +
+           `strongest driver (<span class="num">${domPhrase}</span>) has a strong ` +
+           `record of continuing. So this strategy says ${tag}.`;
+  }
+  return `Strategy concluded ${tag}.`;
+}
+function buildVerdictConclusion(strategyId, verdict, ref, bundle, moveDate) {
+  if (!ref) return 'Pick a flagged move on the chart above.';
+  const conf = Math.round((ref.confidence ?? 0) * 100);
+  const verdictWord = verdict === 'neutral' ? 'SKIP'
+                    : verdict === 'lean'    ? 'LEAN'
+                    : verdict === 'fade'    ? 'FADE' : '—';
+  const verdictCls = verdict === 'lean' ? 'pos'
+                   : verdict === 'fade' ? 'neg' : 'muted';
+  const tag = `<span class="${verdictCls}">${verdictWord}</span>`;
+  const confTail = ` <span class="muted">Model confidence in the underlying ` +
+                   `attribution: <span class="num">${conf}%</span>.</span>`;
+  const readSentence = buildModelReadSentence(ref);
+  const reasonSentence = verdict ? buildStrategyReasoning(strategyId, verdict, ref, tag) : '';
+  const outcomeSentence = (verdict && moveDate && bundle)
+    ? buildOutcomeSentence(verdict, ref, bundle, moveDate) : '';
+  return `${readSentence} ${reasonSentence} ${outcomeSentence}${confTail}`;
+}
+
 /* ── Disagreement counter ── */
 function countDisagreement(strategies) {
   const out = { lean: 0, fade: 0, skip: 0 };
@@ -1544,6 +1993,11 @@ function renderEventCard() {
       `<div class="body">Pick a ticker above, then click any annotated dot in the chart.</div>`;
     return;
   }
+  // Zero-source state: user toggled every source off. Force the active tab
+  // to Sources so the toggles stay visible (user needs to flip one back on
+  // to recover) and let the renderer surface a zero-warning banner inline.
+  const zeroSources = STATE.enabledSources.size === 0;
+  if (zeroSources) STATE.activeTab = 'sources';
   const move = STATE.bundle.moves[STATE.selectedMoveIdx];
   const a = STATE.attribution;
   const verdict = STATE.strategies[STATE.selectedStrategy];
@@ -1649,6 +2103,19 @@ function renderEventCard() {
     </div>
   ` : '';
 
+  // Mock-banner: when the model returned `model_notes` (placeholder
+   // attribution, no chunks, fake-client mode, etc.) surface the reason so the
+   // user knows the reading is degraded. Backticked spans render as <code>.
+  const notesHtml = a?.model_notes
+    ? `<div class="mock-banner">${escapeHtmlPreserveCode(a.model_notes)}</div>`
+    : '';
+  const zeroHtml = zeroSources
+    ? `<div class="zero-warning"><strong>No sources enabled.</strong> ` +
+      `Toggle at least one source in <em>Sources</em> below to generate an ` +
+      `attribution — <code>model.attribute()</code> can't cite evidence that ` +
+      `isn't there.</div>`
+    : '';
+
   card.innerHTML = `
     <div class="event-h">
       <span class="case-no">${caseNo}</span>
@@ -1660,6 +2127,9 @@ function renderEventCard() {
       </div>
       <div class="date">${dateStr}</div>
     </div>
+
+    ${notesHtml}
+    ${zeroHtml}
 
     <div class="reck" id="reck">
       <div class="cell">
@@ -1718,6 +2188,17 @@ function renderEventCard() {
 
     <div class="strat-row" id="strat-row"></div>
 
+    <div class="verdict-explainer" id="verdict-explainer">
+      <div class="vexp-block">
+        <span class="vexp-label">How this strategy decides</span>
+        <p class="vexp-body" id="vexp-how">—</p>
+      </div>
+      <div class="vexp-block">
+        <span class="vexp-label">What the model concluded</span>
+        <p class="vexp-body" id="vexp-why">Pick a flagged move on the chart above.</p>
+      </div>
+    </div>
+
     <div class="tabs" id="tabs"></div>
     <div class="tab-panels">
       <div class="tab-panel" id="tab-dimensions"></div>
@@ -1744,6 +2225,26 @@ function renderStrategyRow() {
     btn.addEventListener('click', () => { STATE.selectedStrategy = s.id; renderEventCard(); });
     row.appendChild(btn);
   }
+  renderVerdictExplainer();
+}
+
+function renderVerdictExplainer() {
+  const howEl = document.getElementById('vexp-how');
+  const whyEl = document.getElementById('vexp-why');
+  if (!howEl || !whyEl) return;
+  const meta = STRATEGIES.find(s => s.id === STATE.selectedStrategy);
+  howEl.innerHTML = (meta && meta.description) ? meta.description : '—';
+  const ref = STATE.attribution;
+  if (!ref) {
+    whyEl.innerHTML = 'Pick a flagged move on the chart above.';
+    return;
+  }
+  const verdict = STATE.strategies[STATE.selectedStrategy];
+  const move = (STATE.bundle && STATE.selectedMoveIdx != null)
+    ? STATE.bundle.moves[STATE.selectedMoveIdx] : null;
+  const moveDate = move ? move.move_date : null;
+  whyEl.innerHTML = buildVerdictConclusion(
+    STATE.selectedStrategy, verdict, ref, STATE.bundle, moveDate);
 }
 
 function renderTabs() {
@@ -1926,6 +2427,37 @@ function renderEvidence(panel) {
 
 function renderSources(panel) {
   panel.innerHTML = '';
+
+  // Toolbar: "vs full stack" reference (visible only when the user has
+  // toggled off some sources) + "Reset to full stack" action. Mirrors the
+  // controls on the legacy index.html so users on desk.html still see how
+  // their custom selection drifts from the all-sources baseline.
+  const fs = STATE.lastFullStack;
+  const allOn = fs &&
+    ALL_IDS.filter(id => (STATE.chunksAvailable[id] || 0) > 0)
+      .every(id => STATE.enabledSources.has(id));
+  const tools = document.createElement('div');
+  tools.className = 'src-tools';
+  const fsHtml = (fs && !allOn)
+    ? `<span class="ref">
+         <span class="lbl">vs full stack</span>
+         <span>predicted <span class="num">${pct(fs.predicted)}</span></span>
+         <span class="sep">·</span>
+         <span class="num">${fs.character || '—'}</span>
+         <span class="sep">·</span>
+         <span><span class="num">${Math.round((fs.confidence ?? 0) * 100)}%</span> conf</span>
+       </span>`
+    : `<span class="ref"><span class="lbl">all sources active</span></span>`;
+  tools.innerHTML =
+    fsHtml +
+    `<button type="button" class="reset-btn" id="reset-toggles-btn">Reset to full stack</button>`;
+  panel.appendChild(tools);
+  tools.querySelector('#reset-toggles-btn').addEventListener('click', () => {
+    STATE.enabledSources = new Set(
+      ALL_IDS.filter(id => (STATE.chunksAvailable[id] || 0) > 0));
+    recomputeAttribution();
+  });
+
   const grid = document.createElement('div');
   grid.className = 'src-grid';
   for (const s of SOURCE_TYPES) {
@@ -1934,6 +2466,16 @@ function renderSources(panel) {
     const disabled = count === 0;
     const node = document.createElement('label');
     node.className = 'src-toggle' + (checked ? ' checked' : '') + (disabled ? ' disabled' : '');
+    if (disabled) {
+      // News + peer/sector come from a Yahoo Finance parquet whose coverage
+      // starts in early 2025; older moves legitimately have nothing there.
+      // The other sources extend further back but can still be sparse per
+      // (ticker, date).
+      const hint = (s.id === 'news' || s.id === 'peer_news' || s.id === 'sector_news')
+        ? 'No Yahoo News coverage for this date — bundled news parquet starts in early 2025.'
+        : `No ${s.label} chunks for this (ticker, date).`;
+      node.setAttribute('title', hint);
+    }
     node.innerHTML =
       `<input type="checkbox" ${checked?'checked':''} ${disabled?'disabled':''}>` +
       `<div class="name">${s.label}</div>` +
@@ -1981,6 +2523,10 @@ function selectMove(idx) {
   STATE.chunksAvailable = m.chunks_available || {};
   STATE.enabledSources = new Set(ALL_IDS.filter(id => (STATE.chunksAvailable[id] || 0) > 0));
   STATE.attribution = m.attribution || null;
+  // Cache the pre-baked full-stack attribution so the Sources tab can show
+  // "vs full stack" deltas when the user toggles sources off.
+  STATE.lastFullStack = m.attribution || null;
+  STATE.lastFullStackStrategies = m.strategies || null;
   STATE.strategies = m.strategies || (STATE.attribution ? deriveStrategies(STATE.attribution) : {});
   STATE.chunks = m.chunks || [];
   renderEventCard();
@@ -2025,6 +2571,8 @@ async function recomputeAttribution() {
         realized: a.return_pct, predicted: a.predicted_return_pct,
         character: a.move_character, confidence: a.confidence,
         chunks_considered: a.chunks_considered,
+        sources_used: a.sources_used,
+        model_notes: a.model_notes,
         dimensions: { demand: a.demand, pricing: a.pricing, competitive: a.competitive,
           management_credibility: a.management_credibility, macro: a.macro },
       };
@@ -2202,34 +2750,6 @@ document.addEventListener('keydown', (e) => {
     renderTickerStrip();
     const initial = idx.tickers.find(t => t.ticker === 'AMD')?.ticker || idx.tickers[0]?.ticker;
     if (initial) await selectTicker(initial);
-    // TEMP screenshot: select case 14 + inject mock cited_evidence so we can see rich render.
-    if (STATE.bundle?.moves?.length > 13) {
-      const m = STATE.bundle.moves[13];
-      // Disable auto-fire of /api/attribute (server is pre-merge so it'd wipe our mocks).
-      m.chunks_available = {};
-      selectMove(13);
-      // Inject mock cited_evidence into the live STATE.attribution after select runs.
-      if (STATE.attribution?.dimensions) {
-        for (const dimName of Object.keys(STATE.attribution.dimensions)) {
-          const dim = STATE.attribution.dimensions[dimName];
-          if (dim.evidence_chunk_ids?.length) {
-            dim.cited_evidence = dim.evidence_chunk_ids.map((cid) => ({
-              chunk_id: cid,
-              quote: "Total revenue grew 36% YoY driven by Data Center segment, with Instinct MI300X demand exceeding production capacity through year-end.",
-              reasoning: "Direct evidence of structural demand: Data Center growth is sustained capex, not a one-quarter reversal.",
-            }));
-          }
-        }
-      }
-      // Auto-open the Demand row's first chip so screenshots show the rich render.
-      setTimeout(() => {
-        const demandRow = document.querySelector('.dim-row[data-dim="demand"]');
-        if (demandRow) {
-          const firstChip = demandRow.querySelector('code[data-chunk-id]');
-          if (firstChip) firstChip.click();
-        }
-      }, 200);
-    }
   } catch (err) { console.error(err); }
 })();
 </script>

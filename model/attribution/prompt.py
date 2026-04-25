@@ -37,17 +37,27 @@ You attribute every move across FIVE dimensions:
 
 For each dimension you assign a weight in [0, 1], a direction, a one-sentence rationale, and a list of `cited_evidence` entries. Each entry pairs a chunk_id with a short verbatim quote from that chunk and a 1-2-sentence explanation of how the quote shaped this dimension's score. The UI shows the quote + reasoning to a reader instead of dumping the full chunk text.
 
-OUTPUT RULES (strict):
-1. Return your answer by calling the emit_attribution tool. Do not answer in prose.
-2. The five dimension weights MUST sum to exactly 1.0. Normalize before emitting if your first pass does not sum. A dimension that the evidence does not speak to gets weight 0.0, direction "neutral", a rationale noting the absence of signal, and at least one cited_evidence entry (the chunk that most-clearly demonstrates the absence of that signal — quote a representative line and explain that it does not pertain to this dimension).
-3. Every DimensionScore.cited_evidence list MUST be non-empty.
-4. For every cited_evidence entry:
-   - chunk_id MUST appear in the TEXT CHUNKS section of the user turn. Event entries (event_id, payload_ref) are context only and are NOT valid citations.
-   - quote MUST be a verbatim excerpt from that chunk's text (15-40 words, no ellipses inserted by you, copy exactly). It must clearly support the reasoning.
-   - reasoning is 1-2 sentences explaining how this specific quote informed the dimension's weight and direction. Reference the dimension explicitly so a reader scanning the panel can tell why this evidence matters.
-5. Classify move_character as one of: structural (the move reflects a lasting change), transient (likely to revert within days), mixed, or unclear.
-6. predicted_return_pct is the return you would expect given the evidence alone — the return the model implies the market "should" have printed. Use the same sign convention as the observed return (e.g. -0.05 for -5%).
-7. confidence is in [0, 1] and reflects how well the evidence explains the observed return.
+OUTPUT RULES (strict — every field below is REQUIRED in every emit_attribution call):
+
+DIMENSION FIELDS (ALL FIVE MUST APPEAR — no exceptions):
+You MUST emit `demand`, `pricing`, `competitive`, `management_credibility`, AND `macro` on every call. Skipping a dimension is not allowed. If the evidence says nothing about a dimension, you still emit it with weight=0.0, direction="neutral", a rationale that explicitly states "no signal in evidence for <dimension>", and one cited_evidence entry pointing at any chunk (quote a representative line and note the absence). Do NOT omit the dimension key. A response missing any of the five dimensions is a malformed response and will be rejected.
+
+Within each dimension:
+- weight in [0, 1]; the FIVE WEIGHTS MUST SUM TO EXACTLY 1.0. Normalize before emitting.
+- direction is one of "positive", "negative", "neutral".
+- rationale is one sentence; non-empty.
+- cited_evidence is a non-empty list. Each entry has:
+   - chunk_id — MUST appear in the TEXT CHUNKS section of the user turn. Event entries (event_id, payload_ref) are context only and NOT valid citations.
+   - quote — verbatim excerpt from that chunk (15-40 words, no ellipses, copy exactly). Must clearly support the reasoning.
+   - reasoning — 1-2 sentences explaining how this quote informed the dimension's weight and direction. Reference the dimension by name.
+
+TRAILING SCALAR FIELDS (ALL FOUR MUST APPEAR — no exceptions):
+- move_character — one of: "structural" (the move reflects a lasting change in fundamentals), "transient" (the move is likely to revert within days; the evidence does not support it), "mixed" (some signal in both directions), "unclear" (evidence genuinely does not let you decide). Pick decisively; do not default to "unclear" merely because reasoning is hard. "transient" is a real option — use it whenever the move's magnitude is not justified by the evidence content.
+- confidence — number in [0, 1]; how well the evidence explains the observed return.
+- predicted_return_pct — the return you would expect given the evidence alone, using the same sign convention as the observed return (e.g. -0.05 for -5%). Always emit a number; do not omit.
+- model_notes — short string (optional content but include the key).
+
+A response that is missing ANY dimension or ANY of the four trailing scalar fields is malformed. Always emit the complete tool call.
 
 You reason AS OF the move_date stated in the user turn. You have no knowledge of what happened after that date. Do not refer to later events even if you might recognize them."""
 
@@ -203,6 +213,22 @@ def serialize_evidence(evidence: JoinedEvidence) -> str:
     else:
         lines.append("(no text chunks available)")
 
+    lines.append("")
+    lines.append("=== EMIT CHECKLIST — your tool call MUST contain ALL of these keys ===")
+    lines.append(
+        "demand, pricing, competitive, management_credibility, macro, "
+        "move_character, confidence, predicted_return_pct."
+    )
+    lines.append(
+        "Every dimension above must include weight + direction + rationale + "
+        "cited_evidence (with at least one {chunk_id, quote, reasoning} entry). "
+        "Weights across the five dimensions must sum to 1.0. Do not omit any "
+        "dimension or trailing scalar; emit weight=0 placeholders when evidence "
+        "is silent. Pick a definite move_character — \"transient\" is a valid "
+        "label and should be used when the move's magnitude is not justified "
+        "by the evidence."
+    )
+
     return "\n".join(lines)
 
 
@@ -210,7 +236,7 @@ def build_request_kwargs(
     evidence: JoinedEvidence,
     *,
     model: str = MODEL_ID,
-    max_tokens: int = 2048,
+    max_tokens: int = 4096,
 ) -> dict:
     """Assemble kwargs for `client.messages.create(...)`.
 

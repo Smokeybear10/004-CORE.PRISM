@@ -42,6 +42,21 @@ import os
 import time
 from typing import Optional
 
+# Load repo-root .env so BW_USE_LIVE_ATTRIBUTION + ANTHROPIC_API_KEY are
+# visible regardless of how the process was started. Must run BEFORE
+# `_should_use_live` reads `os.environ`. `model/attribution/__init__.py`
+# also loads it, but that import only fires AFTER `_should_use_live` —
+# leaving direct `model.attribute()` callers (build_static, eval CLIs)
+# silently on the synthetic placeholder path.
+try:
+    from dotenv import load_dotenv as _load_dotenv
+    from pathlib import Path as _Path
+    _env_path = _Path(__file__).resolve().parents[1] / ".env"
+    if _env_path.exists():
+        _load_dotenv(_env_path)
+except ImportError:
+    pass  # python-dotenv missing — fall back to whatever the shell set
+
 from schema import (
     AblationConfig,
     Attribution,
