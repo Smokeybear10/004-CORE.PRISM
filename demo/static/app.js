@@ -32,6 +32,7 @@ const STATE = {
   fetchSeq: 0,          // monotonic to cancel stale fetches
   selectedStrategy: 'fundamental_vs_nonfundamental',
   lastStrategies: {},   // {strategy_name: 'lean'|'fade'|'neutral'}
+  evalReport: null,     // accuracy harness JSON, loaded once at boot
 };
 
 const DIM_LABEL = {
@@ -1025,6 +1026,120 @@ function renderAttributionDetails(move) {
 
 }
 
+// ---------- Eval Harness panel ----------
+// Renders eval_report.json — the X/N "did the model get the test cases
+// right?" output of `python -m eval`. Distinct from the Verdict Console:
+// the harness has ground truth and scores it; the Verdict Console is a
+// per-move strategy explorer with no scoring. Filters report cases to
+// the currently selected ticker so the panel stays relevant when you
+// flip between AMD / ABT / etc.
+function renderEvalHarness() {
+  const section = document.getElementById('eval-harness');
+  const headline = document.getElementById('eval-headline');
+  const sub = document.getElementById('eval-sub');
+  const list = document.getElementById('eval-cases');
+  const disclaimer = document.getElementById('eval-disclaimer');
+  const primaryStrat = document.getElementById('eval-primary-strategy');
+  if (!section || !STATE.evalReport) {
+    if (section) section.hidden = true;
+    return;
+  }
+
+  const report = STATE.evalReport;
+  const ticker = STATE.currentTicker;
+  const primary = (report.strategies || []).find(
+    s => s.strategy === report.primary_strategy
+  );
+  const allCases = primary ? primary.cases : [];
+  const tickerCases = ticker
+    ? allCases.filter(c => c.ticker === ticker)
+    : allCases;
+
+  // Hide the panel entirely when the current ticker has no fixtures —
+  // showing "0/0 correct" reads worse than just not advertising.
+  if (tickerCases.length === 0) {
+    section.hidden = true;
+    return;
+  }
+  section.hidden = false;
+
+  const n = tickerCases.filter(c => c.scored).length;
+  const k = tickerCases.filter(c => c.match === true).length;
+  const pct = n > 0 ? Math.round((k / n) * 100) : 0;
+  headline.innerHTML =
+    `<span class="eval-num">${k}</span>` +
+    `<span class="eval-slash"> / </span>` +
+    `<span class="eval-den">${n}</span>` +
+    `<span class="eval-of"> cases correct</span>` +
+    `<span class="eval-pct"> · ${pct}%</span>`;
+  sub.textContent =
+    `${ticker} · hand-authored fixtures with known causes (${tickerCases.length} ` +
+    `loaded). Other strategies show verdicts but aren't scored — see note below.`;
+
+  if (primaryStrat) primaryStrat.textContent = report.primary_strategy;
+
+  list.innerHTML = '';
+  for (const c of tickerCases) {
+    const wrap = document.createElement('div');
+    wrap.className = 'eval-case eval-case-' + (
+      c.match === true ? 'pass'
+      : c.match === false ? 'fail'
+      : 'skip'
+    );
+    const glyph = c.match === true ? '✓'
+                : c.match === false ? '✗'
+                : '·';
+    const cause = (c.known_cause || '').split(':', 1)[0];
+    const expectedHtml = c.expected_verdict
+      ? `<span class="verdict-tag ${c.expected_verdict}">${c.expected_verdict.toUpperCase()}</span>`
+      : '<span class="muted small">—</span>';
+    const modelHtml = c.model_verdict
+      ? `<span class="verdict-tag ${c.model_verdict}">${c.model_verdict.toUpperCase()}</span>`
+      : '<span class="muted small">—</span>';
+
+    // Show every strategy's verdict for this case so the audience can see
+    // exactly which lens scored and which didn't.
+    const otherStrategiesHtml = (report.strategies || [])
+      .filter(s => s.strategy !== report.primary_strategy)
+      .map(s => {
+        const cell = (s.cases || []).find(x => x.case_id === c.case_id);
+        const v = cell ? (cell.model_verdict || '—') : '—';
+        const cls = (v === 'lean' || v === 'fade' || v === 'neutral') ? v : 'pending';
+        return `<div class="eval-other-strat">` +
+                 `<span class="eval-other-name">${s.strategy.replace(/_/g, ' ')}</span>` +
+                 `<span class="verdict-tag small ${cls}">${v.toUpperCase()}</span>` +
+               `</div>`;
+      }).join('');
+
+    wrap.innerHTML =
+      `<div class="eval-case-head">` +
+        `<span class="eval-glyph">${glyph}</span>` +
+        `<div class="eval-case-id">` +
+          `<span class="eval-case-date">${c.case_id}</span>` +
+          `<span class="eval-case-cause">${escapeHtml(cause)}</span>` +
+        `</div>` +
+        `<div class="eval-verdicts">` +
+          `<div class="eval-verdict-pair">` +
+            `<span class="eval-verdict-label">expected</span>${expectedHtml}` +
+          `</div>` +
+          `<div class="eval-verdict-pair">` +
+            `<span class="eval-verdict-label">model</span>${modelHtml}` +
+          `</div>` +
+        `</div>` +
+      `</div>` +
+      (otherStrategiesHtml ?
+        `<div class="eval-case-body"><div class="eval-other-strats">` +
+          `<span class="eval-other-heading">Other strategies (unscored)</span>` +
+          otherStrategiesHtml +
+        `</div></div>` : ``);
+    list.appendChild(wrap);
+  }
+
+  if (disclaimer) {
+    disclaimer.textContent = report.unscored_explanation || '';
+  }
+}
+
 // ---------- Interactions ----------
 async function selectTicker(t) {
   if (t === STATE.currentTicker) return;
@@ -1035,6 +1150,7 @@ async function selectTicker(t) {
   const bundle = await fetchJSON(`data/${t}.json`);
   STATE.bundle = bundle;
   renderOverview(bundle);
+  renderEvalHarness();
   renderChart(bundle);
   if (bundle.moves.length > 0) {
     let maxIdx = 0, maxAbs = 0;
@@ -1095,9 +1211,24 @@ function escapeHtmlPreserveCode(s) {
 }
 
 // ---------- Boot ----------
+// Eval report is optional — the demo still works without it (the harness
+// panel just stays hidden). Load it in parallel with the index so a slow
+// or missing report doesn't block the page.
+async function loadEvalReport() {
+  try {
+    STATE.evalReport = await fetchJSON('data/eval_report.json');
+  } catch (err) {
+    console.info('eval_report.json not present — harness panel disabled.');
+    STATE.evalReport = null;
+  }
+}
+
 (async function init() {
   try {
-    const index = await fetchJSON('data/index.json');
+    const [index] = await Promise.all([
+      fetchJSON('data/index.json'),
+      loadEvalReport(),
+    ]);
     STATE.tickers = index.tickers;
     renderTickerPills();
     document.getElementById('reset-toggles').addEventListener('click', resetToggles);

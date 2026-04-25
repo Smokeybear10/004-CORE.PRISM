@@ -17,6 +17,19 @@ Public API (stable):
     - score                 (scorer.py)
 """
 
+from eval.accuracy import (
+    AccuracyReport,
+    CaseAccuracy,
+    GROUND_TRUTHED_STRATEGIES,
+    PRIMARY_STRATEGY,
+    StrategyAccuracy,
+    bundled_attribution_loader,
+    format_report,
+    live_attribution_loader,
+    run_accuracy,
+    score_one_case,
+    write_report,
+)
 from eval.calibration import (
     CalibrationReport,
     FloorCheck,
@@ -60,6 +73,18 @@ from eval.perturbation import (
 from eval.scorer import ExpectedAttribution, ScoreResult, score
 
 __all__ = [
+    # Accuracy harness (the X/N "did the model get it right" runner)
+    "AccuracyReport",
+    "CaseAccuracy",
+    "GROUND_TRUTHED_STRATEGIES",
+    "PRIMARY_STRATEGY",
+    "StrategyAccuracy",
+    "bundled_attribution_loader",
+    "format_report",
+    "live_attribution_loader",
+    "run_accuracy",
+    "score_one_case",
+    "write_report",
     # Scoring primitives
     "ScorerConfig",
     "ExpectedAttribution",

@@ -56,6 +56,27 @@
     <div id="chart"></div>
   </section>
 
+  <section class="eval-harness" id="eval-harness" hidden>
+    <header class="card-header">
+      <div>
+        <span class="kicker">EVAL HARNESS</span>
+        <h3 id="eval-headline">—</h3>
+        <p class="muted small" id="eval-sub">
+          Each AMD case has a hand-authored ground-truth verdict. The harness
+          calls the model, compares to the answer, prints X/N.
+        </p>
+      </div>
+      <div class="eval-meta">
+        <span class="eval-meta-label">PRIMARY STRATEGY</span>
+        <span class="eval-meta-value" id="eval-primary-strategy">fundamental_vs_nonfundamental</span>
+      </div>
+    </header>
+
+    <div class="eval-cases" id="eval-cases"></div>
+
+    <p class="muted small eval-disclaimer" id="eval-disclaimer">—</p>
+  </section>
+
   <section class="verdict-console" id="verdict-console">
     <header class="card-header">
       <div>
