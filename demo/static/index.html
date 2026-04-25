@@ -2653,6 +2653,9 @@ function renderSources(panel) {
   tools.querySelector('#reset-toggles-btn').addEventListener('click', () => {
     STATE.enabledSources = new Set(
       ALL_IDS.filter(id => (STATE.chunksAvailable[id] || 0) > 0));
+    // Same reason as the toggle change handler — repaint immediately, don't
+    // wait the ~30s for /api/attribute.
+    renderSources(panel);
     recomputeAttribution();
   });
 
@@ -2682,6 +2685,11 @@ function renderSources(panel) {
     input.addEventListener('change', e => {
       if (e.target.checked) STATE.enabledSources.add(s.id);
       else STATE.enabledSources.delete(s.id);
+      // /api/attribute can take 30s+ for the live model — don't wait for it
+      // to update the wrapper's `.checked` class. Without this immediate
+      // re-render, the user clicks a toggle, sees no visual change for half
+      // a minute, and reasonably concludes the toggle is broken.
+      renderSources(panel);
       recomputeAttribution();
     });
     grid.appendChild(node);
