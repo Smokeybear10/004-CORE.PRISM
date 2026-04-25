@@ -159,6 +159,11 @@ def _sanitize_chunk_citations(
     with no valid citations, fall back to the first (highest-relevance,
     by virtue of model.relevance ordering) chunk so the citation contract
     stays satisfied. Returns the count of citations dropped, for logging.
+
+    Also scrubs `cited_evidence` entries the same way — every entry whose
+    chunk_id isn't in the evidence pool is dropped, and if a dim ends up
+    with no entries we synthesize a bare fallback so the UI has something
+    to render.
     """
     valid_ids = {c.chunk_id for c in evidence.text_chunks}
     fallback = (
@@ -167,12 +172,29 @@ def _sanitize_chunk_citations(
     dropped = 0
     for name in _DIM_FIELDS:
         dim = getattr(attr, name)
-        original = list(dim.evidence_chunk_ids)
-        kept = [cid for cid in original if cid in valid_ids]
-        dropped += len(original) - len(kept)
-        if not kept and fallback is not None:
-            kept = [fallback]
-        dim.evidence_chunk_ids = kept
+
+        original_ids = list(dim.evidence_chunk_ids)
+        kept_ids = [cid for cid in original_ids if cid in valid_ids]
+        dropped += len(original_ids) - len(kept_ids)
+        if not kept_ids and fallback is not None:
+            kept_ids = [fallback]
+        dim.evidence_chunk_ids = kept_ids
+
+        if dim.cited_evidence:
+            kept_cited = [
+                ce for ce in dim.cited_evidence if ce.chunk_id in valid_ids
+            ]
+            dim.cited_evidence = kept_cited
+            if not kept_cited and fallback is not None:
+                from schema import CitedEvidence
+                dim.cited_evidence = [CitedEvidence(
+                    chunk_id=fallback,
+                    quote="",
+                    reasoning=(
+                        "Sanitizer fell back to top-relevance chunk after "
+                        "dropping hallucinated citations."
+                    ),
+                )]
     return dropped
 
 

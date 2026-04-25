@@ -153,21 +153,45 @@ def _assemble_attribution(
         raw = tool_input.get(name)
         if not isinstance(raw, dict):
             # Model occasionally emits a bare string (or None) for a dimension —
-            # treat that as "no signal" and fill with neutral defaults.
+            # treat that as "no signal" and fill with neutral defaults. Populate
+            # cited_evidence too so the UI's rich shape always renders.
+            from schema import CitedEvidence
             dims[name] = DimensionScore(
                 weight=0.0,
                 direction="neutral",
                 rationale=(raw if isinstance(raw, str)
                            else f"model omitted {name}; no signal in evidence"),
                 evidence_chunk_ids=[fallback_chunk],
+                cited_evidence=[CitedEvidence(
+                    chunk_id=fallback_chunk,
+                    quote="",
+                    reasoning=f"Model omitted {name}; falling back to top-relevance chunk.",
+                )],
             )
             continue
         # Coerce out-of-schema fields the model occasionally returns:
         # direction='mixed' is a common Haiku slip; map to 'neutral'.
         if raw.get("direction") not in valid_dirs:
             raw = {**raw, "direction": "neutral"}
-        if not raw.get("evidence_chunk_ids"):
-            raw = {**raw, "evidence_chunk_ids": [fallback_chunk]}
+        # Reconcile new `cited_evidence` shape with the legacy
+        # `evidence_chunk_ids` list. Either field can populate the other.
+        cited = raw.get("cited_evidence") or []
+        legacy_ids = raw.get("evidence_chunk_ids") or []
+        if cited and not legacy_ids:
+            legacy_ids = [
+                e.get("chunk_id") for e in cited
+                if isinstance(e, dict) and e.get("chunk_id")
+            ]
+        if not cited and legacy_ids:
+            # Old prompt or fallback path: synthesize bare cited_evidence
+            # entries so downstream code that prefers the rich shape still
+            # sees a list it can iterate.
+            cited = [{"chunk_id": cid, "quote": "", "reasoning": ""}
+                     for cid in legacy_ids]
+        if not legacy_ids:
+            legacy_ids = [fallback_chunk]
+            cited = [{"chunk_id": fallback_chunk, "quote": "", "reasoning": ""}]
+        raw = {**raw, "evidence_chunk_ids": legacy_ids, "cited_evidence": cited}
         if not raw.get("rationale"):
             raw = {**raw, "rationale": f"no rationale for {name}"}
         dims[name] = DimensionScore(**raw)

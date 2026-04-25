@@ -35,18 +35,50 @@ You attribute every move across FIVE dimensions:
 - management_credibility — guidance changes, execution, leadership comments, forward-looking statements
 - macro — rates, FX, commodities, geopolitics, sector-wide forces
 
-For each dimension you assign a weight in [0, 1], a direction, a one-sentence rationale, and at least one evidence citation.
+For each dimension you assign a weight in [0, 1], a direction, a one-sentence rationale, and a list of `cited_evidence` entries. Each entry pairs a chunk_id with a short verbatim quote from that chunk and a 1-2-sentence explanation of how the quote shaped this dimension's score. The UI shows the quote + reasoning to a reader instead of dumping the full chunk text.
 
 OUTPUT RULES (strict):
 1. Return your answer by calling the emit_attribution tool. Do not answer in prose.
-2. The five dimension weights MUST sum to exactly 1.0. Normalize before emitting if your first pass does not sum. A dimension that the evidence does not speak to gets weight 0.0, direction "neutral", a rationale noting the absence of signal, and at least one citation (the chunk that most-clearly demonstrates the absence of that signal).
-3. Every DimensionScore.evidence_chunk_ids list MUST be non-empty.
-4. Every chunk_id you cite MUST appear in the TEXT CHUNKS section of the user turn. Event entries (event_id, payload_ref) are context only and are NOT valid citations.
+2. The five dimension weights MUST sum to exactly 1.0. Normalize before emitting if your first pass does not sum. A dimension that the evidence does not speak to gets weight 0.0, direction "neutral", a rationale noting the absence of signal, and at least one cited_evidence entry (the chunk that most-clearly demonstrates the absence of that signal — quote a representative line and explain that it does not pertain to this dimension).
+3. Every DimensionScore.cited_evidence list MUST be non-empty.
+4. For every cited_evidence entry:
+   - chunk_id MUST appear in the TEXT CHUNKS section of the user turn. Event entries (event_id, payload_ref) are context only and are NOT valid citations.
+   - quote MUST be a verbatim excerpt from that chunk's text (15-40 words, no ellipses inserted by you, copy exactly). It must clearly support the reasoning.
+   - reasoning is 1-2 sentences explaining how this specific quote informed the dimension's weight and direction. Reference the dimension explicitly so a reader scanning the panel can tell why this evidence matters.
 5. Classify move_character as one of: structural (the move reflects a lasting change), transient (likely to revert within days), mixed, or unclear.
 6. predicted_return_pct is the return you would expect given the evidence alone — the return the model implies the market "should" have printed. Use the same sign convention as the observed return (e.g. -0.05 for -5%).
 7. confidence is in [0, 1] and reflects how well the evidence explains the observed return.
 
 You reason AS OF the move_date stated in the user turn. You have no knowledge of what happened after that date. Do not refer to later events even if you might recognize them."""
+
+
+# Per-citation evidence sub-schema. Each entry pairs a chunk_id with a
+# verbatim quote and a per-citation reasoning so the UI can render
+# "<quote> — <why this mattered>" instead of dumping the full chunk text.
+_CITED_EVIDENCE_SCHEMA: dict = {
+    "type": "object",
+    "properties": {
+        "chunk_id": {
+            "type": "string",
+            "description": "A chunk_id drawn from the TEXT CHUNKS section of the user turn.",
+        },
+        "quote": {
+            "type": "string",
+            "description": (
+                "Short verbatim excerpt from the cited chunk (15-40 words). "
+                "Copy exactly from the chunk text — do not paraphrase or insert ellipses."
+            ),
+        },
+        "reasoning": {
+            "type": "string",
+            "description": (
+                "1-2 sentences explaining how this specific quote informed the "
+                "dimension's weight and direction. Reference the dimension by name."
+            ),
+        },
+    },
+    "required": ["chunk_id", "quote", "reasoning"],
+}
 
 
 # Dimension sub-schema is reused for all five dimensions. Inlined rather than
@@ -69,13 +101,19 @@ _DIM_SCHEMA: dict = {
             "type": "string",
             "description": "One sentence. Must be non-empty.",
         },
-        "evidence_chunk_ids": {
+        "cited_evidence": {
             "type": "array",
-            "items": {"type": "string"},
-            "description": "At least one chunk_id drawn from the TEXT CHUNKS section of the user turn.",
+            "items": _CITED_EVIDENCE_SCHEMA,
+            "minItems": 1,
+            "description": (
+                "At least one cited evidence entry. Each is "
+                "{chunk_id, quote, reasoning} — the chunk's id, a verbatim "
+                "excerpt that supports this dimension, and a short note on "
+                "how the excerpt shaped the weight/direction."
+            ),
         },
     },
-    "required": ["weight", "direction", "rationale", "evidence_chunk_ids"],
+    "required": ["weight", "direction", "rationale", "cited_evidence"],
 }
 
 

@@ -65,7 +65,15 @@ def _news_coverage_start(ticker: str) -> "date | None":
 
 
 def _dim_dict(score) -> dict:
+    cited = []
+    for ce in (score.cited_evidence or []):
+        cited.append({
+            "chunk_id": ce.chunk_id,
+            "quote": ce.quote,
+            "reasoning": ce.reasoning,
+        })
     return {
+        "cited_evidence": cited,
         "weight": round(float(score.weight), 4),
         "direction": score.direction,
         "rationale": score.rationale,
