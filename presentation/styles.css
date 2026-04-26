@@ -157,20 +157,23 @@ body {
   opacity: 0;
   visibility: hidden;
   transform: translateY(8px);
+  /* Outgoing: fade out fast, then snap hidden so the next slide isn't
+     visually overlapping during the transition. */
   transition:
-    opacity 0.55s var(--easing),
-    transform 0.55s var(--easing),
-    visibility 0s linear 0.55s;
+    opacity 0.20s var(--easing),
+    transform 0.20s var(--easing),
+    visibility 0s linear 0.20s;
   pointer-events: none;
 }
 .state[data-active] {
   opacity: 1;
   visibility: visible;
   transform: translateY(0);
+  /* Incoming: wait the 0.20s for the outgoing slide to clear, then fade in. */
   transition:
-    opacity 0.55s var(--easing),
-    transform 0.55s var(--easing),
-    visibility 0s linear 0s;
+    opacity 0.45s var(--easing) 0.20s,
+    transform 0.45s var(--easing) 0.20s,
+    visibility 0s linear 0.20s;
   pointer-events: auto;
 }
 
@@ -313,8 +316,19 @@ body {
   transform: translateY(14px);
   filter: blur(6px);
 }
+/* Safety net: hard-set the resting state on the active slide so the
+   letters stay visible even if animation-fill-mode flakes out (some
+   browsers drop `forwards` when var() is in the shorthand). The
+   animation itself still runs the entrance from opacity:0 → 1. */
 .state-open[data-active] .prism-headline .letter {
-  animation: s0-letter-refract 850ms var(--easing) forwards;
+  opacity: 1;
+  transform: translateY(0);
+  filter: blur(0);
+  color: var(--navy);
+  animation-name: s0-letter-refract;
+  animation-duration: 850ms;
+  animation-timing-function: cubic-bezier(0.16, 1, 0.3, 1);
+  animation-fill-mode: both;
 }
 .state-open[data-active] .prism-headline .l-p { animation-delay: 0.55s; }
 .state-open[data-active] .prism-headline .l-r { animation-delay: 0.68s; }
@@ -343,7 +357,14 @@ body {
   transform-origin: 30% 80%;
 }
 .state-open[data-active] .prism-headline .period {
-  animation: s0-period-pop 600ms 1.7s var(--easing-snap) forwards;
+  /* Final-state safety net (mirrors the .letter rule above). */
+  opacity: 1;
+  transform: scale(1) rotate(0);
+  animation-name: s0-period-pop;
+  animation-duration: 600ms;
+  animation-delay: 1.7s;
+  animation-timing-function: cubic-bezier(0.34, 1.4, 0.64, 1);
+  animation-fill-mode: both;
 }
 @keyframes s0-period-pop {
   to { opacity: 1; transform: scale(1) rotate(0); }

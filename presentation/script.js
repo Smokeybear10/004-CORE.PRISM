@@ -72,18 +72,25 @@ document.querySelectorAll('[data-demo-reload]').forEach((btn) => {
   });
 });
 
+let isFirstRender = true;
+
 function render() {
   states.forEach((s, i) => {
     if (i === idx) {
-      // Force animation replay: remove, force reflow, re-add.
-      // Otherwise CSS animations don't restart on revisit.
-      s.removeAttribute('data-active');
-      void s.offsetWidth;
+      // Skip the remove/reflow/re-add dance on first render — the HTML
+      // already has data-active on the opening state, and forcing it off
+      // briefly causes a visible fade-out flash before the fade-in.
+      // Only run the replay dance on revisit.
+      if (!isFirstRender) {
+        s.removeAttribute('data-active');
+        void s.offsetWidth;
+      }
       s.setAttribute('data-active', '');
     } else {
       s.removeAttribute('data-active');
     }
   });
+  isFirstRender = false;
   const meta = META[idx] || {};
   if (stateLabel) stateLabel.textContent = meta.label || `State ${idx + 1}`;
   if (pager) pager.textContent = `page ${idx + 1} of ${states.length}`;
