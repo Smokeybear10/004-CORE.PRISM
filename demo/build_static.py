@@ -3,7 +3,7 @@ One-shot build: dump per-ticker JSON bundles for the static HTML demo.
 
 Run from the project root:
     python demo/build_static.py
-    python -m http.server 8000 --directory demo/static
+    python -m http.server 2004 --directory demo/static
 
 Output:
     demo/static/data/{TICKER}.json    # prices + flagged moves + attributions + chunks

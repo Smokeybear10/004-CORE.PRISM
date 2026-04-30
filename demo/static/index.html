@@ -110,12 +110,12 @@
     }
     .mast-name .dot { color: var(--oxblood); }
 
-    /* Top-right navigation pills — links to intro / closing slide decks */
+    /* Footer navigation pills — links to intro / closing slide decks */
     .mast-nav {
       display: flex;
-      flex-direction: column;
-      align-items: flex-end;
-      gap: 4px;
+      flex-direction: row;
+      align-items: center;
+      gap: 8px;
     }
     .mast-link {
       display: inline-flex;
@@ -1817,12 +1817,8 @@
       <span class="mast-meta" id="mast-meta">Persistence Reasoning over Idiosyncratic Stock Moves</span>
     </div>
     <div class="mast-status">
-      <div class="mast-nav">
-        <a href="/presentation/" target="_top" class="mast-link">Intro slides <span class="arrow">→</span></a>
-        <a href="closing.html" target="_top" class="mast-link secondary">Closing slides <span class="arrow">→</span></a>
-      </div>
       <span><span class="dot"></span><span class="iso" id="status-date">2026-04-25</span> · LIVE</span>
-      <span>MODEL · CLAUDE-HAIKU-4-5</span>
+      <span>MODEL · CLAUDE-OPUS-4-7</span>
     </div>
   </div>
 </header>
@@ -1948,6 +1944,10 @@
 
 <footer class="footer">
   <span>© PRISM — Bridgewater Hackathon Build, 2026</span>
+  <div class="mast-nav">
+    <a href="/presentation/" target="_top" class="mast-link">Intro slides <span class="arrow">→</span></a>
+    <a href="closing.html" target="_top" class="mast-link secondary">Closing slides <span class="arrow">→</span></a>
+  </div>
   <span>Concept · DESK</span>
 </footer>
 

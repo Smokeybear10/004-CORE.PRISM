@@ -20,11 +20,13 @@ Startup cost: ~30-60s to load and pre-index the 628 MB news parquet per
 focal ticker. Per-request cost: milliseconds.
 
 Run from the project root:
-    uvicorn demo.server:app --host 127.0.0.1 --port 8000
+    uvicorn demo.server:app --host 127.0.0.1 --port 2004
 """
 
 from __future__ import annotations
 
+import json
+import os
 import sys
 from datetime import date
 from pathlib import Path
@@ -59,6 +61,42 @@ from schema import (  # noqa: E402
 
 STATIC_DIR = Path(__file__).resolve().parent / "static"
 PRESENTATION_DIR = _ROOT / "presentation"
+
+# Disk cache for /api/attribute responses, keyed by (ticker, move_date,
+# sorted-enabled-sources-tuple). Pre-warmed by demo/prewarm_cache.py so
+# every common toggle combination is free at demo time.
+#
+# CACHE_ONLY=1 makes the server return 503 on miss instead of falling
+# through to model.attribute() — useful when presenting and you want a
+# hard guarantee that no API credit is burned.
+ATTR_CACHE_DIR = _ROOT / "data" / "cache" / "api_attribute"
+CACHE_ONLY = os.environ.get("BW_CACHE_ONLY", "").strip() in {"1", "true", "yes"}
+
+
+def _cache_key(ticker: str, move_date: date, sources: list[str]) -> str:
+    src_part = "_".join(sorted(sources)) or "none"
+    return f"{ticker}_{move_date.isoformat()}_{src_part}.json"
+
+
+def _cache_path(ticker: str, move_date: date, sources: list[str]) -> Path:
+    return ATTR_CACHE_DIR / _cache_key(ticker, move_date, sources)
+
+
+def _cache_read(ticker: str, move_date: date, sources: list[str]) -> dict | None:
+    p = _cache_path(ticker, move_date, sources)
+    if not p.exists():
+        return None
+    try:
+        return json.loads(p.read_text())
+    except Exception:
+        return None
+
+
+def _cache_write(
+    ticker: str, move_date: date, sources: list[str], payload: dict
+) -> None:
+    ATTR_CACHE_DIR.mkdir(parents=True, exist_ok=True)
+    _cache_path(ticker, move_date, sources).write_text(json.dumps(payload))
 
 # backtest.fixtures.generate_attribution KeyErrors on unknown ablation names.
 # Map the number of user-enabled sources to the closest pre-defined bundle so
@@ -154,6 +192,18 @@ def compute_attribution(req: AttributeRequest) -> AttributeResponse:
     except ValueError as exc:
         raise HTTPException(status_code=400, detail=f"Unknown source_type: {exc}")
 
+    cached = _cache_read(req.ticker, req.move_date, req.enabled_sources)
+    if cached is not None:
+        return AttributeResponse(**cached)
+    if CACHE_ONLY:
+        raise HTTPException(
+            status_code=503,
+            detail=(
+                "BW_CACHE_ONLY set and this (ticker, move, sources) combo "
+                "isn't pre-warmed. Run demo/prewarm_cache.py to fill it."
+            ),
+        )
+
     move = PriceMove(
         ticker=req.ticker,
         move_date=req.move_date,
@@ -219,7 +269,7 @@ def compute_attribution(req: AttributeRequest) -> AttributeResponse:
             payload_set[cid] = chunk_by_id[cid]
     chunks_payload = [c.model_dump(mode="json") for c in payload_set.values()]
 
-    return AttributeResponse(
+    response = AttributeResponse(
         attribution=attr_dump,
         chunks=chunks_payload,
         chunks_considered=len(filtered),
@@ -227,6 +277,8 @@ def compute_attribution(req: AttributeRequest) -> AttributeResponse:
         enabled_sources=[s.value for s in enabled],
         strategies=_compute_strategies(attr),
     )
+    _cache_write(req.ticker, req.move_date, req.enabled_sources, response.model_dump(mode="json"))
+    return response
 
 
 # ---------- Static files (mount LAST so /api routes win) ----------

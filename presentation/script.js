@@ -29,7 +29,7 @@ function go(targetIdx) {
 
 // ── Demo iframe (state 6) ────────────────────────────────────
 // Lazy-load: only set src when the demo state is first activated,
-// so opening the deck doesn't ping localhost:8000 unnecessarily.
+// so opening the deck doesn't ping localhost:2004 unnecessarily.
 const demoState = document.querySelector('.state-demo');
 const demoFrame = document.querySelector('[data-demo-frame]');
 const demoFallback = document.querySelector('[data-demo-fallback]');
