@@ -1830,3 +1830,28 @@ button { font-family: inherit; cursor: pointer; }
   .prism-beam { display: none; }
   .src-grid { grid-template-columns: repeat(2, 1fr); }
 }
+
+/* ── Mobile fix: stop horizontal overflow on the masthead and chart-card meta ── */
+@media (max-width: 720px) {
+  .mast-inner {
+    grid-template-columns: 1fr;
+    gap: 12px;
+    padding: 14px 16px;
+  }
+  .mast-inner .ticker-strip { order: 3; flex-wrap: wrap; }
+  .mast-inner .status { order: 2; align-self: start; }
+  .chart-card { padding: 14px 16px; }
+  .chart-card .meta {
+    flex-wrap: wrap;
+    row-gap: 8px;
+  }
+  .chart-card .meta .pill { min-width: 0; max-width: 100%; }
+  .strip-inner { padding: 14px 16px; }
+  .pnl-strip { padding: 14px 16px; }
+  .xticker-scan, .dim-ts-card { margin-left: 12px; margin-right: 12px; }
+  .audit-panel { margin-left: 12px; margin-right: 12px; }
+  .abl-strip { margin-left: 12px; margin-right: 12px; }
+  .foot { padding: 14px 16px 18px; flex-wrap: wrap; gap: 10px; }
+}
+/* Long inline code in /about and /roadmap can't push the page wider than 100vw */
+code { overflow-wrap: anywhere; word-break: break-word; }

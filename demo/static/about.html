@@ -625,6 +625,37 @@
       text-transform: uppercase;
       align-self: center;
     }
+
+    /* Stop the wide architecture canvas from forcing the page horizontally */
+    .arch-section { overflow-x: hidden; }
+    .arch-wrap { max-width: 100%; overflow-x: auto; }
+
+    @media (max-width: 720px) {
+      main.about { padding: 32px 16px 56px; }
+      .lede { font-size: 19px; }
+      section.block h3 { font-size: 24px; }
+      .pipeline { padding: 14px 16px; }
+      .pipeline .row {
+        grid-template-columns: 24px 1fr;
+        gap: 8px 12px;
+      }
+      .pipeline .row .stage { grid-column: 2; }
+      .pipeline .row .desc {
+        grid-column: 1 / -1;
+        font-size: 14px;
+        padding-left: 36px;
+      }
+      .credits { padding: 18px 18px; }
+      .credits .row { grid-template-columns: 1fr; gap: 4px; padding: 10px 0; }
+      ol.steps { grid-template-columns: 1fr; }
+      .arch-section { padding: 32px 4vw; margin-top: 32px; margin-bottom: 32px; }
+      .pnl-card { padding: 14px 16px; }
+      .pnl-card .pnl-row {
+        grid-template-columns: 1fr auto;
+        row-gap: 4px;
+      }
+      .pnl-card .pnl-row .stat { grid-row: 2; font-size: 11px; }
+    }
   </style>
 </head>
 <body>
