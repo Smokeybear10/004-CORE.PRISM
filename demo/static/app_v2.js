@@ -126,6 +126,25 @@ function escapeHtml(s) {
     .replace(/"/g, '&quot;').replace(/'/g, '&#39;');
 }
 
+// Highest-weighted dimension across a {dim_key: {weight, ...}} map.
+function dominantDimKey(dims) {
+  if (!dims) return null;
+  let best = null, bestW = -Infinity;
+  for (const k of DIM_ORDER) {
+    const w = dims[k]?.weight;
+    if (typeof w === 'number' && w > bestW) { bestW = w; best = k; }
+  }
+  return best;
+}
+
+// Format a verdict string for hover/labels: 'lean' → 'Lean.', 'neutral' → 'Skip.'.
+function verdictLabel(v) {
+  if (v === 'lean') return 'Lean';
+  if (v === 'fade') return 'Fade';
+  if (v === 'neutral' || v === 'skip') return 'Skip';
+  return null;
+}
+
 // ═════════════════════════════════════════════
 // TICKER STRIP
 // ═════════════════════════════════════════════
@@ -195,9 +214,42 @@ function computePredictedSeries(bundle, ablationName) {
 
 function renderChart(bundle) {
   const priceByDate = new Map(bundle.prices.map(p => [p.date, p.close]));
-  const hoverText = (m) =>
-    `<b>${m.move_date}</b><br>close $${priceByDate.get(m.move_date)?.toFixed(2) ?? '—'}` +
-    `<br>return ${pct(m.return_pct)}<br>vol z ${signed(m.vol_zscore)}`;
+
+  // Per-move colour + verdict + dominant dim, derived from the pre-baked
+  // attribution. Used by both the marker fill (#02) and the hover text (#01).
+  const moveMeta = (i) => {
+    const m = bundle.moves[i];
+    const attr = m.attribution || null;
+    const dims = attr?.dimensions || null;
+    const domKey = dominantDimKey(dims);
+    const domMeta = domKey ? DIM_META[domKey] : null;
+    const stratId = STATE.selectedStrategy;
+    const rawV = m.strategies?.[stratId] || null;
+    const verdict = verdictLabel(rawV);
+    return {
+      color: domMeta?.color || '#6a6e7c',
+      domLabel: domMeta?.label || '—',
+      verdict,
+      verdictRaw: rawV,
+      character: attr?.move_character || attr?.character || null,
+    };
+  };
+  const hoverText = (i) => {
+    const m = bundle.moves[i];
+    const meta = moveMeta(i);
+    const verdictHtml = meta.verdict
+      ? `<br><span style="color:${meta.color};">▍</span> ${meta.verdict.toUpperCase()}`
+      : '';
+    const charHtml = meta.character
+      ? ` · ${escapeHtml(meta.character)}`
+      : '';
+    return (
+      `<b>${m.move_date}</b> · close $${priceByDate.get(m.move_date)?.toFixed(2) ?? '—'}<br>` +
+      `<b>${pct(m.return_pct)}</b> · vol z ${signed(m.vol_zscore)}<br>` +
+      `dominant: <b>${escapeHtml(meta.domLabel)}</b>` +
+      verdictHtml + charHtml
+    );
+  };
 
   const rallyIdx = [], selloffIdx = [];
   bundle.moves.forEach((m, i) => {
@@ -206,24 +258,24 @@ function renderChart(bundle) {
     (m.return_pct < 0 ? selloffIdx : rallyIdx).push(i);
   });
 
-  // Mark currently selected
   const isSelected = (i) => i === STATE.selectedMoveIdx;
 
-  const buildActualMarkerTrace = (idx, color, name) => ({
+  // Direction encoded by symbol; color encoded by dominant dimension.
+  const buildActualMarkerTrace = (idx, symbol, name) => ({
     x: idx.map(i => bundle.moves[i].move_date),
     y: idx.map(i => priceByDate.get(bundle.moves[i].move_date) ?? null),
     customdata: idx,
-    text: idx.map(i => hoverText(bundle.moves[i])),
+    text: idx.map(i => hoverText(i)),
     hovertemplate: '%{text}<extra></extra>',
     mode: 'markers',
     marker: {
-      size: idx.map(i => isSelected(i) ? 16 : 11),
-      color,
+      size: idx.map(i => isSelected(i) ? 17 : 12),
+      color: idx.map(i => moveMeta(i).color),
       line: {
         color: idx.map(i => isSelected(i) ? '#0a1d36' : '#fbfaf6'),
-        width: idx.map(i => isSelected(i) ? 2.5 : 1.6),
+        width: idx.map(i => isSelected(i) ? 2.5 : 1.4),
       },
-      symbol: 'circle',
+      symbol,
     },
     name,
   });
@@ -295,8 +347,8 @@ function renderChart(bundle) {
       opacity: 0.85,
     });
   }
-  traces.push(buildActualMarkerTrace(rallyIdx,   '#2e6f48', 'Rally'));
-  traces.push(buildActualMarkerTrace(selloffIdx, '#8c2f2f', 'Selloff'));
+  traces.push(buildActualMarkerTrace(rallyIdx,   'triangle-up',   '▲ Rally · colored by dominant dim'));
+  traces.push(buildActualMarkerTrace(selloffIdx, 'triangle-down', '▼ Selloff · colored by dominant dim'));
   if (overlay) {
     traces.push(buildPredictedMarkerTrace(rallyIdx,   '#2e6f48', 'Predicted (rally)'));
     traces.push(buildPredictedMarkerTrace(selloffIdx, '#8c2f2f', 'Predicted (selloff)'));
@@ -605,6 +657,280 @@ function renderToggleCaption(enabledCount, totalCount, chunksConsidered) {
 // ═════════════════════════════════════════════
 // STRATEGY ROW + verdict
 // ═════════════════════════════════════════════
+// ═════════════════════════════════════════════
+// #07 · Ablation diff strip — predicted return per bundle, with
+// alignment (match/partial/miss) vs realized.
+// ═════════════════════════════════════════════
+const ABLATION_BUNDLES = [
+  { id: 'base_news',     label: 'BASE_NEWS',  sub: 'news only' },
+  { id: '+sec',          label: '+SEC',       sub: '+ 10-K · 8-K' },
+  { id: '+earnings',     label: '+EARNINGS',  sub: '+ transcripts' },
+  { id: '+peer_news',    label: '+PEER',      sub: '+ family co.' },
+  { id: '+sector_news',  label: '+SECTOR',    sub: '+ sector news' },
+  { id: '+macro',        label: '+MACRO',     sub: '+ Fed · VIX' },
+  { id: '+positioning',  label: '+POSITION',  sub: '+ 13F' },
+];
+
+function _alignmentState(predicted, realized) {
+  if (predicted == null || !Number.isFinite(predicted)) return 'idle';
+  const ps = Math.sign(predicted);
+  const rs = Math.sign(realized);
+  if (ps === 0 || rs === 0) return 'partial';
+  if (ps !== rs) return 'miss';
+  const ratio = Math.abs(predicted) / Math.max(Math.abs(realized), 1e-6);
+  if (ratio >= 0.5 && ratio <= 2.0) return 'match';
+  return 'partial';
+}
+
+function renderAblationStrip(bundle, moveIdx) {
+  const strip = document.getElementById('abl-strip');
+  const host  = document.getElementById('abl-chips');
+  if (!strip || !host) return;
+  if (moveIdx == null) { strip.hidden = true; return; }
+  const move = bundle.moves[moveIdx];
+  const preds = move?.predictions_by_ablation || {};
+  if (!Object.keys(preds).length) { strip.hidden = true; return; }
+  strip.hidden = false;
+  const realized = move.return_pct ?? 0;
+  const activeBundle = pickAblationName(STATE.enabledSources);
+  host.innerHTML = ABLATION_BUNDLES.map(({ id, label, sub }, idx) => {
+    const p = preds[id];
+    const state = _alignmentState(p, realized);
+    const numTxt = p == null
+      ? '—'
+      : `${p >= 0 ? '+' : ''}${(p * 100).toFixed(2)}%`;
+    const subTxt = p == null
+      ? 'no prediction'
+      : state === 'match'   ? 'matches sign · close magnitude'
+      : state === 'partial' ? 'matches sign · scale off'
+      : state === 'miss'    ? 'wrong direction'
+      : sub;
+    const isActive = id === activeBundle ? ' active' : '';
+    return (
+      `<div class="abl-chip${isActive}" data-state="${state}" data-bundle="${id}">` +
+        `<div class="name">${label}<span class="n">${idx + 1}/7</span></div>` +
+        `<div class="num">${numTxt}</div>` +
+        `<div class="sub">${escapeHtml(subTxt)}</div>` +
+      `</div>`
+    );
+  }).join('');
+}
+
+// ═════════════════════════════════════════════
+// #08 · Model-audit / coherence panel
+// ═════════════════════════════════════════════
+function renderAuditPanel(attr) {
+  const panel = document.getElementById('audit-panel');
+  const notes = document.getElementById('audit-notes');
+  const cov = document.getElementById('audit-coverage');
+  const conf = document.getElementById('audit-confidence');
+  const gate = document.getElementById('audit-gate');
+  if (!panel || !notes || !cov || !conf || !gate) return;
+  if (!attr) { panel.hidden = true; return; }
+  panel.hidden = false;
+  const notesText = attr.model_notes || attr.notes || 'No coherence notes recorded for this attribution.';
+  notes.textContent = notesText;
+  const dims = attr.dimensions || {};
+  const dimsWithCites = Object.values(dims).filter(d => {
+    const ce = Array.isArray(d?.cited_evidence) ? d.cited_evidence : [];
+    const ids = d?.evidence_chunk_ids || [];
+    return ce.length > 0 || ids.length > 0;
+  }).length;
+  const total = Object.keys(DIM_META).length;
+  cov.textContent = `${dimsWithCites} / ${total} dims cited`;
+  const confidence = attr.confidence;
+  conf.textContent = confidence == null ? '—' : `${Math.round(confidence * 100)}%`;
+  const gated = dimsWithCites === total ? 'all dims passed' : `${total - dimsWithCites} dropped`;
+  gate.textContent = gated;
+}
+
+// ═════════════════════════════════════════════
+// #09 · Cross-ticker date scan — 5-up grid keyed on a date
+// ═════════════════════════════════════════════
+const BUNDLE_CACHE = new Map();   // ticker → bundle JSON
+
+async function _ensureBundle(ticker) {
+  if (BUNDLE_CACHE.has(ticker)) return BUNDLE_CACHE.get(ticker);
+  try {
+    const b = await fetchJSON(`/data/${ticker}.json`);
+    BUNDLE_CACHE.set(ticker, b);
+    return b;
+  } catch (e) {
+    return null;
+  }
+}
+
+function _nearestMove(bundle, date) {
+  if (!bundle?.moves?.length) return null;
+  const target = date;
+  let best = null;
+  for (const m of bundle.moves) {
+    if (m.move_date > target) continue;
+    if (!best || m.move_date > best.move_date) best = m;
+  }
+  return best;
+}
+
+async function renderCrossTickerScan(date) {
+  const card = document.getElementById('xticker-scan');
+  const grid = document.getElementById('xt-grid');
+  const dateEl = document.getElementById('xt-date');
+  if (!card || !grid || !dateEl) return;
+  if (!date) { card.hidden = true; return; }
+  card.hidden = false;
+  dateEl.textContent = date;
+  const tickers = STATE.tickers.map(t => t.ticker);
+  const bundles = await Promise.all(tickers.map(_ensureBundle));
+  const cells = tickers.map((t, i) => {
+    const b = bundles[i];
+    const m = b ? _nearestMove(b, date) : null;
+    if (!m) {
+      return `<div class="xt-cell empty"><div class="xt-h"><span class="ticker">${escapeHtml(t)}</span><span class="date">—</span></div><div class="ret flat">—</div><div class="dom"><span class="swatch" style="background:var(--ink-dim)"></span>no event ≤ date</div></div>`;
+    }
+    const ret = m.return_pct;
+    const retCls = ret > 0.001 ? 'up' : ret < -0.001 ? 'down' : 'flat';
+    const retTxt = `${ret >= 0 ? '+' : ''}${(ret * 100).toFixed(2)}%`;
+    const dims = m.attribution?.dimensions || null;
+    const domKey = dominantDimKey(dims);
+    const domMeta = domKey ? DIM_META[domKey] : null;
+    const verdictRaw = m.strategies?.[STATE.selectedStrategy] || null;
+    const verdictLbl = verdictLabel(verdictRaw);
+    const verdictCls = verdictRaw === 'lean' ? 'lean' : verdictRaw === 'fade' ? 'fade' : '';
+    const verdictText = verdictLbl ? `${verdictLbl}.` : '—';
+    return (
+      `<div class="xt-cell" data-ticker="${escapeHtml(t)}" data-date="${escapeHtml(m.move_date)}">` +
+        `<div class="xt-h">` +
+          `<span class="ticker">${escapeHtml(t)}</span>` +
+          `<span class="date">${escapeHtml(m.move_date)}</span>` +
+        `</div>` +
+        `<div class="ret ${retCls}">${retTxt}</div>` +
+        `<div class="dom"><span class="swatch" style="background:${domMeta?.color || 'var(--ink-dim)'}"></span>${escapeHtml(domMeta?.label || '—')}</div>` +
+        `<div class="verdict-mini-x ${verdictCls}">${verdictText}</div>` +
+      `</div>`
+    );
+  });
+  grid.innerHTML = cells.join('');
+  grid.querySelectorAll('.xt-cell[data-ticker]').forEach(el => {
+    el.addEventListener('click', async () => {
+      const t = el.getAttribute('data-ticker');
+      const d = el.getAttribute('data-date');
+      if (!t || !d) return;
+      if (t !== STATE.currentTicker) {
+        await selectTicker(t, { moveDate: d });
+      } else {
+        const idx = STATE.bundle?.moves?.findIndex(m => m.move_date === d);
+        if (idx != null && idx >= 0) selectMove(idx);
+      }
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    });
+  });
+}
+
+// ═════════════════════════════════════════════
+// #11 · Predicted-return trajectory across the seven ablation bundles
+// for the currently selected move. Replaces the per-dim stacked area.
+// ═════════════════════════════════════════════
+function renderPredictionTrajectory(bundle, moveIdx) {
+  const card = document.getElementById('dim-ts-card');
+  const host = document.getElementById('dim-ts');
+  if (!card || !host) return;
+  if (moveIdx == null) { card.hidden = true; return; }
+  const move = bundle?.moves?.[moveIdx];
+  const preds = move?.predictions_by_ablation || {};
+  if (!Object.keys(preds).length) { card.hidden = true; return; }
+  card.hidden = false;
+
+  const realized = move.return_pct ?? 0;
+  const xs = ABLATION_BUNDLES.map(b => b.label);
+  const ys = ABLATION_BUNDLES.map(b => {
+    const p = preds[b.id];
+    return (p == null || !Number.isFinite(p)) ? null : p * 100;
+  });
+  const states = ABLATION_BUNDLES.map(b => _alignmentState(preds[b.id], realized));
+  const colorFor = (s) =>
+    s === 'match'   ? '#2e6f48' :
+    s === 'partial' ? '#a87c3d' :
+    s === 'miss'    ? '#8c2f2f' : '#989384';
+  const markerColors = states.map(colorFor);
+
+  const traces = [
+    // The connecting line — neutral navy so the per-point colors carry the story.
+    {
+      x: xs, y: ys,
+      mode: 'lines+markers',
+      line: { color: '#0a1d36', width: 1.6, shape: 'linear' },
+      marker: {
+        size: 13,
+        color: markerColors,
+        line: { color: '#fbfaf6', width: 1.5 },
+        symbol: 'diamond',
+      },
+      hovertemplate: '<b>%{x}</b><br>predicted return: <b>%{y:.2f}%</b><extra></extra>',
+      name: 'Predicted',
+      customdata: ABLATION_BUNDLES.map(b => b.sub),
+    },
+  ];
+
+  const realizedY = realized * 100;
+  const layout = {
+    paper_bgcolor: 'rgba(0,0,0,0)',
+    plot_bgcolor:  'rgba(0,0,0,0)',
+    margin: { l: 56, r: 22, t: 12, b: 42 },
+    font: { family: 'Inter, sans-serif', color: '#6a6e7c', size: 11 },
+    hoverlabel: { bgcolor: '#fbfaf6', bordercolor: '#dcd9cf',
+                  font: { family: 'Inter, sans-serif', color: '#0d1320', size: 12 } },
+    xaxis: {
+      gridcolor: 'transparent', linecolor: '#dcd9cf', tickcolor: '#dcd9cf', zeroline: false,
+      tickfont: { size: 10, color: '#0a1d36' },
+    },
+    yaxis: {
+      title: { text: 'Predicted return (%)', standoff: 8 },
+      gridcolor: '#dcd9cf', linecolor: '#dcd9cf', tickcolor: '#dcd9cf',
+      zeroline: true, zerolinecolor: '#dcd9cf', zerolinewidth: 1,
+      ticksuffix: '%',
+    },
+    shapes: [
+      {
+        type: 'line', xref: 'paper', x0: 0, x1: 1,
+        y0: realizedY, y1: realizedY,
+        line: { color: '#7a1f1f', width: 1.6, dash: 'dash' },
+      },
+    ],
+    annotations: [
+      {
+        xref: 'paper', x: 1, xanchor: 'right',
+        y: realizedY, yanchor: 'bottom',
+        text: `Realized · <b>${realizedY >= 0 ? '+' : ''}${realizedY.toFixed(2)}%</b>`,
+        font: { family: 'Inter, sans-serif', size: 10, color: '#7a1f1f' },
+        showarrow: false,
+        bgcolor: '#fbfaf6',
+        borderpad: 3,
+      },
+    ],
+    showlegend: false,
+  };
+  Plotly.react('dim-ts', traces, layout,
+    { displaylogo: false, responsive: true, modeBarButtonsToRemove: ['lasso2d','select2d','zoom2d','pan2d','autoScale2d'] });
+}
+
+// ═════════════════════════════════════════════
+// Verdict-character pill (STRUCTURAL / TRANSIENT / MIXED / UNCLEAR)
+// ═════════════════════════════════════════════
+function renderCharacterPill(character) {
+  const pill = document.getElementById('verdict-character');
+  if (!pill) return;
+  const c = (character || '').toLowerCase();
+  if (!c || !['structural', 'transient', 'mixed', 'unclear'].includes(c)) {
+    pill.hidden = true;
+    pill.dataset.state = 'idle';
+    pill.textContent = '—';
+    return;
+  }
+  pill.hidden = false;
+  pill.dataset.state = c;
+  pill.textContent = c;
+}
+
 function renderStrategyRow() {
   const list = document.getElementById('strat-list');
   list.innerHTML = '';
@@ -639,11 +965,13 @@ function renderVerdict() {
     wordEl.textContent = '—';
     wordEl.dataset.state = 'idle';
     stratEl.textContent = meta ? meta.label : 'pick a move';
+    renderCharacterPill(null);
   } else {
     const display = verdict === 'neutral' ? 'Skip.' : (verdict === 'lean' ? 'Lean.' : 'Fade.');
     wordEl.textContent = display;
     wordEl.dataset.state = verdict === 'neutral' ? 'skip' : verdict;
     stratEl.textContent = meta ? `${meta.label} says` : '';
+    renderCharacterPill(STATE.lastFullStack?.character);
   }
 
   const expHow = document.getElementById('exp-how');
@@ -829,6 +1157,7 @@ function buildOutcomeSentence(verdict, ref, bundle, moveDate) {
 // ═════════════════════════════════════════════
 async function fetchAttribution(move, enabledSources) {
   const seq = ++STATE.fetchSeq;
+  renderCacheBadge('loading', null);
   const res = await fetch('/api/attribute', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
@@ -841,10 +1170,52 @@ async function fetchAttribution(move, enabledSources) {
       enabled_sources: enabledSources,
     }),
   });
-  if (!res.ok) throw new Error(`/api/attribute ${res.status}`);
+  if (!res.ok) {
+    renderCacheBadge('error', null);
+    throw new Error(`/api/attribute ${res.status}`);
+  }
+  const cacheState = (res.headers.get('X-PRISM-Cache') || '').toLowerCase();
+  const elapsedHeader = res.headers.get('X-PRISM-Elapsed-Ms');
+  const elapsedMs = elapsedHeader ? parseFloat(elapsedHeader) : null;
   const data = await res.json();
   if (seq !== STATE.fetchSeq) return null;
+  renderCacheBadge(cacheState || 'hit', elapsedMs);
   return data;
+}
+
+// ═════════════════════════════════════════════
+// Cache hit / live miss badge in the footer
+// ═════════════════════════════════════════════
+function renderCacheBadge(state, elapsedMs) {
+  const el = document.getElementById('cache-badge');
+  const lbl = document.getElementById('cache-badge-lbl');
+  if (!el || !lbl) return;
+  const ms = (elapsedMs != null && Number.isFinite(elapsedMs))
+    ? (elapsedMs < 10 ? `${elapsedMs.toFixed(1)} ms` : `${Math.round(elapsedMs)} ms`)
+    : null;
+  if (state === 'hit') {
+    el.dataset.state = 'hit';
+    lbl.textContent = ms ? `cache hit · ${ms}` : 'cache hit';
+  } else if (state === 'miss') {
+    el.dataset.state = 'miss';
+    const cost = '~$0.75';   // Opus 4.7 per-attribution upper bound
+    lbl.textContent = ms ? `live · ${ms} · ${cost}` : `live · ${cost}`;
+  } else if (state === 'pre') {
+    el.dataset.state = 'hit';
+    lbl.textContent = 'pre-baked bundle';
+  } else if (state === 'empty') {
+    el.dataset.state = 'empty';
+    lbl.textContent = 'no sources';
+  } else if (state === 'loading') {
+    el.dataset.state = 'miss';
+    lbl.textContent = 'computing…';
+  } else if (state === 'error') {
+    el.dataset.state = 'error';
+    lbl.textContent = 'attribution failed';
+  } else {
+    el.dataset.state = 'idle';
+    lbl.textContent = 'idle';
+  }
 }
 
 async function recomputeAttribution() {
@@ -866,6 +1237,7 @@ async function recomputeAttribution() {
     renderStrategyRow();
     renderToggleCaption(0, totalAvail, 0);
     renderOrientAndMeta(null, null);
+    renderAuditPanel(null);
     document.getElementById('canvas-meta').innerHTML =
       `<span class="num">0</span> chunks · attribution disabled`;
     return;
@@ -917,9 +1289,10 @@ function applyAttributionResponse(move, response) {
   renderBeams(weights);
 
   renderOrientAndMeta(move, ref, response.chunks_considered, response.enabled_sources.length, 'live');
+  renderAuditPanel({ ...ref, model_notes: a.model_notes, dimensions: dims });
 
   document.getElementById('foot-meta').textContent =
-    `${response.chunks_considered} chunks · attribution gate ✓`;
+    `attribution gate ✓ · ${response.chunks_considered} chunks`;
 
   renderStrategyRow();
 }
@@ -939,8 +1312,10 @@ function applyPreBaked(bundle, moveIdx) {
     STATE.lastFullStack = null;
     renderStrategyRow();
     renderOrientAndMeta(null, null);
+    renderCacheBadge('idle', null);
     return;
   }
+  renderCacheBadge('pre', null);
   const ref = {
     realized: attr.realized,
     predicted: attr.predicted,
@@ -961,6 +1336,7 @@ function applyPreBaked(bundle, moveIdx) {
   for (const k of DIM_ORDER) weights[k] = (attr.dimensions[k]?.weight) ?? 0;
   renderBeams(weights);
   renderStrategyRow();
+  renderAuditPanel(attr);
   // Pre-baked attribution doesn't track per-source enabled count, so use
   // the bundle's full-stack source count for the meta line.
   const srcCount = (attr.sources_used || []).length || ALL_SOURCE_IDS.length;
@@ -970,7 +1346,7 @@ function applyPreBaked(bundle, moveIdx) {
 // ═════════════════════════════════════════════
 // TICKER + MOVE selection
 // ═════════════════════════════════════════════
-async function selectTicker(t) {
+async function selectTicker(t, opts = {}) {
   if (t === STATE.currentTicker) return;
   STATE.currentTicker = t;
   STATE.selectedMoveIdx = null;
@@ -979,17 +1355,27 @@ async function selectTicker(t) {
   STATE.bundle = bundle;
   renderStrip(bundle);
   renderChart(bundle);
+  renderPnL(bundle);
   if (bundle.moves.length > 0) {
-    let maxIdx = 0, maxAbs = 0;
-    bundle.moves.forEach((m, i) => {
-      if (Math.abs(m.return_pct) > maxAbs) { maxAbs = Math.abs(m.return_pct); maxIdx = i; }
-    });
-    selectMove(maxIdx);
+    // If a move date was requested via opts (e.g. URL hash), prefer it.
+    let targetIdx = -1;
+    if (opts.moveDate) {
+      targetIdx = bundle.moves.findIndex(m => m.move_date === opts.moveDate);
+    }
+    if (targetIdx < 0) {
+      let maxIdx = 0, maxAbs = 0;
+      bundle.moves.forEach((m, i) => {
+        if (Math.abs(m.return_pct) > maxAbs) { maxAbs = Math.abs(m.return_pct); maxIdx = i; }
+      });
+      targetIdx = maxIdx;
+    }
+    selectMove(targetIdx);
   } else {
     renderEventCard(null, null);
     renderDimCards(null, new Map());
     renderEvidence(null, new Map());
     renderBeams(null);
+    renderMoveNav();
   }
 }
 
@@ -1004,6 +1390,217 @@ function selectMove(idx) {
   renderToggleCaption(STATE.enabledSources.size, total, move.attribution?.chunks_considered ?? 0);
   if (STATE.enabledSources.size > 0) recomputeAttribution();
   renderChart(STATE.bundle); // refresh selection highlight
+  renderMoveNav();
+  renderPredictionTrajectory(STATE.bundle, idx);
+  renderCrossTickerScan(move.move_date);
+  syncHash();
+}
+
+// ═════════════════════════════════════════════
+// PnL strip · equity curves (model vs four mandated baselines)
+// ═════════════════════════════════════════════
+const _PNL_COLORS = {
+  model:        '#7a1f1f',  // oxblood — the protagonist
+  naive_lean:   '#0a1d36',  // navy
+  always_fade:  '#6a6e7c',  // muted gray
+  random:       '#a87c3d',  // brass
+  sentiment:    '#5A8DA8',  // calibration cyan
+};
+const _PNL_DASH = {
+  model:        'solid',
+  naive_lean:   'solid',
+  always_fade:  'dot',
+  random:       'dashdot',
+  sentiment:    'dash',
+};
+function _pnlColor(name) {
+  const k = String(name || '').toLowerCase().replace(/[^a-z]+/g, '_').replace(/_+$/, '');
+  return _PNL_COLORS[k] || '#989384';
+}
+function _pnlDash(name) {
+  const k = String(name || '').toLowerCase().replace(/[^a-z]+/g, '_').replace(/_+$/, '');
+  return _PNL_DASH[k] || 'solid';
+}
+
+function renderPnL(bundle) {
+  const strip = document.getElementById('pnl-strip');
+  if (!strip) return;
+  const pnl = bundle?.pnl;
+  if (!pnl?.strategies?.length) {
+    strip.hidden = true;
+    return;
+  }
+  strip.hidden = false;
+  const fmtMoney = (x) => {
+    if (x == null) return '—';
+    const sign = x < 0 ? '-' : '';
+    return `${sign}$${Math.abs(x).toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 0 })}`;
+  };
+  document.getElementById('pnl-ttl').textContent = `${bundle.ticker} · model vs four mandated baselines`;
+  document.getElementById('pnl-notional').textContent = fmtMoney(pnl.notional_per_trade);
+  document.getElementById('pnl-events').textContent = String(pnl.n_events ?? '—');
+  document.getElementById('pnl-horizon').textContent = `${pnl.horizon_days ?? 5} d`;
+
+  // Equity curves: one line per strategy. Model in oxblood, thick. Baselines
+  // in dialed-back colors and dash patterns so they don't fight each other.
+  const traces = pnl.strategies.map((s) => {
+    const curve = Array.isArray(s.equity_curve) ? s.equity_curve : [];
+    const color = _pnlColor(s.name);
+    const dash  = _pnlDash(s.name);
+    const isModel = s.name === 'model';
+    return {
+      x: curve.map(p => p.date),
+      y: curve.map(p => p.equity),
+      mode: 'lines',
+      line: {
+        color,
+        width: isModel ? 2.6 : 1.6,
+        dash,
+        shape: 'hv',     // step — equity holds between trades
+      },
+      name: s.label || s.name,
+      legendgroup: s.name,
+      hovertemplate:
+        `<b>${escapeHtml(s.label || s.name)}</b><br>` +
+        `%{x}<br>equity <b>$%{y:,.0f}</b>` +
+        `<extra></extra>`,
+      opacity: isModel ? 1.0 : 0.92,
+    };
+  });
+
+  const notional = pnl.notional_per_trade ?? 10000;
+  const layout = {
+    paper_bgcolor: 'rgba(0,0,0,0)',
+    plot_bgcolor:  'rgba(0,0,0,0)',
+    margin: { l: 64, r: 18, t: 14, b: 36 },
+    font: { family: 'Inter, sans-serif', color: '#6a6e7c', size: 11 },
+    hoverlabel: { bgcolor: '#fbfaf6', bordercolor: '#dcd9cf',
+                  font: { family: 'Inter, sans-serif', color: '#0d1320', size: 12 } },
+    xaxis: { gridcolor: '#dcd9cf', linecolor: '#dcd9cf', tickcolor: '#dcd9cf', zeroline: false },
+    yaxis: {
+      title: { text: 'Equity ($)', standoff: 8 },
+      gridcolor: '#dcd9cf', linecolor: '#dcd9cf', tickcolor: '#dcd9cf',
+      zeroline: false, tickprefix: '$', tickformat: ',.0f',
+    },
+    shapes: [
+      // Starting capital reference line.
+      {
+        type: 'line', xref: 'paper', x0: 0, x1: 1,
+        y0: notional, y1: notional,
+        line: { color: '#b6bac4', width: 1, dash: 'dot' },
+      },
+    ],
+    annotations: [
+      {
+        xref: 'paper', x: 0, xanchor: 'left',
+        y: notional, yanchor: 'bottom',
+        text: `start · $${notional.toLocaleString()}`,
+        font: { family: 'JetBrains Mono, monospace', size: 9, color: '#989384' },
+        showarrow: false, bgcolor: 'rgba(255,255,255,0)',
+      },
+    ],
+    showlegend: false,    // we render our own legend below
+  };
+  Plotly.react('pnl-chart', traces, layout,
+    { displaylogo: false, responsive: true,
+      modeBarButtonsToRemove: ['lasso2d','select2d','autoScale2d'] });
+
+  // Legend rows below the chart — three-line stack so long strategy names
+  // don't collide with the dollar number column.
+  const legend = document.getElementById('pnl-legend');
+  legend.innerHTML = pnl.strategies.map((s) => {
+    const total = s.total_pnl_dollars ?? 0;
+    const cls = total > 0 ? 'pnl-pos' : total < 0 ? 'pnl-neg' : '';
+    const hit = s.hit_rate != null ? `${(s.hit_rate * 100).toFixed(0)}% hit` : '— hit';
+    const sharpe = s.sharpe != null ? `${s.sharpe.toFixed(2)} sh` : '— sh';
+    const isModel = s.name === 'model';
+    const dashCls = _pnlDash(s.name) === 'solid' ? '' : ' dashed';
+    const color = _pnlColor(s.name);
+    return `
+      <button type="button" class="pnl-legend-row${isModel ? ' model' : ''}${dashCls}" data-strategy="${escapeHtml(s.name)}" style="color:${color}">
+        <span class="swatch" style="background:${color}"></span>
+        <div class="legend-content">
+          <div class="legend-head">
+            <span class="lbl">${isModel ? 'Model' : 'Baseline'}</span>
+            <span class="num ${cls}">${fmtMoney(total)}</span>
+          </div>
+          <div class="name" title="${escapeHtml(s.label || s.name)}">${escapeHtml(s.label || s.name)}</div>
+          <div class="stats">
+            <span class="stat">${hit}</span>
+            <span class="stat">${sharpe}</span>
+          </div>
+        </div>
+      </button>`;
+  }).join('');
+
+  // Click to isolate (toggle visible vs only-this).
+  legend.querySelectorAll('.pnl-legend-row').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const target = btn.getAttribute('data-strategy');
+      const others = Array.from(legend.querySelectorAll('.pnl-legend-row'))
+        .filter(el => el.getAttribute('data-strategy') !== target);
+      const isolating = !btn.classList.contains('soloed');
+      others.forEach(el => el.classList.toggle('dimmed', isolating));
+      btn.classList.toggle('soloed', isolating);
+      // Re-render the chart with traces visible only for non-dimmed strategies.
+      const visibleNames = isolating
+        ? new Set([target])
+        : new Set(pnl.strategies.map(s => s.name));
+      Plotly.restyle('pnl-chart', {
+        visible: pnl.strategies.map(s => visibleNames.has(s.name) ? true : 'legendonly'),
+      });
+    });
+  });
+}
+
+// ═════════════════════════════════════════════
+// Move navigator · prev / next + counter
+// ═════════════════════════════════════════════
+function renderMoveNav() {
+  const counter = document.getElementById('move-counter');
+  const prev = document.getElementById('move-prev');
+  const next = document.getElementById('move-next');
+  if (!counter || !prev || !next) return;
+  const moves = STATE.bundle?.moves ?? [];
+  const idx = STATE.selectedMoveIdx;
+  if (!moves.length || idx == null) {
+    counter.innerHTML = '— / —';
+    prev.disabled = true;
+    next.disabled = true;
+    return;
+  }
+  counter.innerHTML = `<b>${idx + 1}</b> / ${moves.length}`;
+  prev.disabled = idx <= 0;
+  next.disabled = idx >= moves.length - 1;
+}
+
+function stepMove(delta) {
+  const moves = STATE.bundle?.moves ?? [];
+  if (!moves.length || STATE.selectedMoveIdx == null) return;
+  const next = STATE.selectedMoveIdx + delta;
+  if (next < 0 || next >= moves.length) return;
+  selectMove(next);
+}
+
+// ═════════════════════════════════════════════
+// URL hash permalinks · #TICKER/YYYY-MM-DD
+// ═════════════════════════════════════════════
+function parseHash() {
+  const h = (window.location.hash || '').replace(/^#/, '');
+  if (!h) return null;
+  const [ticker, moveDate] = h.split('/');
+  return { ticker: ticker?.toUpperCase() || null, moveDate: moveDate || null };
+}
+
+function syncHash() {
+  const t = STATE.currentTicker;
+  const move = (STATE.bundle && STATE.selectedMoveIdx != null)
+    ? STATE.bundle.moves[STATE.selectedMoveIdx] : null;
+  if (!t) return;
+  const next = move ? `#${t}/${move.move_date}` : `#${t}`;
+  if (window.location.hash !== next) {
+    history.replaceState(null, '', next);
+  }
 }
 
 function resetToggles() {
@@ -1264,9 +1861,66 @@ function setupEvalToggle() {
   });
 }
 
+function setupAuditToggle() {
+  const head = document.getElementById('audit-head');
+  const body = document.getElementById('audit-body');
+  if (!head || !body) return;
+  head.addEventListener('click', () => {
+    const open = head.getAttribute('aria-expanded') === 'true';
+    head.setAttribute('aria-expanded', String(!open));
+    body.hidden = open;
+  });
+}
+
 // ═════════════════════════════════════════════
 // BOOT
 // ═════════════════════════════════════════════
+function setupMoveNav() {
+  document.getElementById('move-prev')?.addEventListener('click', () => stepMove(-1));
+  document.getElementById('move-next')?.addEventListener('click', () => stepMove(+1));
+  window.addEventListener('keydown', (e) => {
+    // Skip if typing in an input/textarea
+    const tag = (e.target?.tagName || '').toLowerCase();
+    if (tag === 'input' || tag === 'textarea' || e.target?.isContentEditable) return;
+    if (e.metaKey || e.ctrlKey || e.altKey) return;
+    if (e.key === 'ArrowLeft')  { e.preventDefault(); stepMove(-1); }
+    if (e.key === 'ArrowRight') { e.preventDefault(); stepMove(+1); }
+  });
+
+  // Permalink copy button — copies the current URL (hash already syncs).
+  const shareBtn = document.getElementById('move-share');
+  const shareLbl = document.getElementById('move-share-lbl');
+  if (!shareBtn || !shareLbl) return;
+  let resetTimer = null;
+  shareBtn.addEventListener('click', async () => {
+    syncHash();
+    const url = window.location.href;
+    let copied = false;
+    try {
+      if (navigator.clipboard?.writeText) {
+        await navigator.clipboard.writeText(url);
+        copied = true;
+      }
+    } catch (e) { /* fall through to manual fallback */ }
+    if (!copied) {
+      const ta = document.createElement('textarea');
+      ta.value = url;
+      ta.style.position = 'fixed'; ta.style.opacity = '0';
+      document.body.appendChild(ta);
+      ta.select();
+      try { copied = document.execCommand('copy'); } catch (e) { /* ignore */ }
+      ta.remove();
+    }
+    shareBtn.classList.toggle('copied', copied);
+    shareLbl.textContent = copied ? 'Copied ✓' : 'Copy failed';
+    if (resetTimer) clearTimeout(resetTimer);
+    resetTimer = setTimeout(() => {
+      shareBtn.classList.remove('copied');
+      shareLbl.textContent = 'Copy link';
+    }, 1800);
+  });
+}
+
 (async function init() {
   try {
     const index = await fetchJSON('/data/index.json');
@@ -1276,10 +1930,30 @@ function setupEvalToggle() {
     setupSourceTabs();
     setupDirectionFilter();
     setupEvalToggle();
+    setupAuditToggle();
+    setupMoveNav();
     renderEvalStrip();  // fires once; cached on STATE
-    const initial = STATE.tickers.find(t => t.ticker === 'AMD')?.ticker
-                  || STATE.tickers[0]?.ticker;
-    if (initial) await selectTicker(initial);
+
+    // Resolve the initial ticker + move from URL hash if present.
+    const requested = parseHash();
+    const tickerIds = STATE.tickers.map(t => t.ticker);
+    const initial = (requested?.ticker && tickerIds.includes(requested.ticker))
+                  ? requested.ticker
+                  : (STATE.tickers.find(t => t.ticker === 'AMD')?.ticker
+                     || STATE.tickers[0]?.ticker);
+    if (initial) await selectTicker(initial, { moveDate: requested?.moveDate });
+
+    // React to user-driven hash changes (back button, copy/paste link).
+    window.addEventListener('hashchange', async () => {
+      const h = parseHash();
+      if (!h?.ticker || !tickerIds.includes(h.ticker)) return;
+      if (h.ticker !== STATE.currentTicker) {
+        await selectTicker(h.ticker, { moveDate: h.moveDate });
+      } else if (h.moveDate) {
+        const idx = STATE.bundle?.moves?.findIndex(m => m.move_date === h.moveDate);
+        if (idx != null && idx >= 0) selectMove(idx);
+      }
+    });
   } catch (err) {
     document.getElementById('ticker-name').textContent = 'Error loading data';
     document.getElementById('ticker-sub').textContent = String(err);

@@ -32,7 +32,9 @@ from datetime import date
 from pathlib import Path
 from typing import List, Optional
 
-from fastapi import FastAPI, HTTPException
+import time
+
+from fastapi import FastAPI, HTTPException, Response
 from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field
@@ -183,7 +185,8 @@ def _compute_strategies(attr: Attribution) -> dict[str, str]:
 # ---------- /api/attribute ----------
 
 @app.post("/api/attribute", response_model=AttributeResponse)
-def compute_attribution(req: AttributeRequest) -> AttributeResponse:
+def compute_attribution(req: AttributeRequest, response: Response) -> AttributeResponse:
+    started = time.perf_counter()
     if req.ticker not in FOCAL_TICKERS:
         raise HTTPException(status_code=400, detail=f"Unknown ticker: {req.ticker}")
 
@@ -192,8 +195,15 @@ def compute_attribution(req: AttributeRequest) -> AttributeResponse:
     except ValueError as exc:
         raise HTTPException(status_code=400, detail=f"Unknown source_type: {exc}")
 
+    # Expose timing + cache state to the frontend so the demo can render a
+    # per-attribution badge ("cache hit · 2 ms" vs "live · 712 ms").
+    response.headers["Access-Control-Expose-Headers"] = "X-PRISM-Cache, X-PRISM-Elapsed-Ms"
+
     cached = _cache_read(req.ticker, req.move_date, req.enabled_sources)
     if cached is not None:
+        elapsed_ms = (time.perf_counter() - started) * 1000.0
+        response.headers["X-PRISM-Cache"] = "hit"
+        response.headers["X-PRISM-Elapsed-Ms"] = f"{elapsed_ms:.1f}"
         return AttributeResponse(**cached)
     if CACHE_ONLY:
         raise HTTPException(
@@ -225,6 +235,9 @@ def compute_attribution(req: AttributeRequest) -> AttributeResponse:
         # Zero sources (or zero-chunk selection under the enabled types) —
         # model.attribute would fall back to "no_chunks_provided_0". Return a
         # shaped "empty" response so the client can warn without an exception.
+        elapsed_ms = (time.perf_counter() - started) * 1000.0
+        response.headers["X-PRISM-Cache"] = "empty"
+        response.headers["X-PRISM-Elapsed-Ms"] = f"{elapsed_ms:.1f}"
         return AttributeResponse(
             attribution={},
             chunks=[],
@@ -269,7 +282,7 @@ def compute_attribution(req: AttributeRequest) -> AttributeResponse:
             payload_set[cid] = chunk_by_id[cid]
     chunks_payload = [c.model_dump(mode="json") for c in payload_set.values()]
 
-    response = AttributeResponse(
+    response_payload = AttributeResponse(
         attribution=attr_dump,
         chunks=chunks_payload,
         chunks_considered=len(filtered),
@@ -277,8 +290,11 @@ def compute_attribution(req: AttributeRequest) -> AttributeResponse:
         enabled_sources=[s.value for s in enabled],
         strategies=_compute_strategies(attr),
     )
-    _cache_write(req.ticker, req.move_date, req.enabled_sources, response.model_dump(mode="json"))
-    return response
+    _cache_write(req.ticker, req.move_date, req.enabled_sources, response_payload.model_dump(mode="json"))
+    elapsed_ms = (time.perf_counter() - started) * 1000.0
+    response.headers["X-PRISM-Cache"] = "miss"
+    response.headers["X-PRISM-Elapsed-Ms"] = f"{elapsed_ms:.1f}"
+    return response_payload
 
 
 # ---------- Static files (mount LAST so /api routes win) ----------

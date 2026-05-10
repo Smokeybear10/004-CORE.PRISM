@@ -57,9 +57,9 @@
       </div>
     </div>
     <div class="verdict-mini" id="verdict-mini">
-      <div class="lbl">Verdict</div>
       <div class="word" id="verdict-mini-word" data-state="idle">—</div>
       <div class="strat" id="verdict-mini-strat">pick a move</div>
+      <div class="char-pill" id="verdict-character" data-state="idle" hidden>—</div>
     </div>
   </div>
 </section>
@@ -80,6 +80,16 @@
   <div id="chart"></div>
   <div class="chart-foot">
     <span class="hint">Click any flagged dot below to focus it. Diamond markers show the model's <em>predicted</em> close under the active source set.</span>
+    <div class="move-nav" id="move-nav" aria-label="Step through flagged moves">
+      <span class="nav-lbl">Step</span>
+      <button type="button" id="move-prev" title="Previous flagged move (←)" aria-label="Previous flagged move" disabled>‹</button>
+      <span class="counter" id="move-counter">— / —</span>
+      <button type="button" id="move-next" title="Next flagged move (→)" aria-label="Next flagged move" disabled>›</button>
+      <button type="button" id="move-share" class="share-btn" title="Copy link to this move" aria-label="Copy permalink">
+        <span class="share-icon" aria-hidden="true">⎘</span>
+        <span class="share-lbl" id="move-share-lbl">Copy link</span>
+      </button>
+    </div>
   </div>
 </section>
 
@@ -122,6 +132,25 @@
 
   <div id="zero-warning" class="zero-warning" hidden>
     <strong>No sources enabled.</strong> Toggle at least one stream below to ground the attribution. <em>The prism needs light to refract.</em>
+  </div>
+
+  <!-- ───────────── Model audit / coherence panel ───────────── -->
+  <div class="audit-panel" id="audit-panel" hidden>
+    <button type="button" class="audit-head" id="audit-head" aria-expanded="false" aria-controls="audit-body">
+      <span class="left">
+        <span class="kicker">Coherence audit</span>
+        <span class="head" id="audit-headline">Model notes &amp; gate decisions</span>
+      </span>
+      <span class="chev" id="audit-chev">▾</span>
+    </button>
+    <div class="audit-body" id="audit-body" hidden>
+      <p class="audit-notes" id="audit-notes">—</p>
+      <div class="audit-meta">
+        <div class="audit-stat"><span class="lbl">Coverage</span><span class="val" id="audit-coverage">—</span></div>
+        <div class="audit-stat"><span class="lbl">Confidence</span><span class="val" id="audit-confidence">—</span></div>
+        <div class="audit-stat"><span class="lbl">Gate</span><span class="val" id="audit-gate">—</span></div>
+      </div>
+    </div>
   </div>
 </section>
 
@@ -168,6 +197,44 @@
   </div>
 </section>
 
+<!-- ───────────── Predicted-return trajectory across the seven ablations ───────────── -->
+<section class="dim-ts-card" id="dim-ts-card" hidden>
+  <div class="card-h">
+    <div class="ttl">Predicted return · <em>trajectory across additive information sets</em></div>
+    <div class="meta">Each point is the model's predicted return for this move using only sources up to that bundle. Dashed line shows realized. <span class="muted">Sentiment overlay not yet ingested.</span></div>
+  </div>
+  <div id="dim-ts"></div>
+</section>
+
+<!-- ───────────── Cross-ticker date scan ───────────── -->
+<section class="xticker-scan" id="xticker-scan" hidden>
+  <div class="card-h">
+    <div class="ttl">Cross-ticker scan · <em><span id="xt-date">—</span></em></div>
+    <div class="meta">Closest flagged move per ticker on or before this date.</div>
+  </div>
+  <div class="xt-grid" id="xt-grid"></div>
+</section>
+
+<!-- ───────────── PnL strip · 5-day forward PnL vs 4 baselines ───────────── -->
+<section class="pnl-strip" id="pnl-strip" hidden>
+  <div class="pnl-h">
+    <div class="ttl-block">
+      <div class="kicker">Forward returns · cumulative equity curve</div>
+      <div class="ttl" id="pnl-ttl">— · model vs four mandated baselines</div>
+    </div>
+    <div class="pnl-meta">
+      <div class="kstat"><div class="lbl">Notional / trade</div><div class="val" id="pnl-notional">—</div></div>
+      <div class="kstat"><div class="lbl">Events</div><div class="val" id="pnl-events">—</div></div>
+      <div class="kstat"><div class="lbl">Horizon</div><div class="val" id="pnl-horizon">—</div></div>
+    </div>
+  </div>
+  <div class="pnl-chart-wrap">
+    <div id="pnl-chart"></div>
+  </div>
+  <div class="pnl-legend" id="pnl-legend"></div>
+  <p class="pnl-foot">5-day raw forward returns · fixed-size sleeves · no fees, slippage, or market-neutralization. <em>Hit</em> = % of events the verdict was right · <em>sh</em> = Sharpe. Click a legend row to isolate that strategy.</p>
+</section>
+
 <!-- ───────────── Eval headline strip ───────────── -->
 <section class="eval-strip" id="eval-strip" hidden>
   <button type="button" class="eval-head" id="eval-head" aria-expanded="false" aria-controls="eval-cases">
@@ -184,7 +251,13 @@
 <!-- ───────────── Footer ───────────── -->
 <footer class="foot">
   <div>PRISM</div>
-  <div id="foot-meta">cached · attribution gate ✓</div>
+  <div class="foot-r">
+    <span id="cache-badge" class="cache-badge" data-state="idle" title="Per-attribution cache state">
+      <span class="dot"></span>
+      <span class="lbl" id="cache-badge-lbl">idle</span>
+    </span>
+    <span id="foot-meta">attribution gate ✓</span>
+  </div>
 </footer>
 
 <div class="page-spectrum" style="height:3px">
