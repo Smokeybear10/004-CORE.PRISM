@@ -68,6 +68,23 @@ body {
 
 button { font-family: inherit; cursor: pointer; }
 
+/* h2 elements that use the .ttl class shouldn't carry default UA margins */
+h2.ttl, h3.ttl { margin: 0; }
+
+/* Custom buttons need a visible focus state for keyboard users */
+.move-nav button:focus-visible,
+.share-btn:focus-visible,
+.dpill:focus-visible,
+.ticker-pill:focus-visible,
+.pnl-legend-row:focus-visible,
+.src-tab:focus-visible,
+.eval-head:focus-visible,
+.audit-head:focus-visible,
+.reset-btn:focus-visible {
+  outline: 2px solid var(--oxblood);
+  outline-offset: 2px;
+}
+
 /* ════════════════════════════════════════════════════════════
    Spectrum strip + masthead
    ═══════════════════════════════════════════════════════════ */
