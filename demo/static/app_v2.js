@@ -1517,8 +1517,8 @@ function renderPnL(bundle) {
     const dashCls = _pnlDash(s.name) === 'solid' ? '' : ' dashed';
     const color = _pnlColor(s.name);
     return `
-      <button type="button" class="pnl-legend-row${isModel ? ' model' : ''}${dashCls}" data-strategy="${escapeHtml(s.name)}" style="color:${color}">
-        <span class="swatch" style="background:${color}"></span>
+      <button type="button" class="pnl-legend-row${isModel ? ' model' : ''}${dashCls}" data-strategy="${escapeHtml(s.name)}">
+        <span class="swatch" style="background:${color}; color:${color}"></span>
         <div class="legend-content">
           <div class="legend-head">
             <span class="lbl">${isModel ? 'Model' : 'Baseline'}</span>
