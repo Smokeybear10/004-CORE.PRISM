@@ -269,12 +269,12 @@ button { font-family: inherit; cursor: pointer; }
   text-transform: uppercase;
 }
 .verdict-mini .word {
-  font: italic 500 56px var(--serif);
-  letter-spacing: -0.03em;
-  line-height: 1;
-  margin-top: 4px;
+  font: italic 600 84px/0.92 var(--serif);
+  letter-spacing: -0.04em;
+  margin-top: 2px;
   color: var(--ink-dim);
   transition: color 240ms;
+  text-shadow: 0 1px 0 rgba(255,255,255,0.5);
 }
 .verdict-mini .word[data-state="lean"] { color: var(--up); }
 .verdict-mini .word[data-state="fade"] { color: var(--down); }
@@ -1833,6 +1833,7 @@ button { font-family: inherit; cursor: pointer; }
 
 /* ── Mobile fix: stop horizontal overflow on the masthead and chart-card meta ── */
 @media (max-width: 720px) {
+  .verdict-mini .word { font-size: 64px; }
   .mast-inner {
     grid-template-columns: 1fr;
     gap: 12px;
