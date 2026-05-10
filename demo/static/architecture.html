@@ -827,42 +827,41 @@
 
         <!-- ============ COMPUTE ============ -->
         <g class="node compute">
-          <rect x="60" y="570" width="340" height="120" rx="6" ry="6"/>
-          <text class="title" x="230" y="605" text-anchor="middle">detect_significant_moves()</text>
-          <text class="sub" x="230" y="630" text-anchor="middle">|return| &gt; 3× trailing-60d realized vol</text>
-          <text class="sub" x="230" y="650" text-anchor="middle">PriceMove with vol_zscore + magnitude_rank</text>
-          <text class="metric" x="230" y="676" text-anchor="middle">~18 flagged moves per ticker / 5y</text>
+          <rect x="60" y="555" width="340" height="150" rx="6" ry="6"/>
+          <text class="title" x="230" y="600" text-anchor="middle">detect_significant_moves()</text>
+          <text class="sub" x="230" y="624" text-anchor="middle">|return| &gt; 3× trailing-60d realized vol</text>
+          <text class="sub" x="230" y="644" text-anchor="middle">PriceMove with vol_zscore + magnitude_rank</text>
+          <text class="metric" x="230" y="672" text-anchor="middle">~18 flagged moves per ticker / 5y</text>
+          <text class="metric" x="230" y="692" text-anchor="middle">→ PriceMove</text>
         </g>
         <g class="node compute">
-          <rect x="430" y="570" width="380" height="120" rx="6" ry="6"/>
-          <text class="title" x="620" y="605" text-anchor="middle">chunks_for_real(ticker, move_date)</text>
-          <text class="sub" x="620" y="630" text-anchor="middle">trading-day window join across 8 streams</text>
-          <text class="sub" x="620" y="650" text-anchor="middle">stable chunk_id per row · stratified order</text>
-          <text class="metric" x="620" y="676" text-anchor="middle">~50 TextChunk per move</text>
-          <!-- Source pips inside this node -->
-          <circle class="pip" cx="475" cy="613" r="5" fill="#C8442C"/>
-          <circle class="pip" cx="490" cy="613" r="5" fill="#E89B4A"/>
-          <circle class="pip" cx="505" cy="613" r="5" fill="#C77A2E"/>
-          <circle class="pip" cx="520" cy="613" r="5" fill="#D4B85A"/>
-          <circle class="pip" cx="535" cy="613" r="5" fill="#5A8DA8"/>
-          <circle class="pip" cx="550" cy="613" r="5" fill="#3D6B82"/>
-          <circle class="pip" cx="565" cy="613" r="5" fill="#3D4A6B"/>
-          <circle class="pip" cx="580" cy="613" r="5" fill="#b8954a"/>
+          <rect x="430" y="555" width="380" height="150" rx="6" ry="6"/>
+          <!-- Source pips: dedicated row right under the top border, well above title -->
+          <circle class="pip" cx="540" cy="572" r="5" fill="#C8442C"/>
+          <circle class="pip" cx="560" cy="572" r="5" fill="#E89B4A"/>
+          <circle class="pip" cx="580" cy="572" r="5" fill="#C77A2E"/>
+          <circle class="pip" cx="600" cy="572" r="5" fill="#D4B85A"/>
+          <circle class="pip" cx="620" cy="572" r="5" fill="#5A8DA8"/>
+          <circle class="pip" cx="640" cy="572" r="5" fill="#3D6B82"/>
+          <circle class="pip" cx="660" cy="572" r="5" fill="#3D4A6B"/>
+          <circle class="pip" cx="680" cy="572" r="5" fill="#b8954a"/>
+          <text class="title" x="620" y="600" text-anchor="middle">chunks_for_real(ticker, move_date)</text>
+          <text class="sub" x="620" y="624" text-anchor="middle">trading-day window join across 8 streams</text>
+          <text class="sub" x="620" y="644" text-anchor="middle">stable chunk_id per row · stratified order</text>
+          <text class="metric" x="620" y="672" text-anchor="middle">~50 TextChunk per move</text>
+          <text class="metric" x="620" y="692" text-anchor="middle">→ TextChunk[]</text>
         </g>
         <g class="node compute">
-          <rect x="840" y="570" width="350" height="120" rx="6" ry="6"/>
-          <text class="title" x="1015" y="605" text-anchor="middle">filter by enabled_sources</text>
-          <text class="sub" x="1015" y="630" text-anchor="middle">user toggle pills drive this</text>
-          <text class="sub" x="1015" y="650" text-anchor="middle">drops chunks whose source isn't enabled</text>
-          <text class="metric" x="1015" y="676" text-anchor="middle">→ filtered TextChunk[]</text>
+          <rect x="840" y="555" width="350" height="150" rx="6" ry="6"/>
+          <text class="title" x="1015" y="600" text-anchor="middle">filter by enabled_sources</text>
+          <text class="sub" x="1015" y="624" text-anchor="middle">user toggle pills drive this</text>
+          <text class="sub" x="1015" y="644" text-anchor="middle">drops chunks whose source isn't enabled</text>
+          <text class="metric" x="1015" y="672" text-anchor="middle">→ filtered TextChunk[]</text>
         </g>
 
-        <!-- Schema chips, sit on edges as data type labels -->
-        <rect class="edge-label-bg" x="408" y="618" width="98" height="24"/>
-        <text class="edge-label" x="457" y="635" text-anchor="middle">PriceMove</text>
-
-        <rect class="edge-label-bg" x="816" y="618" width="120" height="24"/>
-        <text class="edge-label" x="876" y="635" text-anchor="middle">TextChunk[]</text>
+        <!-- Schema chips removed — output types now appear inside each node
+             (e.g. "→ PriceMove" inside detect_significant_moves) so the
+             floating labels no longer clip the chunks_for_real text. -->
 
         <!-- ============ MODEL + CACHE ============ -->
         <g class="node model">
@@ -991,17 +990,17 @@
         <path class="edge" d="M 1099 412 C 1099 422, 880 422, 880 430"/>
 
         <!-- parquet cache → compute -->
-        <path class="edge thick" d="M 400 474 C 350 510, 270 540, 230 570"/>
-        <path class="edge thick" d="M 700 474 C 700 510, 660 540, 620 570"/>
+        <path class="edge thick" d="M 400 474 C 350 510, 270 530, 230 555"/>
+        <path class="edge thick" d="M 700 474 C 700 510, 660 530, 620 555"/>
 
         <!-- detect → joiner -->
-        <path class="edge thick" d="M 400 626 L 430 626"/>
+        <path class="edge thick" d="M 400 630 L 430 630"/>
 
         <!-- joiner → filter -->
-        <path class="edge thick" d="M 810 626 L 840 626"/>
+        <path class="edge thick" d="M 810 630 L 840 630"/>
 
         <!-- filter → model.attribute -->
-        <path class="edge thick" d="M 1015 690 C 1015 770, 400 800, 300 850"/>
+        <path class="edge thick" d="M 1015 705 C 1015 770, 400 800, 300 850"/>
         <rect class="edge-label-bg" x="640" y="780" width="180" height="22"/>
         <text class="edge-label" x="730" y="796" text-anchor="middle">filtered TextChunk[]</text>
 

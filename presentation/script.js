@@ -10,13 +10,18 @@ const pager = document.getElementById('pager');
 
 // State metadata — label per state (and optional section grouping later)
 const META = {
-  0: { label: 'Section 01 · Open' },
-  1: { label: 'Section 01 · Problem' },
-  2: { label: 'Section 01 · Gap' },
-  3: { label: 'Section 01 · Methodology' },
-  4: { label: 'Section 01 · Decision' },
-  5: { label: 'Section 01 · → Section 02' },
-  6: { label: 'Section 02 · Human Benchmark' },
+  0:  { label: 'Section 01 · Open' },
+  1:  { label: 'Section 01 · Problem' },
+  2:  { label: 'Section 01 · Gap' },
+  3:  { label: 'Section 01 · Methodology' },
+  4:  { label: 'Section 01 · Decision' },
+  5:  { label: 'Section 01 · → Section 02' },
+  6:  { label: 'Section 02 · Human Benchmark' },
+  7:  { label: 'Section 03 · Philosophy' },
+  8:  { label: 'Section 03 · Evaluations' },
+  9:  { label: 'Section 03 · Ablation' },
+  10: { label: 'Section 03 · Backtest' },
+  11: { label: 'Section 03 · Shortcomings' },
 };
 
 let idx = 0;

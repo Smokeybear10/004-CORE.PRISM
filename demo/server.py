@@ -285,6 +285,24 @@ def compute_attribution(req: AttributeRequest) -> AttributeResponse:
 
 @app.get("/")
 def _index() -> FileResponse:
+    """Main demo — PRISM."""
+    return FileResponse(STATIC_DIR / "index_v2.html")
+
+
+@app.get("/prism-mark.svg")
+def _prism_mark() -> FileResponse:
+    return FileResponse(STATIC_DIR / "prism-mark.svg", media_type="image/svg+xml")
+
+
+@app.get("/about")
+def _about() -> FileResponse:
+    """Project explainer + how-to-use walkthrough."""
+    return FileResponse(STATIC_DIR / "about.html")
+
+
+@app.get("/v1")
+def _index_v1() -> FileResponse:
+    """Original v1 demo (Bridgewater stacked layout). Kept for comparison."""
     return FileResponse(STATIC_DIR / "index.html")
 
 
