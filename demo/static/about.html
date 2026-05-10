@@ -12,40 +12,40 @@
   <style>
     /* About-page layout — borrows tokens from styles_v2.css */
     main.about {
-      max-width: 920px;
+      max-width: 1320px;
       margin: 0 auto;
-      padding: 56px 32px 80px;
+      padding: 64px 40px 96px;
     }
     .lede {
-      font: italic 400 22px/1.45 var(--serif);
+      font: italic 400 26px/1.42 var(--serif);
       color: var(--ink-2);
-      max-width: 640px;
-      margin: 0 0 36px;
+      max-width: 920px;
+      margin: 0 0 48px;
     }
     .lede b { color: var(--ink); font-style: normal; font-weight: 600; }
     section.block {
-      margin-top: 48px;
+      margin-top: 64px;
     }
     section.block h2 {
       font: 600 11px var(--mono);
       letter-spacing: 0.24em;
       text-transform: uppercase;
       color: var(--oxblood);
-      margin: 0 0 6px;
+      margin: 0 0 8px;
     }
     section.block h3 {
       font-family: var(--serif);
       font-weight: 500;
-      font-size: 28px;
+      font-size: 32px;
       letter-spacing: -0.015em;
       color: var(--navy);
-      margin: 0 0 16px;
+      margin: 0 0 20px;
     }
     section.block p {
-      font: 400 15px/1.6 var(--sans);
+      font: 400 16px/1.65 var(--sans);
       color: var(--ink-2);
-      max-width: 680px;
-      margin: 0 0 14px;
+      max-width: 920px;
+      margin: 0 0 16px;
     }
     section.block p b { color: var(--ink); font-weight: 600; }
 
@@ -53,20 +53,20 @@
       display: flex;
       flex-direction: column;
       gap: 6px;
-      margin: 18px 0 8px;
-      font: 500 12px var(--mono);
+      margin: 22px 0 8px;
+      font: 500 13px var(--mono);
       color: var(--ink-2);
       background: var(--paper-2);
       border: 1px solid var(--rule);
       border-radius: var(--r-md);
-      padding: 16px 20px;
+      padding: 22px 28px;
     }
     .pipeline .row {
       display: grid;
-      grid-template-columns: 22px 130px 1fr;
-      gap: 14px;
+      grid-template-columns: 28px 160px 1fr;
+      gap: 18px;
       align-items: center;
-      padding: 6px 0;
+      padding: 10px 0;
       border-bottom: 1px dashed var(--rule);
     }
     .pipeline .row:last-child { border-bottom: none; }
@@ -84,7 +84,8 @@
     }
     .pipeline .desc {
       font-family: var(--sans);
-      font-size: 13.5px;
+      font-size: 14.5px;
+      line-height: 1.6;
       color: var(--ink-2);
     }
     .pipeline .desc code {
@@ -98,27 +99,27 @@
 
     .dims, .sources {
       display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
-      gap: 10px;
-      margin: 16px 0;
+      grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+      gap: 12px;
+      margin: 22px 0;
     }
     .dim, .src-row {
       background: #fff;
       border: 1px solid var(--rule);
       border-left: 5px solid var(--c, var(--ink-dim));
       border-radius: var(--r-sm);
-      padding: 10px 14px;
+      padding: 16px 20px;
     }
     .dim .name, .src-row .name {
-      font: 500 14px var(--serif);
+      font: 500 16px var(--serif);
       color: var(--navy);
     }
     .dim .sub, .src-row .sub {
-      font: 500 10.5px var(--mono);
-      letter-spacing: 0.08em;
+      font: 500 11px var(--mono);
+      letter-spacing: 0.1em;
       color: var(--ink-q);
       text-transform: uppercase;
-      margin-top: 2px;
+      margin-top: 4px;
     }
     .dim.demand                 { --c: var(--d-demand); }
     .dim.pricing                { --c: var(--d-pricing); }
@@ -138,34 +139,36 @@
       list-style: none;
       counter-reset: step;
       padding: 0;
-      margin: 18px 0 0;
+      margin: 24px 0 0;
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(380px, 1fr));
+      gap: 12px;
     }
     ol.steps li {
       counter-increment: step;
       position: relative;
-      padding: 14px 14px 14px 56px;
+      padding: 22px 24px 22px 68px;
       background: var(--paper-2);
       border: 1px solid var(--rule);
       border-radius: var(--r-sm);
-      margin-bottom: 8px;
     }
     ol.steps li::before {
       content: counter(step);
       position: absolute;
-      left: 16px;
-      top: 14px;
-      font: 700 18px var(--serif);
+      left: 22px;
+      top: 22px;
+      font: 700 22px var(--serif);
       color: var(--oxblood);
-      width: 28px;
+      width: 32px;
       text-align: center;
     }
     ol.steps li .what {
-      font: 500 15px var(--serif);
+      font: 500 17px var(--serif);
       color: var(--navy);
-      margin-bottom: 4px;
+      margin-bottom: 6px;
     }
     ol.steps li .how {
-      font: 400 13px/1.5 var(--sans);
+      font: 400 14px/1.55 var(--sans);
       color: var(--ink-2);
     }
     ol.steps li .how code {
@@ -469,25 +472,25 @@
     .story-row {
       display: grid;
       grid-template-columns: repeat(3, 1fr);
-      gap: 14px;
-      margin-top: 16px;
+      gap: 18px;
+      margin-top: 28px;
     }
     @media (max-width: 800px) { .story-row { grid-template-columns: 1fr; } }
     .story-card {
       background: var(--paper-2);
       border: 1px solid var(--rule);
       border-radius: var(--r-md);
-      padding: 16px 18px;
+      padding: 24px 26px;
     }
     .story-card .lbl {
-      font: 600 10px var(--mono);
+      font: 600 11px var(--mono);
       letter-spacing: 0.22em;
       text-transform: uppercase;
       color: var(--oxblood);
-      margin-bottom: 8px;
+      margin-bottom: 12px;
     }
     .story-card .body {
-      font: 400 13.5px/1.55 var(--serif);
+      font: 400 15px/1.6 var(--serif);
       color: var(--ink);
     }
     .story-card .body strong { color: var(--oxblood); font-weight: 600; }
@@ -598,25 +601,25 @@
     }
 
     .credits {
-      margin-top: 56px;
-      padding: 22px 26px;
+      margin-top: 32px;
+      padding: 28px 32px;
       background: var(--paper-2);
       border: 1px solid var(--rule);
       border-radius: var(--r-md);
     }
     .credits .row {
       display: grid;
-      grid-template-columns: 130px 1fr;
-      gap: 16px;
-      padding: 6px 0;
+      grid-template-columns: 200px 1fr;
+      gap: 24px;
+      padding: 12px 0;
       border-bottom: 1px dashed var(--rule);
       font-family: var(--sans);
-      font-size: 13.5px;
+      font-size: 15px;
       color: var(--ink-2);
     }
     .credits .row:last-child { border-bottom: none; }
     .credits .row .lbl {
-      font: 600 10.5px var(--mono);
+      font: 600 11px var(--mono);
       letter-spacing: 0.18em;
       color: var(--ink-q);
       text-transform: uppercase;
@@ -649,16 +652,16 @@
 <main class="about">
 
   <p class="lede">
-    PRISM is a <b>financial historian</b>. Given a stock that moved unusually big on a given day, it ingests the news, SEC filings, earnings transcripts, and 13F holdings around that move, and asks Claude to attribute the move across five dimensions — each score citing the exact evidence chunks that drove it. Then it decides: is this move <b>structural</b> (lean with it, it'll persist) or <b>transient</b> (fade it, it'll revert)?
+    PRISM decomposes individual equity price moves into five attributable dimensions — <b>demand, pricing, competitive dynamics, management credibility, and macro exposure</b> — using qualitative evidence dated within the event window. Every dimensional score is grounded in a specific evidence chunk; uncited scores are dropped at validation. The decomposition produces a <b>structural</b> or <b>transient</b> classification that drives a lean-or-fade verdict, evaluated against four baselines on a five-day forward return.
   </p>
 
 
   <!-- ───────────── What it is ───────────── -->
   <section class="block">
-    <h2>§ 01 · What PRISM is</h2>
-    <h3>The metaphor: light through a prism</h3>
+    <h2>§ 01 · Method</h2>
+    <h3>Dimensional decomposition over qualitative evidence</h3>
     <p>
-      White light enters a prism and refracts into a rainbow of colored beams. PRISM borrows that idea for stocks: a single price move is the white light, and the model decomposes it into <b>five colored beams</b> — each one a dimension of cause, each beam's thickness reflecting how much that dimension drove the move.
+      Sentiment models compress qualitative text into a single scalar. PRISM resists that compression. The same evidence is decomposed across five orthogonal dimensions — chosen to map cleanly onto causal hypotheses about why a stock moved — and scored independently. The vector of dimensional weights, not their sum, is the unit of analysis.
     </p>
     <div class="dims">
       <div class="dim demand">
@@ -683,15 +686,15 @@
       </div>
     </div>
     <p>
-      This isn't sentiment analysis. We're decomposing qualitative language into measurable dimensions that evolve over time, and testing whether that decomposition predicts whether a move persists or reverts.
+      The empirical question: does decomposed attribution predict mean-reversion versus continuation more reliably than scalar sentiment, naive momentum, or random assignment? Section 06 reports five-day forward returns against those baselines.
     </p>
   </section>
 
 
   <!-- ───────────── How it works ───────────── -->
   <section class="block">
-    <h2>§ 02 · How it works</h2>
-    <h3>The pipeline, end-to-end</h3>
+    <h2>§ 02 · Pipeline</h2>
+    <h3>Eight stages from raw filings to forward PnL</h3>
     <div class="pipeline">
       <div class="row">
         <span class="num">1.</span><span class="stage">Ingest</span>
@@ -699,7 +702,7 @@
       </div>
       <div class="row">
         <span class="num">2.</span><span class="stage">Detect</span>
-        <span class="desc">Flag every day where the absolute return exceeded 3× trailing-60d realized vol. About 18 events per ticker over 5 years.</span>
+        <span class="desc">Flag every day where absolute return exceeded 3× trailing-60d realized volatility. Approximately 18 events per ticker over five years.</span>
       </div>
       <div class="row">
         <span class="num">3.</span><span class="stage">Join</span>
@@ -707,23 +710,23 @@
       </div>
       <div class="row">
         <span class="num">4.</span><span class="stage">Attribute</span>
-        <span class="desc">Send the chunks to Claude via a <code>tool_use</code> structured-output call. Claude returns the 5-dimension attribution with chunk-id citations on every score.</span>
+        <span class="desc">Submit the chunks to a <code>tool_use</code> structured-output call. The model returns the five-dimension attribution with required chunk-id citations on every score.</span>
       </div>
       <div class="row">
         <span class="num">5.</span><span class="stage">Coherence</span>
-        <span class="desc">Run a second Claude pass (Haiku) that drops any dimension whose rationale doesn't match its citations. Anti-hallucination gate.</span>
+        <span class="desc">A second model pass audits whether each dimension's rationale matches its citations and drops any dimension that fails. Hallucination gate.</span>
       </div>
       <div class="row">
         <span class="num">6.</span><span class="stage">Decide</span>
-        <span class="desc">Classify the move as <b>structural</b>, <b>transient</b>, <b>mixed</b>, or <b>unclear</b>. Convert to a lean / fade / skip verdict via three different strategies.</span>
+        <span class="desc">Classify the move as <b>structural</b>, <b>transient</b>, <b>mixed</b>, or <b>unclear</b>. Three strategies map the classification to a lean / fade / skip verdict.</span>
       </div>
       <div class="row">
         <span class="num">7.</span><span class="stage">Backtest</span>
-        <span class="desc">Apply the verdict to a 5-day forward window. Compare model's PnL against four baselines (naive-lean, always-fade, random, sentiment-only).</span>
+        <span class="desc">Apply each verdict over a five-day forward window. Compare against four baselines: naive-lean, always-fade, random, and sentiment-only.</span>
       </div>
       <div class="row">
         <span class="num">8.</span><span class="stage">Cache</span>
-        <span class="desc">Memoize every API response by <code>(ticker, date, sources)</code> so the demo never bills the API twice for the same click.</span>
+        <span class="desc">Memoize every API response by <code>(ticker, date, sources)</code>. Re-evaluating the same configuration is free and deterministic.</span>
       </div>
     </div>
   </section>
@@ -731,9 +734,9 @@
 
   <!-- ───────────── System architecture diagram (full-width breakout) ───────────── -->
   <section class="block arch-section">
-    <h2>§ 03 · The components, interconnected</h2>
-    <h3>Every box, every wire</h3>
-    <p>Hand-laid graph of the seven lanes, the modules in each, and how a single price move flows from raw HuggingFace parquet on the left to a clickable verdict in the browser on the right. Scroll horizontally if you're on a narrow screen.</p>
+    <h2>§ 03 · Module graph</h2>
+    <h3>Seven lanes, end to end</h3>
+    <p>Static graph of the seven lanes, the modules within each, and the data path from raw HuggingFace parquet through to a structured response in the browser. Read left to right. Scroll horizontally on narrow viewports.</p>
 
     <div class="arch-legend" aria-label="Lane colors">
       <span class="leg"><span class="sw" style="background:var(--c-external)"></span>External</span>
@@ -1051,16 +1054,16 @@
 
     <div class="story-row">
       <div class="story-card">
-        <div class="lbl">Movement 1 · what comes in</div>
-        <div class="body">Five external sources fan out into <strong>eight evidence streams</strong>. Every stream emits typed <em>TextChunks</em> with stable IDs and an enforced <em>publication_date ≤ as_of</em> filter. Cache to disk so re-runs are free.</div>
+        <div class="lbl">Stage I · Inputs</div>
+        <div class="body">Five external sources are normalized into <strong>eight typed evidence streams</strong>. Every stream emits <em>TextChunks</em> with stable IDs under an enforced <em>publication_date ≤ as_of</em> filter. Disk cache eliminates repeated network calls.</div>
       </div>
       <div class="story-card">
-        <div class="lbl">Movement 2 · what the model does</div>
-        <div class="body">A flagged price move and its windowed evidence go into a single Anthropic <strong>tool_use</strong> call. The schema forces five dimensions, each with cited chunks. Validation drops uncited dims; a Haiku second pass audits coherence. The output is a structured <em>Attribution</em>.</div>
+        <div class="lbl">Stage II · Attribution</div>
+        <div class="body">The flagged move and its windowed evidence enter a single <strong>tool_use</strong> structured-output call. The schema requires five dimensions and citations on each. Validation drops uncited scores; a coherence pass audits rationale-citation alignment. Output is a typed <em>Attribution</em>.</div>
       </div>
       <div class="story-card">
-        <div class="lbl">Movement 3 · what comes out</div>
-        <div class="body">Three strategies turn the Attribution into <strong>lean / fade / skip</strong>. A backtest scores each verdict against four baselines on a 5-day forward return. The full response is cached; FastAPI serves it; the browser renders the prism with every claim backed by a clickable quote.</div>
+        <div class="lbl">Stage III · Verdict</div>
+        <div class="body">Three strategies convert the Attribution to a <strong>lean / fade / skip</strong> call. The backtest scores each verdict against four baselines on a five-day forward return. Responses are cached; FastAPI serves them; the browser renders the decomposition with every claim linked to its source quote.</div>
       </div>
     </div>
   </section>
@@ -1068,10 +1071,10 @@
 
   <!-- ───────────── Eight evidence streams ───────────── -->
   <section class="block">
-    <h2>§ 04 · The eight evidence streams</h2>
-    <h3>What the model is allowed to see</h3>
+    <h2>§ 04 · Source taxonomy</h2>
+    <h3>Eight typed evidence streams</h3>
     <p>
-      Each chunk is tagged with one source type. You can toggle any source on or off in the demo to see how the attribution shifts when the model has less to work with. Same five colors as the dimensions — sources that match a dimension share a hue.
+      Every evidence chunk is labeled by source. The demo exposes a per-source toggle so attributions can be regenerated under restricted information sets — the basis for the additive ablation results in Section 06. Source colors mirror the dimension palette where a stream maps cleanly to a dimension.
     </p>
     <div class="sources">
       <div class="src-row news"><div class="name">News</div><div class="sub">Yahoo + Finnhub</div></div>
@@ -1088,40 +1091,40 @@
 
   <!-- ───────────── How to use ───────────── -->
   <section class="block">
-    <h2>§ 05 · How to use the demo</h2>
-    <h3>An eight-step walkthrough</h3>
+    <h2>§ 05 · Operator manual</h2>
+    <h3>Eight steps to a complete decomposition</h3>
     <ol class="steps">
       <li>
-        <div class="what">Pick a ticker.</div>
-        <div class="how">Pills at the top of the masthead — currently <code>ABT</code>, <code>ACU</code>, <code>AIR</code>, <code>AMD</code>, <code>APD</code>. Click one. The page populates with that company's 5-year tape and auto-selects the largest-magnitude flagged move.</div>
+        <div class="what">Select a ticker.</div>
+        <div class="how">Masthead pills: <code>ABT</code>, <code>ACU</code>, <code>AIR</code>, <code>AMD</code>, <code>APD</code>. The page loads the five-year tape and selects the largest-magnitude flagged event by default.</div>
       </li>
       <li>
-        <div class="what">Pick a move.</div>
-        <div class="how">The chart shows the close price as a line, with <b>flagged dots</b> at every day that exceeded the 3-sigma threshold — green dots for rallies, red for sell-offs. Click any dot to focus that move.</div>
+        <div class="what">Select an event.</div>
+        <div class="how">Closing prices appear as a line. Flagged days (those exceeding the 3σ threshold) are marked: green for rallies, red for sell-offs. Clicking a marker focuses the event.</div>
       </li>
       <li>
-        <div class="what">Read the verdict at a glance.</div>
-        <div class="how">The big italic word in the strip below the chart — <b>Lean.</b> / <b>Fade.</b> / <b>Skip.</b> — is the model's call, color-coded green / red / gray. Underneath it is the strategy that produced it.</div>
+        <div class="what">Read the verdict.</div>
+        <div class="how">Below the chart: <b>Lean.</b> / <b>Fade.</b> / <b>Skip.</b> — color-coded green, red, or gray, with the active strategy named beneath.</div>
       </li>
       <li>
-        <div class="what">Read the attribution (the prism).</div>
-        <div class="how">Centerpiece: incoming-event card on the left → triangular prism in the middle → five colored dim cards on the right. Beam thickness shows how much each dimension drove the move. Each dim card shows the top cited quote and the chunk's id.</div>
+        <div class="what">Read the decomposition.</div>
+        <div class="how">Center column: event card, decomposition diagram, dimension panels. Beam thickness encodes dimensional weight; each panel surfaces the top cited quote and its chunk identifier.</div>
       </li>
       <li>
-        <div class="what">Ablate sources.</div>
-        <div class="how">Bottom-left "Sources" tab has 7 toggle pills. Toggle one off → the model re-runs without that evidence stream → the dim cards and beams update. Watch the attribution shift. This is the demo's "watch the picture sharpen" pitch.</div>
+        <div class="what">Restrict the information set.</div>
+        <div class="how">"Sources" tab — seven toggles, one per evidence stream. Disabling a source triggers re-attribution under the restricted set; dimension panels and beams update. This is the per-event ablation surface.</div>
       </li>
       <li>
-        <div class="what">Read the full evidence.</div>
-        <div class="how">Same card, switch to the "Evidence" tab. Every cited chunk grouped by dimension, color-coded. Click a dim group to expand → click any citation to see the full quote and the model's reasoning.</div>
+        <div class="what">Inspect the cited evidence.</div>
+        <div class="how">"Evidence" tab — every cited chunk, grouped by dimension. Expanding a group reveals each citation's full quote and the model's rationale.</div>
       </li>
       <li>
-        <div class="what">Pick a strategy.</div>
-        <div class="how">Bottom-right "Strategies" card has three: <b>Fundamental vs Non</b>, <b>Expected vs Realized</b>, <b>Hybrid</b>. Click a row to make it active. The "What the model concluded" panel rewrites in plain English.</div>
+        <div class="what">Switch strategies.</div>
+        <div class="how">"Strategies" card — three options: <b>Fundamental vs Non</b>, <b>Expected vs Realized</b>, <b>Hybrid</b>. The conclusion panel restates the verdict under the selected mapping.</div>
       </li>
       <li>
-        <div class="what">Close the loop.</div>
-        <div class="how">Below the bottom row: the <b>5-day forward PnL</b> card. Equity curves show what would have happened if you'd traded each flagged event using the model's verdict — versus four baselines. Then the <b>Eval harness</b> strip at the bottom shows hand-authored ground-truth cases and how often the model got them right.</div>
+        <div class="what">Review forward returns.</div>
+        <div class="how">The <b>5-day forward PnL</b> card plots equity curves for the model verdict against four baselines on the flagged event set. The eval-harness strip below reports hand-labeled ground-truth cases and the model's hit rate against them.</div>
       </li>
     </ol>
   </section>
@@ -1129,9 +1132,9 @@
 
   <!-- ───────────── Closing the loop · PnL ───────────── -->
   <section class="block">
-    <h2>§ 06 · Closing the loop</h2>
-    <h3>Did the calls actually pay?</h3>
-    <p>For each flagged move we trade the model's verdict over a 5-day forward window, then compare against four mandated baselines. <em>The structured-attribution signal must beat all four to claim it's doing real work.</em> Numbers below are pulled live from the AMD bundle.</p>
+    <h2>§ 06 · Forward returns</h2>
+    <h3>Five-day forward PnL versus four baselines</h3>
+    <p>For each flagged event the model's verdict drives a five-day forward sleeve. Four baselines run the same event set under identical notional: naive-lean, always-fade, random, and sentiment-only. <em>The attribution signal claims work only when it dominates every baseline on hit rate and Sharpe.</em> Numbers below are pulled live from the AMD bundle.</p>
 
     <div class="pnl-card" id="pnl-card">
       <div class="pnl-h">
@@ -1197,13 +1200,13 @@
 
   <!-- ───────────── Credits ───────────── -->
   <section class="block">
-    <h2>§ 07 · Built for</h2>
-    <h3>Bridgewater AI Hackathon</h3>
+    <h2>§ 07 · Authors and stack</h2>
+    <h3>Bridgewater AI Hackathon · 2026</h3>
     <div class="credits">
-      <div class="row"><span class="lbl">Prices · backbone</span><span>Srilekha — <code>ingestion/prices/</code></span></div>
+      <div class="row"><span class="lbl">Price backbone</span><span>Srilekha — <code>ingestion/prices/</code></span></div>
       <div class="row"><span class="lbl">SEC filings</span><span>Sophia — <code>ingestion/sec/</code></span></div>
-      <div class="row"><span class="lbl">13F + idiosyncratic</span><span>Henry — <code>ingestion/idiosyncratic/</code>, <code>ingestion/events/</code></span></div>
-      <div class="row"><span class="lbl">News · model · demo</span><span>Thomas — <code>ingestion/earnings_news/</code>, <code>model/attribution/</code>, <code>demo/</code></span></div>
+      <div class="row"><span class="lbl">13F · idiosyncratic events</span><span>Henry — <code>ingestion/idiosyncratic/</code>, <code>ingestion/events/</code></span></div>
+      <div class="row"><span class="lbl">News · attribution · demo</span><span>Thomas — <code>ingestion/earnings_news/</code>, <code>model/attribution/</code>, <code>demo/</code></span></div>
       <div class="row"><span class="lbl">Model</span><span><code>claude-opus-4-7</code> for attribution · <code>claude-haiku-4-5</code> for coherence</span></div>
       <div class="row"><span class="lbl">Stack</span><span>Python · FastAPI · Pydantic · HuggingFace · pyarrow · Plotly · vanilla JS</span></div>
     </div>

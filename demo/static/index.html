@@ -4,6 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>PRISM — Persistence Reasoning over Idiosyncratic Stock Moves</title>
+  <link rel="icon" type="image/svg+xml" href="/prism-mark.svg">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&family=Source+Serif+4:ital,opsz,wght@0,8..60,400;0,8..60,500;0,8..60,600;0,8..60,700;1,8..60,400;1,8..60,500;1,8..60,600&display=swap" rel="stylesheet">
@@ -153,17 +154,15 @@
       transition: transform 200ms;
     }
     .mast-link:hover .arrow { transform: translateX(3px); }
-    .prism-spectrum {
+    .mast-mark {
       display: inline-flex;
-      gap: 2px;
+      width: 22px;
+      height: 22px;
+      margin-right: 10px;
       vertical-align: middle;
-      margin-left: 14px;
+      color: var(--navy);
     }
-    .prism-spectrum > span {
-      display: block;
-      width: 4px;
-      height: 16px;
-    }
+    .mast-mark svg { width: 100%; height: 100%; display: block; }
     .mast-meta {
       font-family: var(--serif);
       font-style: italic;
@@ -1805,14 +1804,10 @@
   <div class="masthead-inner">
     <div class="mast-title">
       <span class="mast-name">
-        PRISM
-        <span class="prism-spectrum">
-          <span style="background:#C8442C"></span>
-          <span style="background:#E89B4A"></span>
-          <span style="background:#D4B85A"></span>
-          <span style="background:#5A8DA8"></span>
-          <span style="background:#3D4A6B"></span>
+        <span class="mast-mark" aria-hidden="true">
+          <svg viewBox="0 0 64 64"><g fill="currentColor"><rect x="10" y="10" width="44" height="6" rx="0.5"/><rect x="10" y="18" width="40" height="6" rx="0.5"/><rect x="10" y="26" width="36" height="6" rx="0.5"/><rect x="10" y="34" width="11" height="6" rx="0.5"/><rect x="10" y="42" width="11" height="12" rx="0.5"/></g></svg>
         </span>
+        PRISM<span class="dot">.</span>
       </span>
       <span class="mast-meta" id="mast-meta">Persistence Reasoning over Idiosyncratic Stock Moves</span>
     </div>
