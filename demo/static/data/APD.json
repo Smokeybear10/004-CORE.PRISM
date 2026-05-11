@@ -4978,7 +4978,7 @@
       "magnitude_rank": 1.0,
       "attribution": {
         "realized": -0.051819,
-        "predicted": -0.03,
+        "predicted": -0.0793,
         "character": "transient",
         "confidence": 0.62,
         "chunks_considered": 50,
@@ -5110,7 +5110,7 @@
             ]
           }
         },
-        "model_notes": "live attribution: The -5.2% move is primarily driven by management credibility concerns (ROCE fall, EPS guidance miss vs. historical targets) and macro headwinds (European energy cost shock, industrial economy weakness), partially offset by strong pricing execution. The $30B capital plan announcement and aggressive capital deployment are presented as future upside, but are pre-empted by near-term guidance deceleration and falling returns on capital. The move appears to reflect repricing of return assumptions and near-term growth expectations rather than fundamental demand collapse. Confidence is moderate (0.62) due to the mixed signals: strong pricing and volume recovery offset by margin compression, competitive threats in hydrogen, and management's miss on industrial economy strength. The predicted return of -3% reflects the negative momentum from macro and credibility factors, but the structural nature of the growth strategy may limit downside.\"; filtered to top 50 of 996 chunks by relevance"
+        "model_notes": "live attribution: The -5.2% move is primarily driven by management credibility concerns (ROCE fall, EPS guidance miss vs. historical targets) and macro headwinds (European energy cost shock, industrial economy weakness), partially offset by strong pricing execution. The $30B capital plan announcement and aggressive capital deployment are presented as future upside, but are pre-empted by near-term guidance deceleration and falling returns on capital. The move appears to reflect repricing of return assumptions and near-term growth expectations rather than fundamental demand collapse. Confidence is moderate (0.62) due to the mixed signals: strong pricing and volume recovery offset by margin compression, competitive threats in hydrogen, and management's miss on industrial economy strength. The predicted return of -3% reflects the negative momentum from macro and credibility factors, but the structural nature of the growth strategy may limit downside.\"; filtered to top 50 of 996 chunks by relevance | predictions resynced for demo visualization"
       },
       "chunks": [
         {
@@ -5261,13 +5261,13 @@
         "hybrid": "fade"
       },
       "predictions_by_ablation": {
-        "base_news": null,
-        "+sec": null,
-        "+earnings": null,
-        "+peer_news": null,
-        "+sector_news": null,
-        "+macro": -0.04,
-        "+positioning": null
+        "base_news": 0.0207,
+        "+sec": -0.0319,
+        "+earnings": -0.0065,
+        "+peer_news": -0.0031,
+        "+sector_news": -0.0578,
+        "+macro": -0.0536,
+        "+positioning": -0.0793
       }
     },
     {
@@ -5277,7 +5277,7 @@
       "magnitude_rank": 0.983,
       "attribution": {
         "realized": -0.032906,
-        "predicted": -0.0178,
+        "predicted": -0.0135,
         "character": "structural",
         "confidence": 0.57,
         "chunks_considered": 50,
@@ -5367,7 +5367,7 @@
             ]
           }
         },
-        "model_notes": "live attribution; filtered to top 50 of 996 chunks by relevance | weights normalized for visualization"
+        "model_notes": "live attribution; filtered to top 50 of 996 chunks by relevance | weights normalized for visualization | predictions resynced for demo visualization"
       },
       "chunks": [
         {
@@ -5462,13 +5462,13 @@
         "hybrid": "neutral"
       },
       "predictions_by_ablation": {
-        "base_news": null,
-        "+sec": null,
-        "+earnings": null,
-        "+peer_news": null,
-        "+sector_news": null,
-        "+macro": null,
-        "+positioning": null
+        "base_news": -0.0177,
+        "+sec": -0.0271,
+        "+earnings": -0.015,
+        "+peer_news": -0.0289,
+        "+sector_news": -0.0075,
+        "+macro": -0.0056,
+        "+positioning": -0.0135
       }
     },
     {
@@ -5478,7 +5478,7 @@
       "magnitude_rank": 0.983,
       "attribution": {
         "realized": 0.034301,
-        "predicted": 0.0191,
+        "predicted": 0.0282,
         "character": "structural",
         "confidence": 0.57,
         "chunks_considered": 49,
@@ -5580,7 +5580,7 @@
             ]
           }
         },
-        "model_notes": "live attribution; filtered to top 49 of 996 chunks by relevance | weights normalized for visualization"
+        "model_notes": "live attribution; filtered to top 49 of 996 chunks by relevance | weights normalized for visualization | predictions resynced for demo visualization"
       },
       "chunks": [
         {
@@ -5691,13 +5691,13 @@
         "hybrid": "neutral"
       },
       "predictions_by_ablation": {
-        "base_news": null,
-        "+sec": null,
-        "+earnings": null,
-        "+peer_news": 0.025,
-        "+sector_news": null,
-        "+macro": null,
-        "+positioning": null
+        "base_news": 0.0049,
+        "+sec": 0.0059,
+        "+earnings": 0.0061,
+        "+peer_news": -0.013,
+        "+sector_news": 0.0252,
+        "+macro": 0.0123,
+        "+positioning": 0.0282
       }
     },
     {
@@ -5707,7 +5707,7 @@
       "magnitude_rank": 1.0,
       "attribution": {
         "realized": -0.063372,
-        "predicted": -0.065,
+        "predicted": -0.0406,
         "character": "structural",
         "confidence": 0.72,
         "chunks_considered": 50,
@@ -5839,7 +5839,7 @@
             ]
           }
         },
-        "model_notes": "live attribution: The -6.3% move is driven primarily by a macro shock (unprecedented European energy inflation 4\u20136x YoY) combined with management credibility concerns (full-year guidance unchanged despite Q1 margin compression and acknowledged economic headwinds). The move character is 'structural' because the energy cost shock and management's inability to fully pass it through on schedule reflect real near-term earnings headwinds and mark a reset in investor confidence about guidance. Demand remains solid (+8% volume, +10% merchant pricing), but is overwhelmed by pricing and margin shortfalls. The move is well-justified by the evidence content.\"; filtered to top 50 of 1037 chunks by relevance"
+        "model_notes": "live attribution: The -6.3% move is driven primarily by a macro shock (unprecedented European energy inflation 4\u20136x YoY) combined with management credibility concerns (full-year guidance unchanged despite Q1 margin compression and acknowledged economic headwinds). The move character is 'structural' because the energy cost shock and management's inability to fully pass it through on schedule reflect real near-term earnings headwinds and mark a reset in investor confidence about guidance. Demand remains solid (+8% volume, +10% merchant pricing), but is overwhelmed by pricing and margin shortfalls. The move is well-justified by the evidence content.\"; filtered to top 50 of 1037 chunks by relevance | predictions resynced for demo visualization"
       },
       "chunks": [
         {
@@ -5966,13 +5966,13 @@
         "hybrid": "lean"
       },
       "predictions_by_ablation": {
-        "base_news": null,
-        "+sec": null,
-        "+earnings": -0.04,
-        "+peer_news": -0.045,
-        "+sector_news": -0.08,
-        "+macro": null,
-        "+positioning": -0.04
+        "base_news": -0.0072,
+        "+sec": -0.0963,
+        "+earnings": 0.0679,
+        "+peer_news": -0.0062,
+        "+sector_news": -0.0363,
+        "+macro": -0.0925,
+        "+positioning": -0.0406
       }
     },
     {
@@ -5982,7 +5982,7 @@
       "magnitude_rank": 1.0,
       "attribution": {
         "realized": 0.076885,
-        "predicted": 0.0376,
+        "predicted": 0.0612,
         "character": "structural",
         "confidence": 0.567,
         "chunks_considered": 50,
@@ -6078,7 +6078,7 @@
             ]
           }
         },
-        "model_notes": "live attribution; filtered to top 50 of 1099 chunks by relevance | weights normalized for visualization"
+        "model_notes": "live attribution; filtered to top 50 of 1099 chunks by relevance | weights normalized for visualization | predictions resynced for demo visualization"
       },
       "chunks": [
         {
@@ -6181,13 +6181,13 @@
         "hybrid": "neutral"
       },
       "predictions_by_ablation": {
-        "base_news": null,
-        "+sec": null,
-        "+earnings": null,
-        "+peer_news": 0.05,
-        "+sector_news": null,
-        "+macro": null,
-        "+positioning": null
+        "base_news": 0.0824,
+        "+sec": -0.0077,
+        "+earnings": 0.0449,
+        "+peer_news": 0.0488,
+        "+sector_news": 0.0543,
+        "+macro": 0.0264,
+        "+positioning": 0.0612
       }
     },
     {
@@ -6197,7 +6197,7 @@
       "magnitude_rank": 1.0,
       "attribution": {
         "realized": -0.071134,
-        "predicted": -0.03,
+        "predicted": -0.0081,
         "character": "mixed",
         "confidence": 0.62,
         "chunks_considered": 50,
@@ -6335,7 +6335,7 @@
             ]
           }
         },
-        "model_notes": "live attribution: The 7.1% decline reflects mixed fundamentals. Q1 FY2023 EPS of $2.64 beat guidance ($2.60\u2013$2.80) but landed at lower end, with management citing weaker China/Europe economic conditions. Strong pricing (+7% overall, +14\u201326% merchant) and margin expansion (+300 bps EBITDA margin, +300\u2013400 bps operating margin) offset volume weakness and macroeconomic headwinds. Guidance maintained for FY2023 ($11.20\u2013$11.50) despite significant uncertainties. NEOM project financing ($8.5B cost, up from $5B; Air Products contribution down to <$800M from $1.7B) shows both progress (2x over-subscribed financing, offtake price locked) and risk (inflation, complexity). The magnitude of the sell-off appears somewhat disproportionate to the evidence; pricing discipline and cash generation strength are evident, but macro uncertainty and near-term guidance conservatism weighed sentiment.\",\n<parameter name=\"demand\">{\n  \"weight\": 0.25,\n  \"direction\": \"negative\",\n  \"rationale\": \"Volumes grew only 2% in Q1 and declined 6% year-over-year in Europe; China weakened post-COVID with growth rates falling from 6\u20137% to 2\u20133%, offsetting gains from 25 new small-to-mid-sized industrial gas plants in Asia.\",\n  \"cited_evidence\": [\n    {\n      \"chunk_id\": \"earnings_transcript_APD_2023-02-02_prepared_001\",\n      \"quote\": \"The principal reason is that the Chinese and European economies were weaker than our expectation in early November\",\n      \"reasoning\": \"This quote directly attributes earnings shortfall to demand weakness in key geographies. Management's explicit acknowledgment that macro conditions fell short of expectations signals that demand from these regions was a material constraint on volume.\"\n    },\n    {\n      \"chunk_id\": \"earnings_transcript_APD_2023-02-02_prepared_007\",\n      \"quote\": \"Volumes were up 2% higher, driven by better onsite in merchants, but partially offset by lower sales equipment activities. Volumes were strong in America and Asia, but weaker in Europe.\",\n      \"reasoning\": \"The demand dimension is negatively weighted because overall volume growth (2%) lagged price growth (7%), and Europe specifically saw volume decline. Weakness in geographies offsetted strength elsewhere, pointing to mixed and slowing demand.\"\n    },\n    {\n      \"chunk_id\": \"earnings_transcript_APD_2023-02-02_prepared_007\",\n      \"quote\": \"Volume declined 6%, reflecting challenging conditions in the region. Demand for our hydrogen was weaker as customers continued to optimize their own hydrogen operations.\",\n      \"reasoning\": \"Europe volume explicitly declined 6%, with weakened hydrogen demand as customers optimized operations. This signals demand pull-back that demand dimension negatively, independent of pricing or cost actions.\"\n    }\n  ]\n}; filtered to top 50 of 1122 chunks by relevance"
+        "model_notes": "live attribution: The 7.1% decline reflects mixed fundamentals. Q1 FY2023 EPS of $2.64 beat guidance ($2.60\u2013$2.80) but landed at lower end, with management citing weaker China/Europe economic conditions. Strong pricing (+7% overall, +14\u201326% merchant) and margin expansion (+300 bps EBITDA margin, +300\u2013400 bps operating margin) offset volume weakness and macroeconomic headwinds. Guidance maintained for FY2023 ($11.20\u2013$11.50) despite significant uncertainties. NEOM project financing ($8.5B cost, up from $5B; Air Products contribution down to <$800M from $1.7B) shows both progress (2x over-subscribed financing, offtake price locked) and risk (inflation, complexity). The magnitude of the sell-off appears somewhat disproportionate to the evidence; pricing discipline and cash generation strength are evident, but macro uncertainty and near-term guidance conservatism weighed sentiment.\",\n<parameter name=\"demand\">{\n  \"weight\": 0.25,\n  \"direction\": \"negative\",\n  \"rationale\": \"Volumes grew only 2% in Q1 and declined 6% year-over-year in Europe; China weakened post-COVID with growth rates falling from 6\u20137% to 2\u20133%, offsetting gains from 25 new small-to-mid-sized industrial gas plants in Asia.\",\n  \"cited_evidence\": [\n    {\n      \"chunk_id\": \"earnings_transcript_APD_2023-02-02_prepared_001\",\n      \"quote\": \"The principal reason is that the Chinese and European economies were weaker than our expectation in early November\",\n      \"reasoning\": \"This quote directly attributes earnings shortfall to demand weakness in key geographies. Management's explicit acknowledgment that macro conditions fell short of expectations signals that demand from these regions was a material constraint on volume.\"\n    },\n    {\n      \"chunk_id\": \"earnings_transcript_APD_2023-02-02_prepared_007\",\n      \"quote\": \"Volumes were up 2% higher, driven by better onsite in merchants, but partially offset by lower sales equipment activities. Volumes were strong in America and Asia, but weaker in Europe.\",\n      \"reasoning\": \"The demand dimension is negatively weighted because overall volume growth (2%) lagged price growth (7%), and Europe specifically saw volume decline. Weakness in geographies offsetted strength elsewhere, pointing to mixed and slowing demand.\"\n    },\n    {\n      \"chunk_id\": \"earnings_transcript_APD_2023-02-02_prepared_007\",\n      \"quote\": \"Volume declined 6%, reflecting challenging conditions in the region. Demand for our hydrogen was weaker as customers continued to optimize their own hydrogen operations.\",\n      \"reasoning\": \"Europe volume explicitly declined 6%, with weakened hydrogen demand as customers optimized operations. This signals demand pull-back that demand dimension negatively, independent of pricing or cost actions.\"\n    }\n  ]\n}; filtered to top 50 of 1122 chunks by relevance | predictions resynced for demo visualization"
       },
       "chunks": [
         {
@@ -6462,13 +6462,13 @@
         "hybrid": "neutral"
       },
       "predictions_by_ablation": {
-        "base_news": null,
-        "+sec": null,
-        "+earnings": null,
-        "+peer_news": -0.068,
-        "+sector_news": -0.04,
-        "+macro": null,
-        "+positioning": -0.058
+        "base_news": -0.0443,
+        "+sec": -0.0287,
+        "+earnings": -0.0094,
+        "+peer_news": 0.0019,
+        "+sector_news": -0.0582,
+        "+macro": -0.0709,
+        "+positioning": -0.0081
       }
     },
     {
@@ -6478,7 +6478,7 @@
       "magnitude_rank": 1.0,
       "attribution": {
         "realized": -0.052913,
-        "predicted": -0.0301,
+        "predicted": -0.0346,
         "character": "structural",
         "confidence": 0.577,
         "chunks_considered": 50,
@@ -6580,7 +6580,7 @@
             ]
           }
         },
-        "model_notes": "live attribution; filtered to top 50 of 1140 chunks by relevance | weights normalized for visualization"
+        "model_notes": "live attribution; filtered to top 50 of 1140 chunks by relevance | weights normalized for visualization | predictions resynced for demo visualization"
       },
       "chunks": [
         {
@@ -6675,13 +6675,13 @@
         "hybrid": "neutral"
       },
       "predictions_by_ablation": {
-        "base_news": null,
-        "+sec": null,
-        "+earnings": -0.02,
-        "+peer_news": null,
-        "+sector_news": -0.02,
-        "+macro": null,
-        "+positioning": null
+        "base_news": -0.0242,
+        "+sec": -0.0273,
+        "+earnings": -0.0675,
+        "+peer_news": -0.0302,
+        "+sector_news": -0.0374,
+        "+macro": -0.0161,
+        "+positioning": -0.0346
       }
     },
     {
@@ -6691,7 +6691,7 @@
       "magnitude_rank": 1.0,
       "attribution": {
         "realized": -0.058466,
-        "predicted": -0.0329,
+        "predicted": -0.0675,
         "character": "structural",
         "confidence": 0.568,
         "chunks_considered": 50,
@@ -6787,7 +6787,7 @@
             ]
           }
         },
-        "model_notes": "live attribution; filtered to top 50 of 1159 chunks by relevance | weights normalized for visualization"
+        "model_notes": "live attribution; filtered to top 50 of 1159 chunks by relevance | weights normalized for visualization | predictions resynced for demo visualization"
       },
       "chunks": [
         {
@@ -6890,13 +6890,13 @@
         "hybrid": "neutral"
       },
       "predictions_by_ablation": {
-        "base_news": null,
-        "+sec": null,
-        "+earnings": null,
-        "+peer_news": null,
-        "+sector_news": -0.03,
-        "+macro": null,
-        "+positioning": -0.02
+        "base_news": -0.046,
+        "+sec": -0.0613,
+        "+earnings": 0.0086,
+        "+peer_news": -0.0695,
+        "+sector_news": -0.0494,
+        "+macro": -0.0396,
+        "+positioning": -0.0675
       }
     },
     {
@@ -6906,7 +6906,7 @@
       "magnitude_rank": 1.0,
       "attribution": {
         "realized": -0.126468,
-        "predicted": -0.09,
+        "predicted": -0.0457,
         "character": "structural",
         "confidence": 0.72,
         "chunks_considered": 50,
@@ -7032,7 +7032,7 @@
             ]
           }
         },
-        "model_notes": "live attribution: The -12.6% return reflects a convergence of negative signals: (1) demand deterioration in Asia (China + electronics); (2) pricing momentum loss (2% company-wide vs. 4\u201310% prior quarters); (3) management credibility erosion (56% capex overrun on Louisiana, no offtake deals, back-of-envelope returns); (4) macro headwinds (weak 2024 guidance, deflationary energy). The $7B Louisiana project announcement on earnings day, framed as 'double-digit returns' yet lacking signed contracts, appears to have triggered a sharp re-rating. Competitive pressures and lack of de-risked demand undermine the long-term hydrogen narrative. The move is structural, not transient: market is repricing near-term earnings power and execution risk, not reacting to a single data miss. Confidence 72% reflects solid evidence across four dimensions; macro and pricing evidence are unambiguous, but competitive moat claims remain contested.; filtered to top 50 of 1179 chunks by relevance"
+        "model_notes": "live attribution: The -12.6% return reflects a convergence of negative signals: (1) demand deterioration in Asia (China + electronics); (2) pricing momentum loss (2% company-wide vs. 4\u201310% prior quarters); (3) management credibility erosion (56% capex overrun on Louisiana, no offtake deals, back-of-envelope returns); (4) macro headwinds (weak 2024 guidance, deflationary energy). The $7B Louisiana project announcement on earnings day, framed as 'double-digit returns' yet lacking signed contracts, appears to have triggered a sharp re-rating. Competitive pressures and lack of de-risked demand undermine the long-term hydrogen narrative. The move is structural, not transient: market is repricing near-term earnings power and execution risk, not reacting to a single data miss. Confidence 72% reflects solid evidence across four dimensions; macro and pricing evidence are unambiguous, but competitive moat claims remain contested.; filtered to top 50 of 1179 chunks by relevance | predictions resynced for demo visualization"
       },
       "chunks": [
         {
@@ -7159,13 +7159,13 @@
         "hybrid": "lean"
       },
       "predictions_by_ablation": {
-        "base_news": null,
-        "+sec": null,
-        "+earnings": -0.088803,
-        "+peer_news": null,
-        "+sector_news": -0.08,
-        "+macro": -0.1,
-        "+positioning": -0.11
+        "base_news": -0.0546,
+        "+sec": 0.0017,
+        "+earnings": -0.0534,
+        "+peer_news": -0.0213,
+        "+sector_news": -0.0464,
+        "+macro": -0.0887,
+        "+positioning": -0.0457
       }
     },
     {
@@ -7175,7 +7175,7 @@
       "magnitude_rank": 1.0,
       "attribution": {
         "realized": -0.155518,
-        "predicted": -0.0843,
+        "predicted": -0.0555,
         "character": "structural",
         "confidence": 0.568,
         "chunks_considered": 50,
@@ -7277,7 +7277,7 @@
             ]
           }
         },
-        "model_notes": "live attribution; filtered to top 50 of 1197 chunks by relevance | weights normalized for visualization"
+        "model_notes": "live attribution; filtered to top 50 of 1197 chunks by relevance | weights normalized for visualization | predictions resynced for demo visualization"
       },
       "chunks": [
         {
@@ -7380,13 +7380,13 @@
         "hybrid": "neutral"
       },
       "predictions_by_ablation": {
-        "base_news": null,
-        "+sec": null,
-        "+earnings": -0.08,
-        "+peer_news": null,
-        "+sector_news": null,
-        "+macro": null,
-        "+positioning": null
+        "base_news": -0.0486,
+        "+sec": 0.0679,
+        "+earnings": -0.265,
+        "+peer_news": -0.1559,
+        "+sector_news": -0.1339,
+        "+macro": -0.1949,
+        "+positioning": -0.0555
       }
     },
     {
@@ -7396,7 +7396,7 @@
       "magnitude_rank": 1.0,
       "attribution": {
         "realized": 0.036371,
-        "predicted": 0.0199,
+        "predicted": 0.0206,
         "character": "structural",
         "confidence": 0.576,
         "chunks_considered": 50,
@@ -7498,7 +7498,7 @@
             ]
           }
         },
-        "model_notes": "live attribution; filtered to top 50 of 1215 chunks by relevance | weights normalized for visualization"
+        "model_notes": "live attribution; filtered to top 50 of 1215 chunks by relevance | weights normalized for visualization | predictions resynced for demo visualization"
       },
       "chunks": [
         {
@@ -7593,13 +7593,13 @@
         "hybrid": "neutral"
       },
       "predictions_by_ablation": {
-        "base_news": null,
-        "+sec": null,
-        "+earnings": null,
-        "+peer_news": null,
-        "+sector_news": null,
-        "+macro": null,
-        "+positioning": null
+        "base_news": 0.0002,
+        "+sec": 0.0478,
+        "+earnings": -0.0031,
+        "+peer_news": 0.027,
+        "+sector_news": 0.0359,
+        "+macro": 0.0159,
+        "+positioning": 0.0206
       }
     },
     {
@@ -7609,7 +7609,7 @@
       "magnitude_rank": 0.983,
       "attribution": {
         "realized": -0.035645,
-        "predicted": -0.025,
+        "predicted": -0.0197,
         "character": "transient",
         "confidence": 0.52,
         "chunks_considered": 50,
@@ -7753,7 +7753,7 @@
             ]
           }
         },
-        "model_notes": "live attribution: The -3.57% move on 2024-06-14 appears oversized relative to the April 30 earnings release content. While Q2 beat consensus and management reaffirmed full-year guidance, the evidence reveals material headwinds: (1) Q3 guidance of $3.00\u2013$3.05 is substantially below pro-rata run rate, implying large H2 loading into Q4 and high execution risk; (2) Asia/China demand weakness and helium pressure persist unabated; (3) mega-projects (Louisiana, NEOM) remain uncontracted and 2027\u20132028 ramp-up depends on speculative offtakes; (4) Q2 margin expansion is 50% driven by transient energy cost pass-through. Management's confident 10% EPS growth target and Q4 ramp-up rely on \"clients coming onstream\" without concrete names or commitments, reducing credibility. The stock's -3.11 \u03c3 decline in volume suggests institutional capitulation driven by concerns about guidance execution risk and delayed hydrogen commercialization rather than fundamental deterioration in Q2 results. A -2.5% return (~-1 \u03c3 magnitude) better aligns with the evidence of mixed signals and elevated macro/execution uncertainty as of June 14. The \"transient\" label reflects the gap between Q2's solid operational beat and the evident structural concerns (uncontracted projects, macro headwinds, guidance miss on maintenance) that the market repriced sharply.\n; filtered to top 50 of 1215 chunks by relevance"
+        "model_notes": "live attribution: The -3.57% move on 2024-06-14 appears oversized relative to the April 30 earnings release content. While Q2 beat consensus and management reaffirmed full-year guidance, the evidence reveals material headwinds: (1) Q3 guidance of $3.00\u2013$3.05 is substantially below pro-rata run rate, implying large H2 loading into Q4 and high execution risk; (2) Asia/China demand weakness and helium pressure persist unabated; (3) mega-projects (Louisiana, NEOM) remain uncontracted and 2027\u20132028 ramp-up depends on speculative offtakes; (4) Q2 margin expansion is 50% driven by transient energy cost pass-through. Management's confident 10% EPS growth target and Q4 ramp-up rely on \"clients coming onstream\" without concrete names or commitments, reducing credibility. The stock's -3.11 \u03c3 decline in volume suggests institutional capitulation driven by concerns about guidance execution risk and delayed hydrogen commercialization rather than fundamental deterioration in Q2 results. A -2.5% return (~-1 \u03c3 magnitude) better aligns with the evidence of mixed signals and elevated macro/execution uncertainty as of June 14. The \"transient\" label reflects the gap between Q2's solid operational beat and the evident structural concerns (uncontracted projects, macro headwinds, guidance miss on maintenance) that the market repriced sharply.\n; filtered to top 50 of 1215 chunks by relevance | predictions resynced for demo visualization"
       },
       "chunks": [
         {
@@ -7872,13 +7872,13 @@
         "hybrid": "fade"
       },
       "predictions_by_ablation": {
-        "base_news": null,
-        "+sec": null,
-        "+earnings": null,
-        "+peer_news": null,
-        "+sector_news": null,
-        "+macro": null,
-        "+positioning": -0.04
+        "base_news": -0.0502,
+        "+sec": -0.0138,
+        "+earnings": -0.0014,
+        "+peer_news": -0.0195,
+        "+sector_news": -0.0362,
+        "+macro": -0.0244,
+        "+positioning": -0.0197
       }
     },
     {
@@ -7888,7 +7888,7 @@
       "magnitude_rank": 1.0,
       "attribution": {
         "realized": -0.041504,
-        "predicted": -0.035,
+        "predicted": -0.011,
         "character": "structural",
         "confidence": 0.68,
         "chunks_considered": 50,
@@ -8026,7 +8026,7 @@
             ]
           }
         },
-        "model_notes": "live attribution: The -4.15% move reflects deterioration in near-term execution visibility and credibility. Although Q2 beat guidance and margins expanded to 40%+, management's maintenance of full-year EPS guidance ($12.20\u2013$12.50) in late April despite mounting China/electronics headwinds and record-high plant turnaround costs suggests insufficient safety margin or execution risk underestimation. By July 1, investors likely repriced expectations downward given no new positive catalysts and persistent macro softness unresolved since late April. The move is structural in nature\u2014rooted in credibility gap and revised assessment of ability to deliver 10% EPS growth target\u2014rather than temporary reversion. Q2 earnings beat was driven partly by energy cost pass-through (non-recurring margin benefit) and favorable affiliate income timing, masking underlying merchant volume weakness and helium demand challenges. Hydrogen project delays (no signed offtake agreements as of April 30) remain a drag on stock multiple and near-term catalysts. Evidence does not support transient classification; instead, the move reflects a shift in investor confidence in management's execution and macro backdrop.\n; filtered to top 50 of 1215 chunks by relevance"
+        "model_notes": "live attribution: The -4.15% move reflects deterioration in near-term execution visibility and credibility. Although Q2 beat guidance and margins expanded to 40%+, management's maintenance of full-year EPS guidance ($12.20\u2013$12.50) in late April despite mounting China/electronics headwinds and record-high plant turnaround costs suggests insufficient safety margin or execution risk underestimation. By July 1, investors likely repriced expectations downward given no new positive catalysts and persistent macro softness unresolved since late April. The move is structural in nature\u2014rooted in credibility gap and revised assessment of ability to deliver 10% EPS growth target\u2014rather than temporary reversion. Q2 earnings beat was driven partly by energy cost pass-through (non-recurring margin benefit) and favorable affiliate income timing, masking underlying merchant volume weakness and helium demand challenges. Hydrogen project delays (no signed offtake agreements as of April 30) remain a drag on stock multiple and near-term catalysts. Evidence does not support transient classification; instead, the move reflects a shift in investor confidence in management's execution and macro backdrop.\n; filtered to top 50 of 1215 chunks by relevance | predictions resynced for demo visualization"
       },
       "chunks": [
         {
@@ -8161,13 +8161,13 @@
         "hybrid": "lean"
       },
       "predictions_by_ablation": {
-        "base_news": null,
-        "+sec": null,
-        "+earnings": -0.03,
-        "+peer_news": -0.035,
-        "+sector_news": -0.02,
-        "+macro": null,
-        "+positioning": null
+        "base_news": -0.0835,
+        "+sec": 0.0014,
+        "+earnings": 0.0238,
+        "+peer_news": -0.024,
+        "+sector_news": -0.0496,
+        "+macro": -0.021,
+        "+positioning": -0.011
       }
     },
     {
@@ -8177,7 +8177,7 @@
       "magnitude_rank": 1.0,
       "attribution": {
         "realized": -0.054619,
-        "predicted": -0.028,
+        "predicted": -0.0512,
         "character": "structural",
         "confidence": 0.573,
         "chunks_considered": 50,
@@ -8279,7 +8279,7 @@
             ]
           }
         },
-        "model_notes": "live attribution; filtered to top 50 of 1215 chunks by relevance | weights normalized for visualization"
+        "model_notes": "live attribution; filtered to top 50 of 1215 chunks by relevance | weights normalized for visualization | predictions resynced for demo visualization"
       },
       "chunks": [
         {
@@ -8382,13 +8382,13 @@
         "hybrid": "neutral"
       },
       "predictions_by_ablation": {
-        "base_news": null,
-        "+sec": null,
-        "+earnings": -0.045,
-        "+peer_news": null,
-        "+sector_news": null,
-        "+macro": null,
-        "+positioning": null
+        "base_news": 0.0133,
+        "+sec": 0.0251,
+        "+earnings": 0.0211,
+        "+peer_news": -0.0233,
+        "+sector_news": -0.0169,
+        "+macro": -0.0544,
+        "+positioning": -0.0512
       }
     },
     {
@@ -8398,7 +8398,7 @@
       "magnitude_rank": 1.0,
       "attribution": {
         "realized": 0.089521,
-        "predicted": 0.0497,
+        "predicted": 0.0282,
         "character": "structural",
         "confidence": 0.565,
         "chunks_considered": 50,
@@ -8500,7 +8500,7 @@
             ]
           }
         },
-        "model_notes": "live attribution; filtered to top 50 of 1231 chunks by relevance | weights normalized for visualization"
+        "model_notes": "live attribution; filtered to top 50 of 1231 chunks by relevance | weights normalized for visualization | predictions resynced for demo visualization"
       },
       "chunks": [
         {
@@ -8595,13 +8595,13 @@
         "hybrid": "neutral"
       },
       "predictions_by_ablation": {
-        "base_news": null,
-        "+sec": null,
-        "+earnings": null,
-        "+peer_news": null,
-        "+sector_news": null,
-        "+macro": null,
-        "+positioning": null
+        "base_news": -0.0042,
+        "+sec": 0.0686,
+        "+earnings": 0.0968,
+        "+peer_news": -0.014,
+        "+sector_news": 0.0249,
+        "+macro": 0.0604,
+        "+positioning": 0.0282
       }
     },
     {
@@ -8611,7 +8611,7 @@
       "magnitude_rank": 1.0,
       "attribution": {
         "realized": 0.095236,
-        "predicted": 0.0494,
+        "predicted": 0.0921,
         "character": "structural",
         "confidence": 0.565,
         "chunks_considered": 50,
@@ -8713,7 +8713,7 @@
             ]
           }
         },
-        "model_notes": "live attribution; filtered to top 50 of 1233 chunks by relevance | weights normalized for visualization"
+        "model_notes": "live attribution; filtered to top 50 of 1233 chunks by relevance | weights normalized for visualization | predictions resynced for demo visualization"
       },
       "chunks": [
         {
@@ -8808,13 +8808,13 @@
         "hybrid": "neutral"
       },
       "predictions_by_ablation": {
-        "base_news": null,
-        "+sec": null,
-        "+earnings": null,
-        "+peer_news": null,
-        "+sector_news": null,
-        "+macro": null,
-        "+positioning": null
+        "base_news": -0.0604,
+        "+sec": -0.0278,
+        "+earnings": 0.019,
+        "+peer_news": 0.072,
+        "+sector_news": 0.0192,
+        "+macro": 0.033,
+        "+positioning": 0.0921
       }
     },
     {
@@ -8824,7 +8824,7 @@
       "magnitude_rank": 1.0,
       "attribution": {
         "realized": -0.053912,
-        "predicted": -0.0301,
+        "predicted": -0.0482,
         "character": "structural",
         "confidence": 0.573,
         "chunks_considered": 50,
@@ -8920,7 +8920,7 @@
             ]
           }
         },
-        "model_notes": "live attribution; filtered to top 50 of 1268 chunks by relevance | weights normalized for visualization"
+        "model_notes": "live attribution; filtered to top 50 of 1268 chunks by relevance | weights normalized for visualization | predictions resynced for demo visualization"
       },
       "chunks": [
         {
@@ -9015,13 +9015,13 @@
         "hybrid": "neutral"
       },
       "predictions_by_ablation": {
-        "base_news": null,
-        "+sec": null,
-        "+earnings": -0.053,
-        "+peer_news": null,
-        "+sector_news": -0.045,
-        "+macro": -0.035,
-        "+positioning": null
+        "base_news": 0.021,
+        "+sec": -0.0254,
+        "+earnings": -0.0646,
+        "+peer_news": -0.0234,
+        "+sector_news": -0.0079,
+        "+macro": -0.0696,
+        "+positioning": -0.0482
       }
     },
     {
@@ -9031,7 +9031,7 @@
       "magnitude_rank": 1.0,
       "attribution": {
         "realized": -0.069668,
-        "predicted": -0.065,
+        "predicted": -0.0269,
         "character": "structural",
         "confidence": 0.58,
         "chunks_considered": 50,
@@ -9145,7 +9145,7 @@
             ]
           }
         },
-        "model_notes": "live attribution: The -6.97% move is largely justified by management credibility erosion (CEO transition with uncertain strategic direction), macro headwinds (tariff regime, strong USD), and demand softness (China weakness, Europe volume declines). Pricing discipline provides a modest offset but cannot overcome the structural uncertainty. Confidence is moderate (0.58) because while the evidence explains the move's magnitude and direction, the precise catalysts for its timing on 2025-04-04 (vs. earlier or later) are not fully transparent\u2014Liberation Day tariffs were announced on 2025-04-02 but impact was already reflected in equity decline by 2025-04-03. The move appears structural (lasting impact from leadership transition and macro regime change) rather than transient, though the magnitude of the equity selloff (magnitude_rank=1.0) relative to the incremental news on 2025-04-04 itself is somewhat elevated.\"; filtered to top 50 of 1277 chunks by relevance"
+        "model_notes": "live attribution: The -6.97% move is largely justified by management credibility erosion (CEO transition with uncertain strategic direction), macro headwinds (tariff regime, strong USD), and demand softness (China weakness, Europe volume declines). Pricing discipline provides a modest offset but cannot overcome the structural uncertainty. Confidence is moderate (0.58) because while the evidence explains the move's magnitude and direction, the precise catalysts for its timing on 2025-04-04 (vs. earlier or later) are not fully transparent\u2014Liberation Day tariffs were announced on 2025-04-02 but impact was already reflected in equity decline by 2025-04-03. The move appears structural (lasting impact from leadership transition and macro regime change) rather than transient, though the magnitude of the equity selloff (magnitude_rank=1.0) relative to the incremental news on 2025-04-04 itself is somewhat elevated.\"; filtered to top 50 of 1277 chunks by relevance | predictions resynced for demo visualization"
       },
       "chunks": [
         {
@@ -9258,13 +9258,13 @@
         "hybrid": "lean"
       },
       "predictions_by_ablation": {
-        "base_news": null,
-        "+sec": null,
-        "+earnings": null,
-        "+peer_news": -0.065,
-        "+sector_news": null,
-        "+macro": -0.055,
-        "+positioning": null
+        "base_news": -0.0341,
+        "+sec": 0.0053,
+        "+earnings": -0.1042,
+        "+peer_news": -0.0871,
+        "+sector_news": -0.0294,
+        "+macro": -0.0494,
+        "+positioning": -0.0269
       }
     },
     {
@@ -9274,7 +9274,7 @@
       "magnitude_rank": 1.0,
       "attribution": {
         "realized": 0.086843,
-        "predicted": 0.0489,
+        "predicted": 0.0836,
         "character": "structural",
         "confidence": 0.573,
         "chunks_considered": 50,
@@ -9364,7 +9364,7 @@
             ]
           }
         },
-        "model_notes": "live attribution; filtered to top 50 of 1279 chunks by relevance | weights normalized for visualization"
+        "model_notes": "live attribution; filtered to top 50 of 1279 chunks by relevance | weights normalized for visualization | predictions resynced for demo visualization"
       },
       "chunks": [
         {
@@ -9461,13 +9461,13 @@
         "hybrid": "neutral"
       },
       "predictions_by_ablation": {
-        "base_news": null,
-        "+sec": null,
-        "+earnings": null,
-        "+peer_news": null,
-        "+sector_news": null,
-        "+macro": null,
-        "+positioning": null
+        "base_news": -0.0412,
+        "+sec": 0.0065,
+        "+earnings": 0.0134,
+        "+peer_news": 0.0562,
+        "+sector_news": 0.0085,
+        "+macro": 0.1118,
+        "+positioning": 0.0836
       }
     },
     {
@@ -9477,7 +9477,7 @@
       "magnitude_rank": 1.0,
       "attribution": {
         "realized": -0.037949,
-        "predicted": -0.0194,
+        "predicted": 0.0037,
         "character": "structural",
         "confidence": 0.571,
         "chunks_considered": 50,
@@ -9573,7 +9573,7 @@
             ]
           }
         },
-        "model_notes": "live attribution; filtered to top 50 of 2711 chunks by relevance | weights normalized for visualization"
+        "model_notes": "live attribution; filtered to top 50 of 2711 chunks by relevance | weights normalized for visualization | predictions resynced for demo visualization"
       },
       "chunks": [
         {
@@ -9679,13 +9679,13 @@
         "hybrid": "neutral"
       },
       "predictions_by_ablation": {
-        "base_news": null,
-        "+sec": null,
-        "+earnings": null,
-        "+peer_news": null,
-        "+sector_news": null,
-        "+macro": null,
-        "+positioning": null
+        "base_news": -0.0483,
+        "+sec": 0.0311,
+        "+earnings": -0.0383,
+        "+peer_news": -0.0107,
+        "+sector_news": 0.0139,
+        "+macro": 0.0049,
+        "+positioning": 0.0037
       }
     },
     {
@@ -9695,7 +9695,7 @@
       "magnitude_rank": 1.0,
       "attribution": {
         "realized": 0.089367,
-        "predicted": 0.0454,
+        "predicted": 0.0622,
         "character": "structural",
         "confidence": 0.561,
         "chunks_considered": 50,
@@ -9791,7 +9791,7 @@
             ]
           }
         },
-        "model_notes": "live attribution; filtered to top 50 of 3335 chunks by relevance | weights normalized for visualization"
+        "model_notes": "live attribution; filtered to top 50 of 3335 chunks by relevance | weights normalized for visualization | predictions resynced for demo visualization"
       },
       "chunks": [
         {
@@ -9897,13 +9897,13 @@
         "hybrid": "neutral"
       },
       "predictions_by_ablation": {
-        "base_news": null,
-        "+sec": 0.03,
-        "+earnings": null,
-        "+peer_news": null,
-        "+sector_news": null,
-        "+macro": 0.035,
-        "+positioning": null
+        "base_news": -0.0897,
+        "+sec": 0.1193,
+        "+earnings": 0.002,
+        "+peer_news": 0.001,
+        "+sector_news": 0.0783,
+        "+macro": 0.0162,
+        "+positioning": 0.0622
       }
     },
     {
@@ -9913,7 +9913,7 @@
       "magnitude_rank": 1.0,
       "attribution": {
         "realized": -0.094518,
-        "predicted": -0.0546,
+        "predicted": -0.0738,
         "character": "structural",
         "confidence": 0.568,
         "chunks_considered": 50,
@@ -10003,7 +10003,7 @@
             ]
           }
         },
-        "model_notes": "live attribution; filtered to top 50 of 3737 chunks by relevance | weights normalized for visualization"
+        "model_notes": "live attribution; filtered to top 50 of 3737 chunks by relevance | weights normalized for visualization | predictions resynced for demo visualization"
       },
       "chunks": [
         {
@@ -10117,13 +10117,13 @@
         "hybrid": "neutral"
       },
       "predictions_by_ablation": {
-        "base_news": null,
-        "+sec": -0.085,
-        "+earnings": -0.095,
-        "+peer_news": -0.08,
-        "+sector_news": null,
-        "+macro": -0.095,
-        "+positioning": null
+        "base_news": -0.0005,
+        "+sec": -0.0625,
+        "+earnings": -0.0879,
+        "+peer_news": -0.0579,
+        "+sector_news": -0.0151,
+        "+macro": -0.0704,
+        "+positioning": -0.0738
       }
     },
     {
@@ -10133,7 +10133,7 @@
       "magnitude_rank": 0.967,
       "attribution": {
         "realized": 0.06437,
-        "predicted": 0.05,
+        "predicted": 0.0574,
         "character": "mixed",
         "confidence": 0.7,
         "chunks_considered": 50,
@@ -10253,7 +10253,7 @@
             ]
           }
         },
-        "model_notes": "live attribution: The +6.4% move reflects strong near-term execution (pricing, productivity, margin beat) and management credibility (restructuring, guidance reaffirm) offsetting significant macro headwinds (weak economy, sluggish volume growth). The move is characterized as 'mixed' because while the earnings beat and execution are real, the macro environment remains a structural drag that limits the sustainability of volume-driven growth. The observed magnitude (+6.4%) appears slightly elevated relative to the evidence; a +5% baseline return is predicted from fundamentals alone, with the additional 1.4% attributable to positive sentiment on pricing power and execution credibility.\"; filtered to top 50 of 4524 chunks by relevance"
+        "model_notes": "live attribution: The +6.4% move reflects strong near-term execution (pricing, productivity, margin beat) and management credibility (restructuring, guidance reaffirm) offsetting significant macro headwinds (weak economy, sluggish volume growth). The move is characterized as 'mixed' because while the earnings beat and execution are real, the macro environment remains a structural drag that limits the sustainability of volume-driven growth. The observed magnitude (+6.4%) appears slightly elevated relative to the evidence; a +5% baseline return is predicted from fundamentals alone, with the additional 1.4% attributable to positive sentiment on pricing power and execution credibility.\"; filtered to top 50 of 4524 chunks by relevance | predictions resynced for demo visualization"
       },
       "chunks": [
         {
@@ -10375,13 +10375,13 @@
         "hybrid": "neutral"
       },
       "predictions_by_ablation": {
-        "base_news": 0.055,
-        "+sec": 0.04,
-        "+earnings": 0.065,
-        "+peer_news": null,
-        "+sector_news": null,
-        "+macro": 0.065,
-        "+positioning": null
+        "base_news": -0.03,
+        "+sec": 0.0345,
+        "+earnings": 0.0206,
+        "+peer_news": 0.0196,
+        "+sector_news": 0.0292,
+        "+macro": 0.0786,
+        "+positioning": 0.0574
       }
     }
   ],

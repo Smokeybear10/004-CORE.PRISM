@@ -373,17 +373,6 @@ function renderChart(bundle) {
   Plotly.react('chart', traces, layout,
     { displaylogo: false, responsive: true, modeBarButtonsToRemove: ['lasso2d','select2d'] });
 
-  const pill = document.getElementById('ablation-pill');
-  if (pill) {
-    if (!hasOverlay) {
-      pill.textContent = 'No overlay — enable a source';
-      pill.classList.add('muted');
-    } else {
-      pill.textContent = `Model overlay · ${ablationName}`;
-      pill.classList.remove('muted');
-    }
-  }
-
   const chartDiv = document.getElementById('chart');
   if (!chartDiv._clickHandlerAttached) {
     chartDiv.on('plotly_click', (ev) => {

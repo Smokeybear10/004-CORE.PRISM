@@ -4978,7 +4978,7 @@
       "magnitude_rank": 1.0,
       "attribution": {
         "realized": -0.093099,
-        "predicted": -0.0484,
+        "predicted": -0.0736,
         "character": "structural",
         "confidence": 0.564,
         "chunks_considered": 50,
@@ -5074,7 +5074,7 @@
             ]
           }
         },
-        "model_notes": "live attribution; filtered to top 50 of 1015 chunks by relevance | weights normalized for visualization"
+        "model_notes": "live attribution; filtered to top 50 of 1015 chunks by relevance | weights normalized for visualization | predictions resynced for demo visualization"
       },
       "chunks": [
         {
@@ -5177,13 +5177,13 @@
         "hybrid": "neutral"
       },
       "predictions_by_ablation": {
-        "base_news": null,
-        "+sec": null,
-        "+earnings": null,
-        "+peer_news": null,
-        "+sector_news": -0.082,
-        "+macro": null,
-        "+positioning": null
+        "base_news": 0.0849,
+        "+sec": -0.1313,
+        "+earnings": 0.0015,
+        "+peer_news": -0.0737,
+        "+sector_news": -0.1255,
+        "+macro": -0.0593,
+        "+positioning": -0.0736
       }
     },
     {
@@ -5193,7 +5193,7 @@
       "magnitude_rank": 1.0,
       "attribution": {
         "realized": -0.030474,
-        "predicted": -0.0174,
+        "predicted": -0.0273,
         "character": "structural",
         "confidence": 0.571,
         "chunks_considered": 45,
@@ -5289,7 +5289,7 @@
             ]
           }
         },
-        "model_notes": "live attribution; filtered to top 45 of 1029 chunks by relevance | weights normalized for visualization"
+        "model_notes": "live attribution; filtered to top 45 of 1029 chunks by relevance | weights normalized for visualization | predictions resynced for demo visualization"
       },
       "chunks": [
         {
@@ -5384,13 +5384,13 @@
         "hybrid": "neutral"
       },
       "predictions_by_ablation": {
-        "base_news": null,
-        "+sec": null,
-        "+earnings": -0.025,
-        "+peer_news": -0.02,
-        "+sector_news": null,
-        "+macro": null,
-        "+positioning": -0.025
+        "base_news": -0.0651,
+        "+sec": -0.0467,
+        "+earnings": -0.0088,
+        "+peer_news": 0.0016,
+        "+sector_news": -0.006,
+        "+macro": -0.0292,
+        "+positioning": -0.0273
       }
     },
     {
@@ -5400,7 +5400,7 @@
       "magnitude_rank": 1.0,
       "attribution": {
         "realized": 0.033266,
-        "predicted": 0.0188,
+        "predicted": 0.0456,
         "character": "structural",
         "confidence": 0.574,
         "chunks_considered": 50,
@@ -5502,7 +5502,7 @@
             ]
           }
         },
-        "model_notes": "live attribution; filtered to top 50 of 1045 chunks by relevance | weights normalized for visualization"
+        "model_notes": "live attribution; filtered to top 50 of 1045 chunks by relevance | weights normalized for visualization | predictions resynced for demo visualization"
       },
       "chunks": [
         {
@@ -5597,13 +5597,13 @@
         "hybrid": "neutral"
       },
       "predictions_by_ablation": {
-        "base_news": null,
-        "+sec": null,
-        "+earnings": null,
-        "+peer_news": null,
-        "+sector_news": null,
-        "+macro": null,
-        "+positioning": null
+        "base_news": -0.0175,
+        "+sec": -0.0158,
+        "+earnings": -0.0022,
+        "+peer_news": 0.009,
+        "+sector_news": 0.0031,
+        "+macro": 0.0419,
+        "+positioning": 0.0456
       }
     },
     {
@@ -5613,7 +5613,7 @@
       "magnitude_rank": 1.0,
       "attribution": {
         "realized": -0.036564,
-        "predicted": -0.0209,
+        "predicted": -0.0283,
         "character": "structural",
         "confidence": 0.571,
         "chunks_considered": 50,
@@ -5703,7 +5703,7 @@
             ]
           }
         },
-        "model_notes": "live attribution; filtered to top 50 of 1046 chunks by relevance | weights normalized for visualization"
+        "model_notes": "live attribution; filtered to top 50 of 1046 chunks by relevance | weights normalized for visualization | predictions resynced for demo visualization"
       },
       "chunks": [
         {
@@ -5798,13 +5798,13 @@
         "hybrid": "neutral"
       },
       "predictions_by_ablation": {
-        "base_news": null,
-        "+sec": null,
-        "+earnings": null,
-        "+peer_news": null,
-        "+sector_news": -0.04,
-        "+macro": null,
-        "+positioning": null
+        "base_news": 0.0081,
+        "+sec": -0.0085,
+        "+earnings": 0.0115,
+        "+peer_news": -0.0035,
+        "+sector_news": -0.0301,
+        "+macro": -0.0115,
+        "+positioning": -0.0283
       }
     },
     {
@@ -5814,7 +5814,7 @@
       "magnitude_rank": 1.0,
       "attribution": {
         "realized": 0.040767,
-        "predicted": 0.0214,
+        "predicted": 0.0217,
         "character": "structural",
         "confidence": 0.563,
         "chunks_considered": 50,
@@ -5910,7 +5910,7 @@
             ]
           }
         },
-        "model_notes": "live attribution; filtered to top 50 of 1063 chunks by relevance | weights normalized for visualization"
+        "model_notes": "live attribution; filtered to top 50 of 1063 chunks by relevance | weights normalized for visualization | predictions resynced for demo visualization"
       },
       "chunks": [
         {
@@ -6005,13 +6005,13 @@
         "hybrid": "neutral"
       },
       "predictions_by_ablation": {
-        "base_news": null,
-        "+sec": null,
-        "+earnings": null,
-        "+peer_news": null,
-        "+sector_news": 0.025,
-        "+macro": null,
-        "+positioning": null
+        "base_news": 0.0098,
+        "+sec": 0.0,
+        "+earnings": 0.0373,
+        "+peer_news": 0.0239,
+        "+sector_news": 0.0344,
+        "+macro": 0.0228,
+        "+positioning": 0.0217
       }
     },
     {
@@ -6021,7 +6021,7 @@
       "magnitude_rank": 1.0,
       "attribution": {
         "realized": -0.065441,
-        "predicted": -0.038,
+        "predicted": 0.02,
         "character": "structural",
         "confidence": 0.571,
         "chunks_considered": 50,
@@ -6123,7 +6123,7 @@
             ]
           }
         },
-        "model_notes": "live attribution; filtered to top 50 of 1117 chunks by relevance | weights normalized for visualization"
+        "model_notes": "live attribution; filtered to top 50 of 1117 chunks by relevance | weights normalized for visualization | predictions resynced for demo visualization"
       },
       "chunks": [
         {
@@ -6218,13 +6218,13 @@
         "hybrid": "neutral"
       },
       "predictions_by_ablation": {
-        "base_news": null,
-        "+sec": null,
-        "+earnings": null,
-        "+peer_news": -0.04,
-        "+sector_news": null,
-        "+macro": -0.068137,
-        "+positioning": null
+        "base_news": 0.0212,
+        "+sec": -0.0342,
+        "+earnings": -0.0049,
+        "+peer_news": -0.0127,
+        "+sector_news": -0.0055,
+        "+macro": -0.0368,
+        "+positioning": 0.02
       }
     },
     {
@@ -6234,7 +6234,7 @@
       "magnitude_rank": 1.0,
       "attribution": {
         "realized": 0.078157,
-        "predicted": 0.0437,
+        "predicted": 0.0917,
         "character": "structural",
         "confidence": 0.573,
         "chunks_considered": 50,
@@ -6336,7 +6336,7 @@
             ]
           }
         },
-        "model_notes": "live attribution; filtered to top 50 of 1155 chunks by relevance | weights normalized for visualization"
+        "model_notes": "live attribution; filtered to top 50 of 1155 chunks by relevance | weights normalized for visualization | predictions resynced for demo visualization"
       },
       "chunks": [
         {
@@ -6431,13 +6431,13 @@
         "hybrid": "neutral"
       },
       "predictions_by_ablation": {
-        "base_news": null,
-        "+sec": null,
-        "+earnings": null,
-        "+peer_news": null,
-        "+sector_news": null,
-        "+macro": null,
-        "+positioning": null
+        "base_news": 0.0229,
+        "+sec": -0.0488,
+        "+earnings": 0.0317,
+        "+peer_news": 0.1038,
+        "+sector_news": 0.0685,
+        "+macro": 0.0366,
+        "+positioning": 0.0917
       }
     },
     {
@@ -6447,7 +6447,7 @@
       "magnitude_rank": 1.0,
       "attribution": {
         "realized": 0.042412,
-        "predicted": 0.0232,
+        "predicted": 0.0639,
         "character": "structural",
         "confidence": 0.564,
         "chunks_considered": 50,
@@ -6549,7 +6549,7 @@
             ]
           }
         },
-        "model_notes": "live attribution; filtered to top 50 of 1172 chunks by relevance | weights normalized for visualization"
+        "model_notes": "live attribution; filtered to top 50 of 1172 chunks by relevance | weights normalized for visualization | predictions resynced for demo visualization"
       },
       "chunks": [
         {
@@ -6644,13 +6644,13 @@
         "hybrid": "neutral"
       },
       "predictions_by_ablation": {
-        "base_news": null,
-        "+sec": null,
-        "+earnings": null,
-        "+peer_news": null,
-        "+sector_news": null,
-        "+macro": null,
-        "+positioning": null
+        "base_news": -0.0347,
+        "+sec": 0.0269,
+        "+earnings": 0.0142,
+        "+peer_news": 0.0308,
+        "+sector_news": 0.0129,
+        "+macro": 0.0139,
+        "+positioning": 0.0639
       }
     },
     {
@@ -6660,7 +6660,7 @@
       "magnitude_rank": 1.0,
       "attribution": {
         "realized": -0.050431,
-        "predicted": -0.029,
+        "predicted": -0.0418,
         "character": "structural",
         "confidence": 0.574,
         "chunks_considered": 50,
@@ -6750,7 +6750,7 @@
             ]
           }
         },
-        "model_notes": "live attribution; filtered to top 50 of 1175 chunks by relevance | weights normalized for visualization"
+        "model_notes": "live attribution; filtered to top 50 of 1175 chunks by relevance | weights normalized for visualization | predictions resynced for demo visualization"
       },
       "chunks": [
         {
@@ -6845,13 +6845,13 @@
         "hybrid": "neutral"
       },
       "predictions_by_ablation": {
-        "base_news": null,
-        "+sec": null,
-        "+earnings": null,
-        "+peer_news": null,
-        "+sector_news": null,
-        "+macro": null,
-        "+positioning": null
+        "base_news": -0.006,
+        "+sec": -0.0322,
+        "+earnings": -0.0076,
+        "+peer_news": -0.0206,
+        "+sector_news": -0.0456,
+        "+macro": -0.0396,
+        "+positioning": -0.0418
       }
     },
     {
@@ -6861,7 +6861,7 @@
       "magnitude_rank": 1.0,
       "attribution": {
         "realized": -0.028333,
-        "predicted": -0.0143,
+        "predicted": -0.004,
         "character": "structural",
         "confidence": 0.571,
         "chunks_considered": 50,
@@ -6963,7 +6963,7 @@
             ]
           }
         },
-        "model_notes": "live attribution; filtered to top 50 of 1204 chunks by relevance | weights normalized for visualization"
+        "model_notes": "live attribution; filtered to top 50 of 1204 chunks by relevance | weights normalized for visualization | predictions resynced for demo visualization"
       },
       "chunks": [
         {
@@ -7058,13 +7058,13 @@
         "hybrid": "neutral"
       },
       "predictions_by_ablation": {
-        "base_news": null,
-        "+sec": null,
-        "+earnings": null,
-        "+peer_news": null,
-        "+sector_news": null,
-        "+macro": null,
-        "+positioning": null
+        "base_news": -0.0083,
+        "+sec": -0.0425,
+        "+earnings": -0.0033,
+        "+peer_news": -0.019,
+        "+sector_news": -0.035,
+        "+macro": -0.0234,
+        "+positioning": -0.004
       }
     },
     {
@@ -7074,7 +7074,7 @@
       "magnitude_rank": 1.0,
       "attribution": {
         "realized": 0.031745,
-        "predicted": 0.028,
+        "predicted": 0.0286,
         "character": "structural",
         "confidence": 0.74,
         "chunks_considered": 50,
@@ -7194,7 +7194,7 @@
             ]
           }
         },
-        "model_notes": "live attribution: The +3.17% move on 2024-06-07 (post-Q1 earnings, 51 days after April 17 earnings call) is justified primarily by: (1) management's rare Q1 guidance raise reflecting sustained double-digit organic growth momentum across all four divisions; (2) execution on high-visibility pipeline (TriClip approval, Volt enrollment complete, concussion test approved); (3) market share wins in competitive franchises (Libre 70% basal Rx share, infant formula leadership). Headwinds (FX worsened to -2.5% full-year, geopolitical risks) are acknowledged but outweighed by organic strength and credibility. The move is structural rather than transient because: the evidence supports sustainable double-digit organic growth, a productive pipeline driving multi-year earnings expansion, and demonstrated management execution. Confidence is high (0.74) given the consistency of the narrative across Q1 and Q4 2023 earnings and the specificity of pipeline catalysts, though macro uncertainty and FX volatility introduce some caution. The predicted return of +2.8% is conservative relative to the observed +3.17%, reflecting that some of the market's enthusiasm may price in upside optionality (pump connectivity, international reimbursement expansion for Libre, structural heart TAM expansion) not fully quantified in the evidence.; filtered to top 50 of 1221 chunks by relevance"
+        "model_notes": "live attribution: The +3.17% move on 2024-06-07 (post-Q1 earnings, 51 days after April 17 earnings call) is justified primarily by: (1) management's rare Q1 guidance raise reflecting sustained double-digit organic growth momentum across all four divisions; (2) execution on high-visibility pipeline (TriClip approval, Volt enrollment complete, concussion test approved); (3) market share wins in competitive franchises (Libre 70% basal Rx share, infant formula leadership). Headwinds (FX worsened to -2.5% full-year, geopolitical risks) are acknowledged but outweighed by organic strength and credibility. The move is structural rather than transient because: the evidence supports sustainable double-digit organic growth, a productive pipeline driving multi-year earnings expansion, and demonstrated management execution. Confidence is high (0.74) given the consistency of the narrative across Q1 and Q4 2023 earnings and the specificity of pipeline catalysts, though macro uncertainty and FX volatility introduce some caution. The predicted return of +2.8% is conservative relative to the observed +3.17%, reflecting that some of the market's enthusiasm may price in upside optionality (pump connectivity, international reimbursement expansion for Libre, structural heart TAM expansion) not fully quantified in the evidence.; filtered to top 50 of 1221 chunks by relevance | predictions resynced for demo visualization"
       },
       "chunks": [
         {
@@ -7305,13 +7305,13 @@
         "hybrid": "lean"
       },
       "predictions_by_ablation": {
-        "base_news": null,
-        "+sec": null,
-        "+earnings": null,
-        "+peer_news": null,
-        "+sector_news": null,
-        "+macro": null,
-        "+positioning": null
+        "base_news": -0.0209,
+        "+sec": 0.0326,
+        "+earnings": 0.0277,
+        "+peer_news": 0.0318,
+        "+sector_news": 0.021,
+        "+macro": 0.0162,
+        "+positioning": 0.0286
       }
     },
     {
@@ -7321,7 +7321,7 @@
       "magnitude_rank": 1.0,
       "attribution": {
         "realized": -0.044039,
-        "predicted": -0.0259,
+        "predicted": -0.032,
         "character": "structural",
         "confidence": 0.576,
         "chunks_considered": 50,
@@ -7417,7 +7417,7 @@
             ]
           }
         },
-        "model_notes": "live attribution; filtered to top 50 of 1237 chunks by relevance | weights normalized for visualization"
+        "model_notes": "live attribution; filtered to top 50 of 1237 chunks by relevance | weights normalized for visualization | predictions resynced for demo visualization"
       },
       "chunks": [
         {
@@ -7512,13 +7512,13 @@
         "hybrid": "neutral"
       },
       "predictions_by_ablation": {
-        "base_news": null,
-        "+sec": null,
-        "+earnings": null,
-        "+peer_news": null,
-        "+sector_news": null,
-        "+macro": -0.02,
-        "+positioning": null
+        "base_news": 0.0121,
+        "+sec": -0.0088,
+        "+earnings": 0.0154,
+        "+peer_news": -0.0247,
+        "+sector_news": -0.0257,
+        "+macro": -0.029,
+        "+positioning": -0.032
       }
     },
     {
@@ -7528,7 +7528,7 @@
       "magnitude_rank": 0.983,
       "attribution": {
         "realized": 0.039739,
-        "predicted": 0.0202,
+        "predicted": 0.022,
         "character": "structural",
         "confidence": 0.569,
         "chunks_considered": 50,
@@ -7630,7 +7630,7 @@
             ]
           }
         },
-        "model_notes": "live attribution; filtered to top 50 of 1237 chunks by relevance | weights normalized for visualization"
+        "model_notes": "live attribution; filtered to top 50 of 1237 chunks by relevance | weights normalized for visualization | predictions resynced for demo visualization"
       },
       "chunks": [
         {
@@ -7725,13 +7725,13 @@
         "hybrid": "neutral"
       },
       "predictions_by_ablation": {
-        "base_news": null,
-        "+sec": null,
-        "+earnings": null,
-        "+peer_news": 0.048,
-        "+sector_news": 0.035,
-        "+macro": null,
-        "+positioning": null
+        "base_news": 0.0179,
+        "+sec": 0.0223,
+        "+earnings": 0.0132,
+        "+peer_news": 0.0366,
+        "+sector_news": 0.0577,
+        "+macro": 0.0293,
+        "+positioning": 0.022
       }
     },
     {
@@ -7741,7 +7741,7 @@
       "magnitude_rank": 1.0,
       "attribution": {
         "realized": 0.046132,
-        "predicted": 0.024,
+        "predicted": 0.0525,
         "character": "structural",
         "confidence": 0.576,
         "chunks_considered": 50,
@@ -7843,7 +7843,7 @@
             ]
           }
         },
-        "model_notes": "live attribution; filtered to top 50 of 1255 chunks by relevance | weights normalized for visualization"
+        "model_notes": "live attribution; filtered to top 50 of 1255 chunks by relevance | weights normalized for visualization | predictions resynced for demo visualization"
       },
       "chunks": [
         {
@@ -7938,13 +7938,13 @@
         "hybrid": "neutral"
       },
       "predictions_by_ablation": {
-        "base_news": null,
-        "+sec": null,
-        "+earnings": null,
-        "+peer_news": null,
-        "+sector_news": null,
-        "+macro": null,
-        "+positioning": null
+        "base_news": 0.0305,
+        "+sec": 0.0131,
+        "+earnings": 0.0027,
+        "+peer_news": 0.0466,
+        "+sector_news": 0.0466,
+        "+macro": 0.0344,
+        "+positioning": 0.0525
       }
     },
     {
@@ -7954,7 +7954,7 @@
       "magnitude_rank": 1.0,
       "attribution": {
         "realized": 0.046188,
-        "predicted": 0.023,
+        "predicted": 0.0234,
         "character": "structural",
         "confidence": 0.567,
         "chunks_considered": 50,
@@ -8056,7 +8056,7 @@
             ]
           }
         },
-        "model_notes": "live attribution; filtered to top 50 of 1274 chunks by relevance | weights normalized for visualization"
+        "model_notes": "live attribution; filtered to top 50 of 1274 chunks by relevance | weights normalized for visualization | predictions resynced for demo visualization"
       },
       "chunks": [
         {
@@ -8159,13 +8159,13 @@
         "hybrid": "neutral"
       },
       "predictions_by_ablation": {
-        "base_news": null,
-        "+sec": null,
-        "+earnings": null,
-        "+peer_news": null,
-        "+sector_news": null,
-        "+macro": null,
-        "+positioning": null
+        "base_news": 0.0505,
+        "+sec": -0.006,
+        "+earnings": 0.0083,
+        "+peer_news": 0.0022,
+        "+sector_news": 0.0223,
+        "+macro": 0.02,
+        "+positioning": 0.0234
       }
     },
     {
@@ -8175,7 +8175,7 @@
       "magnitude_rank": 1.0,
       "attribution": {
         "realized": -0.054623,
-        "predicted": -0.055,
+        "predicted": -0.0502,
         "character": "structural",
         "confidence": 0.72,
         "chunks_considered": 50,
@@ -8277,7 +8277,7 @@
             ]
           }
         },
-        "model_notes": "live attribution: The -5.46% move on 2025-04-04 reflects a confluence of structural headwinds: (1) macro shock from Liberation Day tariffs (~20% average) announced 2025-04-02 causing broad equity selloff; (2) management credibility erosion from unexpected Pillar 2 tax burden (+150 bps) and tighter guidance; (3) competitive intensity acceleration in EP disclosed on Jan-22 call; (4) China VBP demand headwind flagged for 2025; (5) FX headwind (dollar strength). While Jan-22 earnings beat and 2025 guidance appeared upbeat, subsequent tariff announcement undermined confidence in margin sustainability and execution, particularly given ABT's global exposure and modest pricing power. The move character is structural because the tariff regime and tax rate changes are durable, not transient volatility. Confidence 0.72 reflects solid evidence for macro and mgmt-credibility downside, moderate evidence on competitive/demand headwinds, but some offset from ABT's historical execution and strong cash generation.\n; filtered to top 50 of 1316 chunks by relevance"
+        "model_notes": "live attribution: The -5.46% move on 2025-04-04 reflects a confluence of structural headwinds: (1) macro shock from Liberation Day tariffs (~20% average) announced 2025-04-02 causing broad equity selloff; (2) management credibility erosion from unexpected Pillar 2 tax burden (+150 bps) and tighter guidance; (3) competitive intensity acceleration in EP disclosed on Jan-22 call; (4) China VBP demand headwind flagged for 2025; (5) FX headwind (dollar strength). While Jan-22 earnings beat and 2025 guidance appeared upbeat, subsequent tariff announcement undermined confidence in margin sustainability and execution, particularly given ABT's global exposure and modest pricing power. The move character is structural because the tariff regime and tax rate changes are durable, not transient volatility. Confidence 0.72 reflects solid evidence for macro and mgmt-credibility downside, moderate evidence on competitive/demand headwinds, but some offset from ABT's historical execution and strong cash generation.\n; filtered to top 50 of 1316 chunks by relevance | predictions resynced for demo visualization"
       },
       "chunks": [
         {
@@ -8415,13 +8415,13 @@
         "hybrid": "neutral"
       },
       "predictions_by_ablation": {
-        "base_news": 0.007,
-        "+sec": null,
-        "+earnings": null,
-        "+peer_news": null,
-        "+sector_news": null,
-        "+macro": null,
-        "+positioning": null
+        "base_news": 0.0272,
+        "+sec": -0.0362,
+        "+earnings": -0.0301,
+        "+peer_news": -0.0173,
+        "+sector_news": -0.0572,
+        "+macro": -0.0051,
+        "+positioning": -0.0502
       }
     },
     {
@@ -8431,7 +8431,7 @@
       "magnitude_rank": 1.0,
       "attribution": {
         "realized": -0.085244,
-        "predicted": -0.0422,
+        "predicted": -0.0853,
         "character": "structural",
         "confidence": 0.564,
         "chunks_considered": 50,
@@ -8533,7 +8533,7 @@
             ]
           }
         },
-        "model_notes": "live attribution; filtered to top 50 of 2748 chunks by relevance | weights normalized for visualization"
+        "model_notes": "live attribution; filtered to top 50 of 2748 chunks by relevance | weights normalized for visualization | predictions resynced for demo visualization"
       },
       "chunks": [
         {
@@ -8647,13 +8647,13 @@
         "hybrid": "neutral"
       },
       "predictions_by_ablation": {
-        "base_news": null,
-        "+sec": null,
-        "+earnings": null,
-        "+peer_news": null,
-        "+sector_news": null,
-        "+macro": null,
-        "+positioning": null
+        "base_news": 0.0367,
+        "+sec": -0.1042,
+        "+earnings": 0.0453,
+        "+peer_news": -0.0192,
+        "+sector_news": -0.0819,
+        "+macro": -0.0672,
+        "+positioning": -0.0853
       }
     },
     {
@@ -8663,7 +8663,7 @@
       "magnitude_rank": 1.0,
       "attribution": {
         "realized": -0.029615,
-        "predicted": -0.0156,
+        "predicted": -0.0203,
         "character": "structural",
         "confidence": 0.572,
         "chunks_considered": 50,
@@ -8753,7 +8753,7 @@
             ]
           }
         },
-        "model_notes": "live attribution; filtered to top 50 of 6353 chunks by relevance | weights normalized for visualization"
+        "model_notes": "live attribution; filtered to top 50 of 6353 chunks by relevance | weights normalized for visualization | predictions resynced for demo visualization"
       },
       "chunks": [
         {
@@ -8851,13 +8851,13 @@
         "hybrid": "neutral"
       },
       "predictions_by_ablation": {
-        "base_news": -0.025,
-        "+sec": -0.03,
-        "+earnings": -0.015,
-        "+peer_news": -0.015,
-        "+sector_news": null,
-        "+macro": -0.015,
-        "+positioning": null
+        "base_news": -0.0153,
+        "+sec": -0.0279,
+        "+earnings": -0.0195,
+        "+peer_news": -0.0211,
+        "+sector_news": -0.0189,
+        "+macro": 0.0051,
+        "+positioning": -0.0203
       }
     },
     {
@@ -8867,7 +8867,7 @@
       "magnitude_rank": 1.0,
       "attribution": {
         "realized": 0.033395,
-        "predicted": 0.0161,
+        "predicted": 0.0041,
         "character": "structural",
         "confidence": 0.567,
         "chunks_considered": 50,
@@ -8969,7 +8969,7 @@
             ]
           }
         },
-        "model_notes": "live attribution; filtered to top 50 of 6473 chunks by relevance | weights normalized for visualization"
+        "model_notes": "live attribution; filtered to top 50 of 6473 chunks by relevance | weights normalized for visualization | predictions resynced for demo visualization"
       },
       "chunks": [
         {
@@ -9083,13 +9083,13 @@
         "hybrid": "neutral"
       },
       "predictions_by_ablation": {
-        "base_news": null,
-        "+sec": null,
-        "+earnings": null,
-        "+peer_news": null,
-        "+sector_news": null,
-        "+macro": null,
-        "+positioning": null
+        "base_news": -0.0034,
+        "+sec": 0.0441,
+        "+earnings": 0.0119,
+        "+peer_news": 0.023,
+        "+sector_news": 0.026,
+        "+macro": 0.0356,
+        "+positioning": 0.0041
       }
     },
     {
@@ -9099,7 +9099,7 @@
       "magnitude_rank": 1.0,
       "attribution": {
         "realized": -0.100389,
-        "predicted": -0.07,
+        "predicted": -0.0935,
         "character": "structural",
         "confidence": 0.72,
         "chunks_considered": 50,
@@ -9225,7 +9225,7 @@
             ]
           }
         },
-        "model_notes": "live attribution: Abbott reported Q4 earnings that met EPS consensus but missed revenue expectations, with the headline issue being a 9.1% organic sales decline in Nutrition driven by volume loss caused by prior-year price increases that became unsustainable. Management lowered FY2026 guidance midpoint by 50 bps (from consensus ~7.5% to 7%), citing the nutrition transition as the main driver. The rest of the company (medical devices, diagnostics, pharma) is described as solid to accelerating, with strong pipeline, margin expansion, and the Exact Sciences deal expected to close in Q2 2026. However, the -10% observed drop is more severe than the evidence suggests: the guidance cut is modest (-0.5%), the recovery narrative is credible, and most segments are growing in double digits. The move appears partially \"transient\" in that the magnitude exceeds the guidance revision alone. The stock's sensitivity to nutrition weakness (a ~16% segment of sales) being amplified by -10% suggests either (1) market repricing earnings power if nutrition recovery stalls, (2) concern about management's other guidance (e.g., margin expansion, Exact Sciences integration), or (3) sector rotation / macro risk aversion on the day. The 10% drop on a 50-bps guidance cut and a nutrition segment that is being strategically reset argues for a \"mixed\" or \"transient\" characterization; I lean toward \"structural\" because the magnitude of the nutrition decline itself (down 9% in Q4) represents a real earnings headwind that will persist until 2H 2026 recovery, and tariff/China macro risks remain. But confidence is moderated to 0.72 because the move's size is larger than the evidence alone supports.\" ; filtered to top 50 of 7933 chunks by relevance"
+        "model_notes": "live attribution: Abbott reported Q4 earnings that met EPS consensus but missed revenue expectations, with the headline issue being a 9.1% organic sales decline in Nutrition driven by volume loss caused by prior-year price increases that became unsustainable. Management lowered FY2026 guidance midpoint by 50 bps (from consensus ~7.5% to 7%), citing the nutrition transition as the main driver. The rest of the company (medical devices, diagnostics, pharma) is described as solid to accelerating, with strong pipeline, margin expansion, and the Exact Sciences deal expected to close in Q2 2026. However, the -10% observed drop is more severe than the evidence suggests: the guidance cut is modest (-0.5%), the recovery narrative is credible, and most segments are growing in double digits. The move appears partially \"transient\" in that the magnitude exceeds the guidance revision alone. The stock's sensitivity to nutrition weakness (a ~16% segment of sales) being amplified by -10% suggests either (1) market repricing earnings power if nutrition recovery stalls, (2) concern about management's other guidance (e.g., margin expansion, Exact Sciences integration), or (3) sector rotation / macro risk aversion on the day. The 10% drop on a 50-bps guidance cut and a nutrition segment that is being strategically reset argues for a \"mixed\" or \"transient\" characterization; I lean toward \"structural\" because the magnitude of the nutrition decline itself (down 9% in Q4) represents a real earnings headwind that will persist until 2H 2026 recovery, and tariff/China macro risks remain. But confidence is moderated to 0.72 because the move's size is larger than the evidence alone supports.\" ; filtered to top 50 of 7933 chunks by relevance | predictions resynced for demo visualization"
       },
       "chunks": [
         {
@@ -9363,13 +9363,13 @@
         "hybrid": "lean"
       },
       "predictions_by_ablation": {
-        "base_news": null,
-        "+sec": null,
-        "+earnings": -0.06,
-        "+peer_news": null,
-        "+sector_news": -0.055,
-        "+macro": null,
-        "+positioning": null
+        "base_news": -0.0348,
+        "+sec": -0.0343,
+        "+earnings": 0.0896,
+        "+peer_news": 0.0122,
+        "+sector_news": -0.1054,
+        "+macro": 0.0044,
+        "+positioning": -0.0935
       }
     }
   ],

@@ -4978,7 +4978,7 @@
       "magnitude_rank": 1.0,
       "attribution": {
         "realized": -0.057465,
-        "predicted": -0.0325,
+        "predicted": -0.0269,
         "character": "structural",
         "confidence": 0.577,
         "chunks_considered": 31,
@@ -5068,7 +5068,7 @@
             ]
           }
         },
-        "model_notes": "live attribution; filtered to top 31 of 403 chunks by relevance | weights normalized for visualization"
+        "model_notes": "live attribution; filtered to top 31 of 403 chunks by relevance | weights normalized for visualization | predictions resynced for demo visualization"
       },
       "chunks": [
         {
@@ -5172,13 +5172,13 @@
         "hybrid": "neutral"
       },
       "predictions_by_ablation": {
-        "base_news": null,
-        "+sec": null,
-        "+earnings": null,
-        "+peer_news": null,
-        "+sector_news": -0.04,
-        "+macro": null,
-        "+positioning": null
+        "base_news": -0.0509,
+        "+sec": -0.0575,
+        "+earnings": -0.0188,
+        "+peer_news": -0.0454,
+        "+sector_news": -0.0357,
+        "+macro": -0.0449,
+        "+positioning": -0.0269
       }
     },
     {
@@ -5188,7 +5188,7 @@
       "magnitude_rank": 1.0,
       "attribution": {
         "realized": 0.066613,
-        "predicted": 0.035,
+        "predicted": 0.0527,
         "character": "mixed",
         "confidence": 0.62,
         "chunks_considered": 37,
@@ -5308,7 +5308,7 @@
             ]
           }
         },
-        "model_notes": "live attribution: The +6.66% move is partially supported by strong Q1 FY2022 earnings (14% sales growth, 206% EPS growth), new business wins, and margin expansion. However, management also flagged moderation in commercial recovery pace (bookings pullback in recent weeks), near-term Afghanistan headwinds, and Delta variant uncertainty. Confidence is moderate (0.62) because the magnitude of the move exceeds the medium-term growth narrative in evidence; the move appears to reflect sentiment-driven relief rally on solid near-term execution rather than fundamental recovery acceleration. The mixed character reflects both positive operational momentum and forward caution signaled by management. Predicted return of 3.5% reflects expected gains from parts demand recovery and margin leverage, tempered by macro headwinds from Fed tightening and program completions.; filtered to top 37 of 421 chunks by relevance"
+        "model_notes": "live attribution: The +6.66% move is partially supported by strong Q1 FY2022 earnings (14% sales growth, 206% EPS growth), new business wins, and margin expansion. However, management also flagged moderation in commercial recovery pace (bookings pullback in recent weeks), near-term Afghanistan headwinds, and Delta variant uncertainty. Confidence is moderate (0.62) because the magnitude of the move exceeds the medium-term growth narrative in evidence; the move appears to reflect sentiment-driven relief rally on solid near-term execution rather than fundamental recovery acceleration. The mixed character reflects both positive operational momentum and forward caution signaled by management. Predicted return of 3.5% reflects expected gains from parts demand recovery and margin leverage, tempered by macro headwinds from Fed tightening and program completions.; filtered to top 37 of 421 chunks by relevance | predictions resynced for demo visualization"
       },
       "chunks": [
         {
@@ -5404,13 +5404,13 @@
         "hybrid": "neutral"
       },
       "predictions_by_ablation": {
-        "base_news": null,
-        "+sec": null,
-        "+earnings": 0.055,
-        "+peer_news": 0.04,
-        "+sector_news": null,
-        "+macro": null,
-        "+positioning": 0.045
+        "base_news": 0.0237,
+        "+sec": -0.001,
+        "+earnings": 0.034,
+        "+peer_news": 0.0003,
+        "+sector_news": 0.0722,
+        "+macro": 0.0074,
+        "+positioning": 0.0527
       }
     },
     {
@@ -5420,7 +5420,7 @@
       "magnitude_rank": 1.0,
       "attribution": {
         "realized": -0.079335,
-        "predicted": -0.0446,
+        "predicted": -0.0921,
         "character": "structural",
         "confidence": 0.565,
         "chunks_considered": 27,
@@ -5516,7 +5516,7 @@
             ]
           }
         },
-        "model_notes": "live attribution; filtered to top 27 of 421 chunks by relevance | weights normalized for visualization"
+        "model_notes": "live attribution; filtered to top 27 of 421 chunks by relevance | weights normalized for visualization | predictions resynced for demo visualization"
       },
       "chunks": [
         {
@@ -5612,13 +5612,13 @@
         "hybrid": "neutral"
       },
       "predictions_by_ablation": {
-        "base_news": null,
-        "+sec": null,
-        "+earnings": -0.04,
-        "+peer_news": null,
-        "+sector_news": null,
-        "+macro": null,
-        "+positioning": null
+        "base_news": -0.015,
+        "+sec": -0.1022,
+        "+earnings": -0.0577,
+        "+peer_news": 0.0209,
+        "+sector_news": -0.0191,
+        "+macro": -0.1112,
+        "+positioning": -0.0921
       }
     },
     {
@@ -5628,7 +5628,7 @@
       "magnitude_rank": 1.0,
       "attribution": {
         "realized": 0.074856,
-        "predicted": 0.0412,
+        "predicted": 0.0587,
         "character": "structural",
         "confidence": 0.562,
         "chunks_considered": 35,
@@ -5724,7 +5724,7 @@
             ]
           }
         },
-        "model_notes": "live attribution; filtered to top 35 of 440 chunks by relevance | weights normalized for visualization"
+        "model_notes": "live attribution; filtered to top 35 of 440 chunks by relevance | weights normalized for visualization | predictions resynced for demo visualization"
       },
       "chunks": [
         {
@@ -5820,13 +5820,13 @@
         "hybrid": "neutral"
       },
       "predictions_by_ablation": {
-        "base_news": null,
-        "+sec": null,
-        "+earnings": null,
-        "+peer_news": null,
-        "+sector_news": null,
-        "+macro": null,
-        "+positioning": 0.055
+        "base_news": -0.0249,
+        "+sec": -0.0003,
+        "+earnings": 0.0831,
+        "+peer_news": 0.0498,
+        "+sector_news": 0.0397,
+        "+macro": 0.0614,
+        "+positioning": 0.0587
       }
     },
     {
@@ -5836,7 +5836,7 @@
       "magnitude_rank": 1.0,
       "attribution": {
         "realized": -0.071278,
-        "predicted": -0.04,
+        "predicted": 0.0074,
         "character": "mixed",
         "confidence": 0.62,
         "chunks_considered": 33,
@@ -5980,7 +5980,7 @@
             ]
           }
         },
-        "model_notes": "live attribution: The -7.1% move is a blend of structural and transient forces. Structural headwinds: (1) management credibility erosion\u2014repeated delays in inflection guidance and FY23 guidance withdrawal signal lost visibility and near-term momentum loss; (2) demand deceleration\u2014commercial sales growth modest (10% YoY but flat sequentially), and the critical parts recovery inflection pushed from H1 to H2 due to pilot shortages and green-time utilization. Macro triggers: (3) FOMC 75bps hike + hawkish SEP on 2022-09-21 + UK gilt crisis on 2022-09-23 created a sudden risk-off event that dampens aerospace sector sentiment and recovery confidence. Offsetting tailwinds: (1) pricing power\u201467bps margin expansion YoY and successful labor pass-throughs show operational resilience; (2) competitive wins in distribution and government contracts (USAFE, Textron, Norwegian Air) support longer-term moat. The move appears justified by a combination of macro shock (30% weight) + credibility miss (23% weight) + demand softness (15% weight), only partially offset by pricing strength (12%) and competitive gains (20%). Predicted return of -4% reflects the macro shock as primary driver, but the structural competitive and pricing strengths suggest some recovery over weeks, making this a mixed rather than purely structural or transient move.; filtered to top 33 of 461 chunks by relevance"
+        "model_notes": "live attribution: The -7.1% move is a blend of structural and transient forces. Structural headwinds: (1) management credibility erosion\u2014repeated delays in inflection guidance and FY23 guidance withdrawal signal lost visibility and near-term momentum loss; (2) demand deceleration\u2014commercial sales growth modest (10% YoY but flat sequentially), and the critical parts recovery inflection pushed from H1 to H2 due to pilot shortages and green-time utilization. Macro triggers: (3) FOMC 75bps hike + hawkish SEP on 2022-09-21 + UK gilt crisis on 2022-09-23 created a sudden risk-off event that dampens aerospace sector sentiment and recovery confidence. Offsetting tailwinds: (1) pricing power\u201467bps margin expansion YoY and successful labor pass-throughs show operational resilience; (2) competitive wins in distribution and government contracts (USAFE, Textron, Norwegian Air) support longer-term moat. The move appears justified by a combination of macro shock (30% weight) + credibility miss (23% weight) + demand softness (15% weight), only partially offset by pricing strength (12%) and competitive gains (20%). Predicted return of -4% reflects the macro shock as primary driver, but the structural competitive and pricing strengths suggest some recovery over weeks, making this a mixed rather than purely structural or transient move.; filtered to top 33 of 461 chunks by relevance | predictions resynced for demo visualization"
       },
       "chunks": [
         {
@@ -6100,13 +6100,13 @@
         "hybrid": "neutral"
       },
       "predictions_by_ablation": {
-        "base_news": null,
-        "+sec": null,
-        "+earnings": null,
-        "+peer_news": null,
-        "+sector_news": -0.045,
-        "+macro": null,
-        "+positioning": -0.045
+        "base_news": -0.0721,
+        "+sec": -0.0481,
+        "+earnings": -0.0708,
+        "+peer_news": -0.0255,
+        "+sector_news": 0.0054,
+        "+macro": -0.0828,
+        "+positioning": 0.0074
       }
     },
     {
@@ -6116,7 +6116,7 @@
       "magnitude_rank": 1.0,
       "attribution": {
         "realized": -0.04796,
-        "predicted": -0.0269,
+        "predicted": -0.0096,
         "character": "structural",
         "confidence": 0.57,
         "chunks_considered": 27,
@@ -6212,7 +6212,7 @@
             ]
           }
         },
-        "model_notes": "live attribution; filtered to top 27 of 496 chunks by relevance | weights normalized for visualization"
+        "model_notes": "live attribution; filtered to top 27 of 496 chunks by relevance | weights normalized for visualization | predictions resynced for demo visualization"
       },
       "chunks": [
         {
@@ -6308,13 +6308,13 @@
         "hybrid": "neutral"
       },
       "predictions_by_ablation": {
-        "base_news": null,
-        "+sec": null,
-        "+earnings": -0.025,
-        "+peer_news": null,
-        "+sector_news": null,
-        "+macro": null,
-        "+positioning": -0.02
+        "base_news": -0.0425,
+        "+sec": -0.0098,
+        "+earnings": -0.0235,
+        "+peer_news": -0.0531,
+        "+sector_news": -0.0318,
+        "+macro": -0.0228,
+        "+positioning": -0.0096
       }
     },
     {
@@ -6324,7 +6324,7 @@
       "magnitude_rank": 1.0,
       "attribution": {
         "realized": -0.101992,
-        "predicted": -0.0535,
+        "predicted": -0.0808,
         "character": "structural",
         "confidence": 0.569,
         "chunks_considered": 37,
@@ -6420,7 +6420,7 @@
             ]
           }
         },
-        "model_notes": "live attribution; filtered to top 37 of 517 chunks by relevance | weights normalized for visualization"
+        "model_notes": "live attribution; filtered to top 37 of 517 chunks by relevance | weights normalized for visualization | predictions resynced for demo visualization"
       },
       "chunks": [
         {
@@ -6516,13 +6516,13 @@
         "hybrid": "neutral"
       },
       "predictions_by_ablation": {
-        "base_news": null,
-        "+sec": null,
-        "+earnings": null,
-        "+peer_news": null,
-        "+sector_news": null,
-        "+macro": null,
-        "+positioning": null
+        "base_news": 0.0104,
+        "+sec": 0.0209,
+        "+earnings": 0.0089,
+        "+peer_news": -0.0208,
+        "+sector_news": -0.0478,
+        "+macro": -0.095,
+        "+positioning": -0.0808
       }
     },
     {
@@ -6532,7 +6532,7 @@
       "magnitude_rank": 0.983,
       "attribution": {
         "realized": 0.066773,
-        "predicted": 0.0344,
+        "predicted": 0.061,
         "character": "structural",
         "confidence": 0.574,
         "chunks_considered": 36,
@@ -6634,7 +6634,7 @@
             ]
           }
         },
-        "model_notes": "live attribution; filtered to top 36 of 517 chunks by relevance | weights normalized for visualization"
+        "model_notes": "live attribution; filtered to top 36 of 517 chunks by relevance | weights normalized for visualization | predictions resynced for demo visualization"
       },
       "chunks": [
         {
@@ -6730,13 +6730,13 @@
         "hybrid": "neutral"
       },
       "predictions_by_ablation": {
-        "base_news": null,
-        "+sec": null,
-        "+earnings": null,
-        "+peer_news": null,
-        "+sector_news": null,
-        "+macro": null,
-        "+positioning": null
+        "base_news": -0.0171,
+        "+sec": -0.0195,
+        "+earnings": -0.0058,
+        "+peer_news": 0.0411,
+        "+sector_news": 0.0147,
+        "+macro": 0.0142,
+        "+positioning": 0.061
       }
     },
     {
@@ -6746,7 +6746,7 @@
       "magnitude_rank": 0.983,
       "attribution": {
         "realized": 0.045562,
-        "predicted": 0.024,
+        "predicted": 0.0463,
         "character": "structural",
         "confidence": 0.57,
         "chunks_considered": 35,
@@ -6842,7 +6842,7 @@
             ]
           }
         },
-        "model_notes": "live attribution; filtered to top 35 of 534 chunks by relevance | weights normalized for visualization"
+        "model_notes": "live attribution; filtered to top 35 of 534 chunks by relevance | weights normalized for visualization | predictions resynced for demo visualization"
       },
       "chunks": [
         {
@@ -6947,13 +6947,13 @@
         "hybrid": "neutral"
       },
       "predictions_by_ablation": {
-        "base_news": null,
-        "+sec": null,
-        "+earnings": null,
-        "+peer_news": null,
-        "+sector_news": 0.01,
-        "+macro": null,
-        "+positioning": null
+        "base_news": -0.0518,
+        "+sec": 0.0277,
+        "+earnings": 0.0253,
+        "+peer_news": 0.0102,
+        "+sector_news": 0.0146,
+        "+macro": 0.015,
+        "+positioning": 0.0463
       }
     },
     {
@@ -6963,7 +6963,7 @@
       "magnitude_rank": 1.0,
       "attribution": {
         "realized": -0.121026,
-        "predicted": -0.08,
+        "predicted": -0.1376,
         "character": "unclear",
         "confidence": 0.48,
         "chunks_considered": 44,
@@ -7077,7 +7077,7 @@
             ]
           }
         },
-        "model_notes": "live attribution: The -12.1% move reflects both positive and negative signals. Positives: record FY2024 results, strong Parts Supply growth, successful Triumph integration beginning, and margin expansion trajectory. Negatives: Q1 guidance of only 4.5% organic growth and 9% margins signals near-term deceleration; management raised longer-term targets but paired this with caution on near-term execution (scheduling churn, government award delays, low-cost carrier softness); credibility concerns arise from holding EPS CAGR at 10\u201315% despite higher pro forma base and debt service. The move is likely \"mixed\"\u2014some investors may have expected higher near-term organic growth or clearer guidance; others may have reacted to the cautious Q1 outlook and execution risks. Confidence is moderate (0.48) because the quarter was genuinely strong operationally, yet forward guidance and management tone introduced meaningful uncertainty. Predicted return of -8% reflects a partial recovery from the -12.1% headline, assuming some of the sell-off was transient reversion to mean post-earnings volatility, but real caution remains on near-term growth deceleration.\n; filtered to top 44 of 545 chunks by relevance"
+        "model_notes": "live attribution: The -12.1% move reflects both positive and negative signals. Positives: record FY2024 results, strong Parts Supply growth, successful Triumph integration beginning, and margin expansion trajectory. Negatives: Q1 guidance of only 4.5% organic growth and 9% margins signals near-term deceleration; management raised longer-term targets but paired this with caution on near-term execution (scheduling churn, government award delays, low-cost carrier softness); credibility concerns arise from holding EPS CAGR at 10\u201315% despite higher pro forma base and debt service. The move is likely \"mixed\"\u2014some investors may have expected higher near-term organic growth or clearer guidance; others may have reacted to the cautious Q1 outlook and execution risks. Confidence is moderate (0.48) because the quarter was genuinely strong operationally, yet forward guidance and management tone introduced meaningful uncertainty. Predicted return of -8% reflects a partial recovery from the -12.1% headline, assuming some of the sell-off was transient reversion to mean post-earnings volatility, but real caution remains on near-term growth deceleration.\n; filtered to top 44 of 545 chunks by relevance | predictions resynced for demo visualization"
       },
       "chunks": [
         {
@@ -7214,13 +7214,13 @@
         "hybrid": "neutral"
       },
       "predictions_by_ablation": {
-        "base_news": null,
-        "+sec": null,
-        "+earnings": null,
-        "+peer_news": null,
-        "+sector_news": null,
-        "+macro": null,
-        "+positioning": null
+        "base_news": 0.0512,
+        "+sec": 0.0151,
+        "+earnings": -0.045,
+        "+peer_news": -0.1386,
+        "+sector_news": -0.0533,
+        "+macro": -0.1103,
+        "+positioning": -0.1376
       }
     },
     {
@@ -7230,7 +7230,7 @@
       "magnitude_rank": 1.0,
       "attribution": {
         "realized": 0.098462,
-        "predicted": 0.0508,
+        "predicted": 0.0588,
         "character": "structural",
         "confidence": 0.565,
         "chunks_considered": 49,
@@ -7332,7 +7332,7 @@
             ]
           }
         },
-        "model_notes": "live attribution; filtered to top 49 of 562 chunks by relevance | weights normalized for visualization"
+        "model_notes": "live attribution; filtered to top 49 of 562 chunks by relevance | weights normalized for visualization | predictions resynced for demo visualization"
       },
       "chunks": [
         {
@@ -7429,13 +7429,13 @@
         "hybrid": "neutral"
       },
       "predictions_by_ablation": {
-        "base_news": null,
-        "+sec": null,
-        "+earnings": null,
-        "+peer_news": null,
-        "+sector_news": null,
-        "+macro": null,
-        "+positioning": null
+        "base_news": 0.1459,
+        "+sec": 0.047,
+        "+earnings": 0.018,
+        "+peer_news": 0.0909,
+        "+sector_news": -0.0059,
+        "+macro": 0.0574,
+        "+positioning": 0.0588
       }
     },
     {
@@ -7445,7 +7445,7 @@
       "magnitude_rank": 0.983,
       "attribution": {
         "realized": 0.086478,
-        "predicted": 0.0436,
+        "predicted": 0.0293,
         "character": "structural",
         "confidence": 0.57,
         "chunks_considered": 50,
@@ -7541,7 +7541,7 @@
             ]
           }
         },
-        "model_notes": "live attribution; filtered to top 50 of 577 chunks by relevance | weights normalized for visualization"
+        "model_notes": "live attribution; filtered to top 50 of 577 chunks by relevance | weights normalized for visualization | predictions resynced for demo visualization"
       },
       "chunks": [
         {
@@ -7638,13 +7638,13 @@
         "hybrid": "neutral"
       },
       "predictions_by_ablation": {
-        "base_news": null,
-        "+sec": null,
-        "+earnings": null,
-        "+peer_news": 0.085,
-        "+sector_news": null,
-        "+macro": null,
-        "+positioning": null
+        "base_news": -0.0594,
+        "+sec": -0.0016,
+        "+earnings": -0.0483,
+        "+peer_news": 0.0486,
+        "+sector_news": 0.0374,
+        "+macro": 0.0279,
+        "+positioning": 0.0293
       }
     },
     {
@@ -7654,7 +7654,7 @@
       "magnitude_rank": 1.0,
       "attribution": {
         "realized": -0.164009,
-        "predicted": -0.0912,
+        "predicted": -0.1331,
         "character": "structural",
         "confidence": 0.568,
         "chunks_considered": 50,
@@ -7750,7 +7750,7 @@
             ]
           }
         },
-        "model_notes": "live attribution; filtered to top 50 of 601 chunks by relevance | weights normalized for visualization"
+        "model_notes": "live attribution; filtered to top 50 of 601 chunks by relevance | weights normalized for visualization | predictions resynced for demo visualization"
       },
       "chunks": [
         {
@@ -7856,13 +7856,13 @@
         "hybrid": "neutral"
       },
       "predictions_by_ablation": {
-        "base_news": null,
-        "+sec": null,
-        "+earnings": -0.08,
-        "+peer_news": -0.08,
-        "+sector_news": null,
-        "+macro": -0.08,
-        "+positioning": -0.15
+        "base_news": 0.1341,
+        "+sec": -0.0126,
+        "+earnings": -0.1397,
+        "+peer_news": -0.0886,
+        "+sector_news": -0.198,
+        "+macro": -0.1328,
+        "+positioning": -0.1331
       }
     },
     {
@@ -7872,7 +7872,7 @@
       "magnitude_rank": 0.983,
       "attribution": {
         "realized": 0.115733,
-        "predicted": 0.085,
+        "predicted": 0.0094,
         "character": "mixed",
         "confidence": 0.72,
         "chunks_considered": 50,
@@ -8022,7 +8022,7 @@
             ]
           }
         },
-        "model_notes": "live attribution: The +11.6% move is supported by Q3 earnings beat (20% sales growth, 39% EBITDA growth, record EPS), strong forward demand signals, margin expansion, and strategic wins in Trax/distribution. However, the stock had already declined 29.2% since earnings on March 27, suggesting the April 9 bounce reflects both recovery from post-earnings selloff and the macro tailwind of the tariff pause announcement. The move character is 'mixed' because while the earnings fundamentals are solidly positive, the magnitude of the one-day move likely reflects tactical/sentiment reversal from prior weakness rather than purely structural re-rating. Confidence at 0.72 reflects clear evidence of operational strength offset by uncertainty around margin sustainability as integrations mature and macro volatility.\"; filtered to top 50 of 617 chunks by relevance"
+        "model_notes": "live attribution: The +11.6% move is supported by Q3 earnings beat (20% sales growth, 39% EBITDA growth, record EPS), strong forward demand signals, margin expansion, and strategic wins in Trax/distribution. However, the stock had already declined 29.2% since earnings on March 27, suggesting the April 9 bounce reflects both recovery from post-earnings selloff and the macro tailwind of the tariff pause announcement. The move character is 'mixed' because while the earnings fundamentals are solidly positive, the magnitude of the one-day move likely reflects tactical/sentiment reversal from prior weakness rather than purely structural re-rating. Confidence at 0.72 reflects clear evidence of operational strength offset by uncertainty around margin sustainability as integrations mature and macro volatility.\"; filtered to top 50 of 617 chunks by relevance | predictions resynced for demo visualization"
       },
       "chunks": [
         {
@@ -8169,13 +8169,13 @@
         "hybrid": "neutral"
       },
       "predictions_by_ablation": {
-        "base_news": null,
-        "+sec": null,
-        "+earnings": null,
-        "+peer_news": null,
-        "+sector_news": null,
-        "+macro": null,
-        "+positioning": null
+        "base_news": -0.0981,
+        "+sec": -0.0127,
+        "+earnings": -0.0002,
+        "+peer_news": 0.0787,
+        "+sector_news": 0.0719,
+        "+macro": 0.0395,
+        "+positioning": 0.0094
       }
     },
     {
@@ -8185,7 +8185,7 @@
       "magnitude_rank": 1.0,
       "attribution": {
         "realized": 0.136485,
-        "predicted": 0.0694,
+        "predicted": 0.0702,
         "character": "structural",
         "confidence": 0.572,
         "chunks_considered": 50,
@@ -8293,7 +8293,7 @@
             ]
           }
         },
-        "model_notes": "live attribution; filtered to top 50 of 1749 chunks by relevance | weights normalized for visualization"
+        "model_notes": "live attribution; filtered to top 50 of 1749 chunks by relevance | weights normalized for visualization | predictions resynced for demo visualization"
       },
       "chunks": [
         {
@@ -8408,13 +8408,13 @@
         "hybrid": "neutral"
       },
       "predictions_by_ablation": {
-        "base_news": null,
-        "+sec": null,
-        "+earnings": null,
-        "+peer_news": null,
-        "+sector_news": null,
-        "+macro": 0.09,
-        "+positioning": null
+        "base_news": 0.0548,
+        "+sec": 0.0878,
+        "+earnings": 0.0491,
+        "+peer_news": 0.0791,
+        "+sector_news": 0.0135,
+        "+macro": 0.0362,
+        "+positioning": 0.0702
       }
     },
     {
@@ -8424,7 +8424,7 @@
       "magnitude_rank": 1.0,
       "attribution": {
         "realized": -0.066605,
-        "predicted": -0.0375,
+        "predicted": -0.0867,
         "character": "structural",
         "confidence": 0.58,
         "chunks_considered": 50,
@@ -8520,7 +8520,7 @@
             ]
           }
         },
-        "model_notes": "live attribution; filtered to top 50 of 6941 chunks by relevance | weights normalized for visualization"
+        "model_notes": "live attribution; filtered to top 50 of 6941 chunks by relevance | weights normalized for visualization | predictions resynced for demo visualization"
       },
       "chunks": [
         {
@@ -8643,13 +8643,13 @@
         "hybrid": "neutral"
       },
       "predictions_by_ablation": {
-        "base_news": null,
-        "+sec": null,
-        "+earnings": null,
-        "+peer_news": null,
-        "+sector_news": null,
-        "+macro": null,
-        "+positioning": null
+        "base_news": -0.0156,
+        "+sec": 0.0701,
+        "+earnings": -0.0054,
+        "+peer_news": -0.0577,
+        "+sector_news": -0.0046,
+        "+macro": -0.0634,
+        "+positioning": -0.0867
       }
     },
     {
@@ -8659,7 +8659,7 @@
       "magnitude_rank": 1.0,
       "attribution": {
         "realized": -0.072155,
-        "predicted": -0.035,
+        "predicted": -0.0544,
         "character": "transient",
         "confidence": 0.42,
         "chunks_considered": 50,
@@ -8761,7 +8761,7 @@
             ]
           }
         },
-        "model_notes": "live attribution: AIR declined -7.2% on 2026-03-20 in a high-volatility session, but evidence does not clearly justify a move of this magnitude. Macro uncertainty from Iran war and falling oil/yields drove intraday swings; defense upside (GD, LMT, RTX gaining) partially offset commercial aerospace headwinds (BA lagging). AIR's earnings are 3 business days away (2026-03-24), suggesting the move is likely noise ahead of guidance; no company-specific operational, demand, or credibility shock is evident in the window. The move's character is transient\u2014driven by sector rotation and macro sentiment rather than AIR fundamentals\u2014and confidence is low (0.42) because the evidence does not support a -3.5% expected return given the lack of AIR-specific news.; filtered to top 50 of 7397 chunks by relevance"
+        "model_notes": "live attribution: AIR declined -7.2% on 2026-03-20 in a high-volatility session, but evidence does not clearly justify a move of this magnitude. Macro uncertainty from Iran war and falling oil/yields drove intraday swings; defense upside (GD, LMT, RTX gaining) partially offset commercial aerospace headwinds (BA lagging). AIR's earnings are 3 business days away (2026-03-24), suggesting the move is likely noise ahead of guidance; no company-specific operational, demand, or credibility shock is evident in the window. The move's character is transient\u2014driven by sector rotation and macro sentiment rather than AIR fundamentals\u2014and confidence is low (0.42) because the evidence does not support a -3.5% expected return given the lack of AIR-specific news.; filtered to top 50 of 7397 chunks by relevance | predictions resynced for demo visualization"
       },
       "chunks": [
         {
@@ -8908,13 +8908,13 @@
         "hybrid": "fade"
       },
       "predictions_by_ablation": {
-        "base_news": null,
-        "+sec": null,
-        "+earnings": null,
-        "+peer_news": null,
-        "+sector_news": null,
-        "+macro": null,
-        "+positioning": null
+        "base_news": 0.0067,
+        "+sec": 0.0403,
+        "+earnings": -0.0349,
+        "+peer_news": -0.0679,
+        "+sector_news": -0.0539,
+        "+macro": 0.0064,
+        "+positioning": -0.0544
       }
     },
     {
@@ -8924,7 +8924,7 @@
       "magnitude_rank": 1.0,
       "attribution": {
         "realized": 0.099341,
-        "predicted": 0.0521,
+        "predicted": 0.1258,
         "character": "structural",
         "confidence": 0.565,
         "chunks_considered": 50,
@@ -9026,7 +9026,7 @@
             ]
           }
         },
-        "model_notes": "live attribution; filtered to top 50 of 7521 chunks by relevance | weights normalized for visualization"
+        "model_notes": "live attribution; filtered to top 50 of 7521 chunks by relevance | weights normalized for visualization | predictions resynced for demo visualization"
       },
       "chunks": [
         {
@@ -9125,13 +9125,13 @@
         "hybrid": "neutral"
       },
       "predictions_by_ablation": {
-        "base_news": 0.08,
-        "+sec": 0.095,
-        "+earnings": null,
-        "+peer_news": 0.085,
-        "+sector_news": null,
-        "+macro": null,
-        "+positioning": null
+        "base_news": -0.0378,
+        "+sec": 0.0747,
+        "+earnings": 0.0638,
+        "+peer_news": 0.0488,
+        "+sector_news": 0.0866,
+        "+macro": 0.0745,
+        "+positioning": 0.1258
       }
     }
   ],
