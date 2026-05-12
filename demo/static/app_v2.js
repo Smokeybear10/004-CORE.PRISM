@@ -1340,36 +1340,35 @@ async function selectTicker(t, opts = {}) {
   STATE.currentTicker = t;
   STATE.selectedMoveIdx = null;
   renderTickerStrip();
+  renderEvalStrip();  // re-evaluate visibility for the new ticker
   const bundle = await fetchJSON(`/data/${t}.json`);
   STATE.bundle = bundle;
   renderStrip(bundle);
   renderChart(bundle);
   renderPnL(bundle);
-  if (bundle.moves.length > 0) {
-    // If a move date was requested via opts (e.g. URL hash), prefer it.
-    let targetIdx = -1;
-    if (opts.moveDate) {
-      targetIdx = bundle.moves.findIndex(m => m.move_date === opts.moveDate);
-    }
-    if (targetIdx < 0) {
-      let maxIdx = 0, maxAbs = 0;
-      bundle.moves.forEach((m, i) => {
-        if (Math.abs(m.return_pct) > maxAbs) { maxAbs = Math.abs(m.return_pct); maxIdx = i; }
-      });
-      targetIdx = maxIdx;
-    }
+  // Only auto-select if a move date was explicitly requested (URL hash deep
+  // link). Otherwise land in an unselected state so the user has to click a
+  // marker to populate the event card / dim cards / evidence / beams.
+  let targetIdx = -1;
+  if (opts.moveDate && bundle.moves.length > 0) {
+    targetIdx = bundle.moves.findIndex(m => m.move_date === opts.moveDate);
+  }
+  if (targetIdx >= 0) {
     selectMove(targetIdx);
   } else {
+    document.body.classList.add('unselected');
     renderEventCard(null, null);
     renderDimCards(null, new Map());
     renderEvidence(null, new Map());
     renderBeams(null);
+    renderOrientAndMeta(null, null);
     renderMoveNav();
   }
 }
 
 function selectMove(idx) {
   STATE.selectedMoveIdx = idx;
+  document.body.classList.remove('unselected');
   const move = STATE.bundle.moves[idx];
   const counts = computeAvailableCounts(move);
   STATE.enabledSources = new Set(ALL_SOURCE_IDS.filter(id => (counts[id] ?? 0) > 0));
@@ -1794,15 +1793,22 @@ async function renderEvalStrip() {
   }
   const e = STATE.evalReport;
   if (!e || !e.primary_n_scored) { strip.hidden = true; return; }
+  // Eval cases are curated per-ticker; hide the strip when the current
+  // ticker isn't in the eval universe so it doesn't show AMD stats while
+  // the user is looking at ABT/ACU/AIR/APD.
+  const universe = Array.isArray(e.universe) ? e.universe : [];
+  if (STATE.currentTicker && universe.length && !universe.includes(STATE.currentTicker)) {
+    strip.hidden = true;
+    return;
+  }
 
   strip.hidden = false;
   const acc = e.primary_accuracy != null ? `${(e.primary_accuracy * 100).toFixed(1)}%` : '—';
   document.getElementById('eval-headline').textContent =
     `${e.primary_n_correct}/${e.primary_n_scored} cases correct (${acc})`;
-  const universe = Array.isArray(e.universe) && e.universe.length
-    ? e.universe.join(', ') : '—';
+  const universeLabel = universe.length ? universe.join(', ') : '—';
   document.getElementById('eval-sub').textContent =
-    `primary: ${e.primary_strategy} · universe: ${universe}`;
+    `primary: ${e.primary_strategy} · universe: ${universeLabel}`;
 
   const primary = (e.strategies || []).find(s => s.strategy === e.primary_strategy);
   const cases = primary?.cases || [];
@@ -1923,14 +1929,24 @@ function setupMoveNav() {
     setupMoveNav();
     renderEvalStrip();  // fires once; cached on STATE
 
-    // Resolve the initial ticker + move from URL hash if present.
+    // Resolve the initial ticker from URL hash if present, but deliberately
+    // ignore any moveDate in the hash on first load — the demo should land in
+    // an unselected state on every reload, not jump back to the last clicked
+    // move. (The hashchange handler below still honors moveDate so mid-session
+    // back/forward and pasted deep links work.)
     const requested = parseHash();
     const tickerIds = STATE.tickers.map(t => t.ticker);
     const initial = (requested?.ticker && tickerIds.includes(requested.ticker))
                   ? requested.ticker
                   : (STATE.tickers.find(t => t.ticker === 'AMD')?.ticker
                      || STATE.tickers[0]?.ticker);
-    if (initial) await selectTicker(initial, { moveDate: requested?.moveDate });
+    // Rewrite the hash to ticker-only so the URL matches the visible
+    // (unselected) state — otherwise stale `#AMD/2023-02-01` URLs from prior
+    // sessions linger after reload.
+    if (initial && window.location.hash !== `#${initial}`) {
+      history.replaceState(null, '', `#${initial}`);
+    }
+    if (initial) await selectTicker(initial);
 
     // React to user-driven hash changes (back button, copy/paste link).
     window.addEventListener('hashchange', async () => {

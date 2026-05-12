@@ -433,6 +433,29 @@ h2.ttl, h3.ttl { margin: 0; }
 .canvas-orient .up   { color: var(--up);   font-weight: 600; font-style: normal; }
 .canvas-orient .down { color: var(--down); font-weight: 600; font-style: normal; }
 
+/* Unselected state — body.unselected toggled by app_v2.js. Hides every
+   per-move analysis section so the page lands at "pick a flagged move on
+   the chart" with the chart and the placeholder line only. */
+body.unselected .prism-grid,
+body.unselected #zero-warning,
+body.unselected #audit-panel,
+body.unselected .bottom-row,
+body.unselected #pnl-strip,
+body.unselected #dim-ts-card,
+body.unselected #xticker-scan { display: none !important; }
+body.unselected .canvas-h .canvas-meta { display: none; }
+body.unselected .prism-canvas {
+  /* Collapse the empty centerpiece to just the placeholder line. */
+  padding: 22px 22px 22px;
+  min-height: 0;
+}
+body.unselected .canvas-orient {
+  font: italic 400 18px/1.5 var(--serif);
+  color: var(--ink-q);
+  margin: 6px 0 4px;
+  text-align: center;
+}
+
 .prism-grid {
   display: grid;
   /* Right column capped a bit narrower than the canvas so the cards have
