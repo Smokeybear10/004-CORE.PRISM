@@ -1,5 +1,7 @@
 # PRISM | Equity Price Action Tagger
 
+**Live demo: [prism-004.vercel.app](https://prism-004.vercel.app/)**
+
 A financial historian. Given a 3-sigma stock move, ingest the news, SEC filings, earnings transcripts, and 13F snapshots dated near it, then ask Claude to attribute the move across five dimensions — demand, pricing, competitive, management credibility, macro — each score citing the exact evidence chunks that drove it. Decide whether the market has it right (lean) or is overreacting to transient signals (fade).
 
 Bridgewater AI Hackathon, Track 1.
@@ -124,6 +126,9 @@ PRISM/
 │   ├── real_chunks.py         chunks_for_real()
 │   └── static/                HTML/CSS/JS + architecture.html
 ├── presentation/              intro slide deck (served at /presentation/)
+├── design/
+│   ├── brand/                 brand exploration mockups (index/mark/icons/explore)
+│   └── handoff_v2/            v2 console design handoff (HTML/CSS/JS snapshot)
 ├── docs/                      hf_schemas.md, design docs
 ├── scripts/                   smoke + load utilities
 └── tests/                     pytest suite (~380+ tests)
