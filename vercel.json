@@ -1,0 +1,6 @@
+{
+  "outputDirectory": "demo/static",
+  "rewrites": [
+    { "source": "/", "destination": "/index_v2.html" }
+  ]
+}

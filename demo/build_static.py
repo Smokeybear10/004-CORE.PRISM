@@ -83,40 +83,85 @@ CHUNK_TEXT_CAP = 600  # trim chunk body for payload size
 ABLATION_CONCURRENCY = 4
 
 
-async def _one_ablation_prediction(
-    m, chunks, ab_name: str, ab_sources: list, sem: "asyncio.Semaphore",
-) -> "tuple[str, float | None]":
-    """Run one ablation's filtered model.attribute() call and return the
-    predicted_return_pct. None when the source filter zeros out the chunk
-    pool (matches server.py's behavior — UI hides the overlay for that
-    ablation). Wraps the sync call in to_thread so we can gather siblings
-    in parallel without rewriting model.attribute itself."""
-    ab_filtered = [c for c in chunks if c.source_type in ab_sources]
-    if not ab_filtered:
-        return ab_name, None
-    async with sem:
-        cfg = AblationConfig(
-            name=ab_name, sources=list(ab_sources),
-            description="pre-baked ablation",
-        )
-        attr = await asyncio.to_thread(model_attribute, m, ab_filtered, cfg)
-    return ab_name, (
-        round(float(attr.predicted_return_pct), 6)
-        if attr.predicted_return_pct is not None else None
-    )
-
-
-async def _gather_predictions_by_ablation(m, chunks) -> "dict[str, float | None]":
+async def _gather_predictions_by_ablation(
+    m, chunks,
+) -> "tuple[dict[str, float | None], dict[str, int]]":
     """Fan out the 7 canonical ablations for one move and gather their
-    predicted_return_pct values into a {ablation_name: float|None} dict.
-    Cap is ABLATION_CONCURRENCY so a single move's burst stays polite."""
+    predicted_return_pct values into a {ablation_name: float|None} dict,
+    plus a parallel {ablation_name: chunks_added_vs_immediate_prior} dict
+    used by the UI to fade diamonds that contributed no new evidence.
+
+    Dedupe: many pre-coverage moves have empty NEWS / PEER / SECTOR / 13F
+    pools, so multiple cumulative ablations resolve to the byte-identical
+    chunk-id set. Calling the model once per UNIQUE set and fanning the
+    result out cuts cost by 5× on those moves without changing the result
+    (same input → same prediction). Concurrency is preserved via
+    asyncio.create_task; the Semaphore caps in-flight threads."""
     sem = asyncio.Semaphore(ABLATION_CONCURRENCY)
-    tasks = [
-        _one_ablation_prediction(m, chunks, name, sources, sem)
-        for name, sources in DEMO_ABLATION_BUNDLES.items()
-    ]
-    results = await asyncio.gather(*tasks)
-    return dict(results)
+
+    # Pre-compute per-ablation filtered chunks + their chunk-id signature.
+    items: list[tuple[str, list, list, frozenset]] = []
+    for name, sources in DEMO_ABLATION_BUNDLES.items():
+        src_set = set(sources)
+        ab_chunks = [c for c in chunks if c.source_type in src_set]
+        ab_ids = frozenset(c.chunk_id for c in ab_chunks)
+        items.append((name, list(sources), ab_chunks, ab_ids))
+
+    # Plan: for each ablation, decide compute vs. copy-from-earlier vs. none.
+    # `seen` maps a chunk-id set → the index of the first ablation that
+    # owned it, so later ablations with the identical set just copy.
+    seen: dict[frozenset, int] = {}
+    plan: list[tuple[str, str, object]] = []
+    for i, (name, sources, ab_chunks, ab_ids) in enumerate(items):
+        if not ab_chunks:
+            plan.append((name, "none", None))
+        elif ab_ids in seen:
+            plan.append((name, "copy", seen[ab_ids]))
+        else:
+            seen[ab_ids] = i
+            plan.append((name, "compute", (sources, ab_chunks)))
+
+    async def _run(ab_chunks_local, cfg_local):
+        async with sem:
+            return await asyncio.to_thread(model_attribute, m, ab_chunks_local, cfg_local)
+
+    tasks: dict[int, asyncio.Task] = {}
+    for i, (name, action, payload) in enumerate(plan):
+        if action == "compute":
+            sources, ab_chunks = payload  # type: ignore[misc]
+            cfg = AblationConfig(
+                name=name, sources=sources,
+                description="pre-baked ablation",
+            )
+            tasks[i] = asyncio.create_task(_run(ab_chunks, cfg))
+
+    results_by_index: dict[int, "float | None"] = {}
+    for i, task in tasks.items():
+        attr = await task
+        results_by_index[i] = (
+            round(float(attr.predicted_return_pct), 6)
+            if attr.predicted_return_pct is not None else None
+        )
+
+    predictions: dict[str, "float | None"] = {}
+    for i, (name, action, payload) in enumerate(plan):
+        if action == "compute":
+            predictions[name] = results_by_index[i]
+        elif action == "copy":
+            predictions[name] = results_by_index.get(payload)  # type: ignore[arg-type]
+        else:  # "none"
+            predictions[name] = None
+
+    # Per-ablation count of chunks newly added vs. the immediately prior
+    # ablation. The UI uses this to fade diamonds that repeat the previous
+    # prediction because no new evidence was actually added.
+    new_counts: dict[str, int] = {}
+    prev_ids: frozenset = frozenset()
+    for name, _, _, ab_ids in items:
+        new_counts[name] = len(ab_ids - prev_ids)
+        prev_ids = ab_ids
+
+    return predictions, new_counts
 
 
 def _news_coverage_start(ticker: str) -> "date | None":
@@ -225,7 +270,7 @@ def build_for_ticker(ticker: str, meta: dict, end_date: date) -> dict:
         # type and re-attributes. Live LLM mode dominates wall-time here, so
         # we run the 7 ablation calls in parallel via asyncio + a semaphore
         # cap — synthetic mode is fast enough that the overhead is fine.
-        predictions_by_ablation = asyncio.run(
+        predictions_by_ablation, new_chunks_by_ablation = asyncio.run(
             _gather_predictions_by_ablation(m, chunks)
         )
 
@@ -282,6 +327,12 @@ def build_for_ticker(ticker: str, meta: dict, end_date: date) -> dict:
             # Keyed by ablation name; values are the model's expected return
             # for this move under that source bundle.
             "predictions_by_ablation": predictions_by_ablation,
+            # Parallel to predictions_by_ablation: how many chunks this
+            # ablation added vs. the previous step. 0 = "same evidence
+            # pool as prior ablation, prediction is a copy". The
+            # prediction-trajectory chart uses this to fade those
+            # diamonds instead of pretending the ablation did work.
+            "new_chunks_by_ablation": new_chunks_by_ablation,
         })
 
     # Closes the loop: dollar P&L for the model + 4 baselines over a 5-day

@@ -9,7 +9,7 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600;700&family=Source+Serif+4:ital,opsz,wght@0,8..60,400;0,8..60,500;0,8..60,600;0,8..60,700;1,8..60,400;1,8..60,500;1,8..60,600&display=swap" rel="stylesheet">
   <script src="https://cdn.plot.ly/plotly-2.35.2.min.js"></script>
-  <link rel="stylesheet" href="styles_v2.css?v=20260511b">
+  <link rel="stylesheet" href="styles_v2.css?v=20260512r">
 </head>
 <body class="unselected">
 
@@ -59,7 +59,6 @@
     <div class="verdict-mini" id="verdict-mini">
       <div class="word" id="verdict-mini-word" data-state="idle">—</div>
       <div class="strat" id="verdict-mini-strat">pick a move</div>
-      <div class="char-pill" id="verdict-character" data-state="idle" hidden>—</div>
     </div>
   </div>
 </section>
@@ -84,10 +83,6 @@
       <button type="button" id="move-prev" title="Previous flagged move (←)" aria-label="Previous flagged move" disabled>‹</button>
       <span class="counter" id="move-counter">— / —</span>
       <button type="button" id="move-next" title="Next flagged move (→)" aria-label="Next flagged move" disabled>›</button>
-      <button type="button" id="move-share" class="share-btn" title="Copy link to this move" aria-label="Copy permalink">
-        <span class="share-icon" aria-hidden="true">⎘</span>
-        <span class="share-lbl" id="move-share-lbl">Copy link</span>
-      </button>
     </div>
   </div>
 </section>
@@ -170,6 +165,7 @@
     <div id="src-tab-sources" class="src-tab-panel" role="tabpanel" aria-labelledby="tab-btn-sources">
       <div id="src-grid" class="src-grid"></div>
       <div id="src-caption" class="src-caption">—</div>
+      <div id="src-live" class="src-live" hidden></div>
     </div>
     <div id="src-tab-evidence" class="src-tab-panel" role="tabpanel" aria-labelledby="tab-btn-evidence" hidden>
       <div class="evd-context" id="evd-context">— · pick a flagged move to see the cited evidence.</div>
@@ -263,6 +259,6 @@
   <span></span><span></span><span></span><span></span><span></span>
 </div>
 
-<script src="app_v2.js?v=20260511b"></script>
+<script src="app_v2.js?v=20260512r"></script>
 </body>
 </html>

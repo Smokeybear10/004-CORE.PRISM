@@ -20,14 +20,22 @@ const SOURCE_TYPES = [
 ];
 const ALL_SOURCE_IDS = SOURCE_TYPES.map(s => s.id);
 
-// Mirrors backend `_COUNT_TO_BUNDLE` so the chart-overlay name matches.
-const COUNT_TO_BUNDLE = {
-  0: 'base_news', 1: 'base_news', 2: '+sec', 3: '+earnings',
-  4: '+peer_news', 5: '+sector_news', 6: '+macro', 7: '+positioning',
-};
+// Map a user-enabled source-type set to the smallest cumulative ablation
+// whose source list is a SUPERSET of what the user toggled. Counting
+// sources is wrong because the user can enable any 2 sources (e.g.,
+// earnings + macro) but the n-th cumulative bundle is keyed on a
+// specific cumulative ordering (news → sec → earnings → peer → sector →
+// macro → 13F). Using the count picked +sec (= news+SEC) for the
+// earnings+macro case — an ablation that has no predictions for AMD
+// pre-2025 because no NEWS/SEC chunks exist that far back.
 function pickAblationName(enabledSet) {
-  const n = enabledSet.size ?? enabledSet.length ?? 0;
-  return COUNT_TO_BUNDLE[Math.min(n, 7)] ?? '+positioning';
+  const enabledArr = Array.from(enabledSet ?? []);
+  if (enabledArr.length === 0) return 'base_news';
+  for (const ab of ABLATION_BUNDLES) {
+    const bundleSources = new Set(_ABLATION_SOURCES[ab.id] || []);
+    if (enabledArr.every(s => bundleSources.has(s))) return ab.id;
+  }
+  return '+positioning'; // safety net — fullest stack
 }
 
 // Display order for dimension cards (the prism's spectrum, top → bottom):
@@ -188,26 +196,46 @@ function renderStrip(bundle) {
 // CHART — Plotly. Same overlay logic as v1.
 // ═════════════════════════════════════════════
 function computePredictedSeries(bundle, ablationName) {
+  // For each flagged move in chronological order, compound the model's
+  // (1+pred)/(1+realized) gap into `cumGap`. The predicted-price line is
+  // then `actual_close * cumGap` at each day. If an event has no prediction
+  // for the active ablation (null — e.g., +sec for pre-2025 AMD events
+  // where no NEWS/SEC chunks exist), we can NOT pretend the model
+  // perfectly tracked actual; that would draw the predicted line right on
+  // top of the actual line and falsely advertise psychic foresight. So we
+  // break the line: predicted stays `null` until the first event that
+  // actually has a prediction, and `cumGap` doesn't start compounding
+  // until then. After that first real prediction, future null events
+  // hold the line flat (no gap change) rather than retroactively erasing
+  // it — that's still honest because the model simply had nothing new to
+  // say at those events.
   const eventByDate = new Map();
   const eventsSorted = bundle.moves
     .map((m, idx) => ({ idx, ...m }))
     .sort((a, b) => a.move_date.localeCompare(b.move_date));
   let cumGap = 1.0;
+  let started = false;
   for (const e of eventsSorted) {
     const pred = e.predictions_by_ablation?.[ablationName];
+    const hasPred = (pred !== null && pred !== undefined);
     const denom = 1 + e.return_pct;
-    if (pred !== null && pred !== undefined && denom !== 0) {
+    if (hasPred && denom !== 0) {
       cumGap *= (1 + pred) / denom;
+      started = true;
     }
-    eventByDate.set(e.move_date, { cumGap, idx: e.idx, predicted: pred });
+    eventByDate.set(e.move_date, {
+      cumGap: started ? cumGap : null,
+      idx: e.idx,
+      predicted: pred,
+    });
   }
-  let runningGap = 1.0;
+  let runningGap = null;
   const dates = [], predicted = [];
   for (const p of bundle.prices) {
     const ev = eventByDate.get(p.date);
-    if (ev) runningGap = ev.cumGap;
+    if (ev && ev.cumGap !== null) runningGap = ev.cumGap;
     dates.push(p.date);
-    predicted.push(p.close * runningGap);
+    predicted.push(runningGap === null ? null : p.close * runningGap);
   }
   return { dates, predicted, eventByDate };
 }
@@ -601,6 +629,104 @@ function computeAvailableCounts(move) {
   return counts;
 }
 
+// Live "model with your selection" card. Reads the selected move's
+// pre-baked predictions_by_ablation and the user's current toggle set,
+// resolves the active ablation via pickAblationName, and renders the
+// predicted return + gap-to-realized + the cumulative ablation ladder.
+// Updates on every toggle so the user sees cause-effect immediately.
+function renderSourceLive() {
+  const host = document.getElementById('src-live');
+  if (!host) return;
+  const move = STATE.selectedMoveIdx != null
+    ? STATE.bundle?.moves?.[STATE.selectedMoveIdx]
+    : null;
+  if (!move) { host.hidden = true; return; }
+  const preds = move.predictions_by_ablation || {};
+  const enabled = STATE.enabledSources || new Set();
+  const activeName = enabled.size > 0 ? pickAblationName(enabled) : null;
+  const activePred = activeName ? preds[activeName] : null;
+  const realized = move.return_pct ?? null;
+  const hasPred = activePred != null && Number.isFinite(activePred);
+
+  const fmtPct = (x) => x == null || !Number.isFinite(x)
+    ? '—'
+    : `${x >= 0 ? '+' : ''}${(x * 100).toFixed(2)}%`;
+  const gapPP = (hasPred && realized != null) ? (activePred - realized) * 100 : null;
+  const gapStr = gapPP == null
+    ? '—'
+    : `${gapPP >= 0 ? '+' : ''}${gapPP.toFixed(2)}pp`;
+  const state = hasPred ? _alignmentState(activePred, realized) : 'idle';
+  const predDir = hasPred && activePred >= 0 ? 'up' : hasPred ? 'down' : '';
+  const realDir = realized == null ? '' : realized >= 0 ? 'up' : 'down';
+  const enabledLabels = Array.from(enabled)
+    .map(id => SOURCE_TYPES.find(s => s.id === id)?.label || id);
+  const enabledStr = enabledLabels.length === 0
+    ? 'no sources selected'
+    : enabledLabels.length === 1
+      ? enabledLabels[0]
+      : `${enabledLabels.length} sources`;
+
+  // Ladder: 7 rungs, mark each as "prior", "active", or "future" relative
+  // to the user's current selection. A rung also gets data-pred="null"
+  // when the move has no prediction at that rung — typically pre-2025
+  // events on base_news / +sec where source coverage is empty.
+  const activeIdx = ABLATION_BUNDLES.findIndex(b => b.id === activeName);
+  const ladderHtml = ABLATION_BUNDLES.map((b, i) => {
+    const p = preds[b.id];
+    const hasP = p != null && Number.isFinite(p);
+    const ladderState = activeIdx < 0 ? 'future'
+      : i < activeIdx ? 'prior'
+      : i === activeIdx ? 'active'
+      : 'future';
+    const labelShort = b.label.replace(/^\+/, '');
+    const tip = hasP
+      ? `${b.label} · predicted ${fmtPct(p)}`
+      : `${b.label} · no prediction for this move`;
+    return `
+      <div class="sl-rung" data-state="${ladderState}" data-pred="${hasP ? 'real' : 'null'}" title="${escapeHtml(tip)}">
+        <span class="sl-dot"></span>
+        <span class="sl-rung-lbl">${escapeHtml(labelShort)}</span>
+      </div>`;
+  }).join('');
+
+  const bundleName = activeName || '—';
+  const ladderMeta = activeIdx >= 0
+    ? `rung ${activeIdx + 1} of ${ABLATION_BUNDLES.length}`
+    : 'no active rung';
+
+  host.hidden = false;
+  host.innerHTML = `
+    <div class="sl-kicker">Model with your selection</div>
+    <div class="sl-stats">
+      <div class="sl-stat" data-state="${state}">
+        <div class="sl-stat-lbl">Predicted</div>
+        <div class="sl-stat-val">${escapeHtml(fmtPct(activePred))}</div>
+        <div class="sl-stat-sub">${escapeHtml(enabledStr)}</div>
+      </div>
+      <div class="sl-stat" data-dir="${realDir}">
+        <div class="sl-stat-lbl">Realized</div>
+        <div class="sl-stat-val">${escapeHtml(fmtPct(realized))}</div>
+        <div class="sl-stat-sub">${escapeHtml(move.move_date)} · 1-day reaction</div>
+      </div>
+      <div class="sl-stat" data-state="${state}">
+        <div class="sl-stat-lbl">Gap</div>
+        <div class="sl-stat-val">${escapeHtml(gapStr)}</div>
+        <div class="sl-stat-sub">${state === 'match' ? 'within target band'
+                                : state === 'partial' ? 'right sign, magnitude off'
+                                : state === 'miss' ? 'wrong direction'
+                                : 'awaiting prediction'}</div>
+      </div>
+    </div>
+    <div class="sl-ladder">
+      <div class="sl-ladder-h">
+        <span class="sl-ladder-name">Cumulative ablation · <b>${escapeHtml(bundleName)}</b></span>
+        <span class="sl-ladder-meta">${escapeHtml(ladderMeta)}</span>
+      </div>
+      <div class="sl-ladder-track">${ladderHtml}</div>
+    </div>
+  `;
+}
+
 function renderToggles(availableCounts) {
   const grid = document.getElementById('src-grid');
   grid.innerHTML = '';
@@ -623,6 +749,9 @@ function renderToggles(availableCounts) {
       if (STATE.lastDims) renderEvidence(STATE.lastDims, STATE.lastChunkMap);
       recomputeAttribution();
       if (STATE.bundle) renderChart(STATE.bundle);
+      // Live readout card under the toggles — picks up the new ablation
+      // resolution and prediction without waiting for the API call.
+      renderSourceLive();
     });
     wrap.appendChild(input);
     const stack = document.createElement('div');
@@ -659,6 +788,44 @@ const ABLATION_BUNDLES = [
   { id: '+macro',        label: '+MACRO',     sub: '+ Fed · VIX' },
   { id: '+positioning',  label: '+POSITION',  sub: '+ 13F' },
 ];
+
+// Cumulative source-type filter per ablation. Mirrors backend
+// DEMO_ABLATION_BUNDLES in demo/build_static.py — keep in sync.
+// Used by renderPredictionTrajectory to detect ablations that added
+// zero new evidence (so they render as hollow diamonds: "the prediction
+// didn't change because no new chunks were added").
+const _ABLATION_SOURCES = {
+  'base_news':    ['news'],
+  '+sec':         ['news', 'sec_10k', 'sec_8k'],
+  '+earnings':    ['news', 'sec_10k', 'sec_8k', 'earnings_transcript'],
+  '+peer_news':   ['news', 'sec_10k', 'sec_8k', 'earnings_transcript', 'peer_news'],
+  '+sector_news': ['news', 'sec_10k', 'sec_8k', 'earnings_transcript', 'peer_news', 'sector_news'],
+  '+macro':       ['news', 'sec_10k', 'sec_8k', 'earnings_transcript', 'peer_news', 'sector_news', 'macro'],
+  '+positioning': ['news', 'sec_10k', 'sec_8k', 'earnings_transcript', 'peer_news', 'sector_news', 'macro', 'thirteen_f'],
+};
+
+// For a given move, return parallel array of "chunks newly added at this
+// ablation step vs. the prior step." Prefers the baked metadata field
+// (build_static writes new_chunks_by_ablation when available); otherwise
+// derives it from move.chunks_available, which is the full-pool count by
+// source_type. Returns zeros if nothing useful is available.
+function _newChunkCountsForMove(move) {
+  if (move?.new_chunks_by_ablation && typeof move.new_chunks_by_ablation === 'object') {
+    return ABLATION_BUNDLES.map(b => Number(move.new_chunks_by_ablation[b.id] ?? 0));
+  }
+  const avail = (move?.chunks_available && typeof move.chunks_available === 'object')
+    ? move.chunks_available
+    : null;
+  if (!avail) return ABLATION_BUNDLES.map(() => 0);
+  let prevTotal = 0;
+  return ABLATION_BUNDLES.map(b => {
+    const srcs = _ABLATION_SOURCES[b.id] || [];
+    const total = srcs.reduce((acc, s) => acc + Number(avail[s] ?? 0), 0);
+    const added = Math.max(0, total - prevTotal);
+    prevTotal = total;
+    return added;
+  });
+}
 
 function _alignmentState(predicted, realized) {
   if (predicted == null || !Number.isFinite(predicted)) return 'idle';
@@ -842,23 +1009,98 @@ function renderPredictionTrajectory(bundle, moveIdx) {
     s === 'miss'    ? '#8c2f2f' : '#989384';
   const markerColors = states.map(colorFor);
 
+  // Repeat detection: a diamond is a "repeat" when the ablation step added
+  // zero new chunks vs. the prior step (so the model saw an identical
+  // evidence pool and necessarily returned the same prediction). Uses
+  // chunk counts — NOT prediction-equality — because the LLM can
+  // legitimately return the same number across two different evidence
+  // pools, and we don't want to fade those (they're real signal).
+  const newCountsArr = _newChunkCountsForMove(move);
+  const repeats = ABLATION_BUNDLES.map(() => false);
+  let sawFirstReal = false;
+  ABLATION_BUNDLES.forEach((b, i) => {
+    if (ys[i] == null) return;
+    if (!sawFirstReal) { sawFirstReal = true; return; }
+    repeats[i] = (newCountsArr[i] === 0);
+  });
+
+  // Use two separate Plotly traces — solid diamonds vs. hollow circles —
+  // so the visual distinction between "real ablation step" and "no new
+  // evidence added" is unmistakable at a glance. Plotly's `marker.symbol`
+  // can't vary per-point reliably across all browsers, but per-trace
+  // symbols always render. The connecting line spans both.
+  const lineYs = ys; // connecting line through both kinds
+  const solidIdx = [], hollowIdx = [], emptyIdx = [];
+  ABLATION_BUNDLES.forEach((b, i) => {
+    if (ys[i] == null) { emptyIdx.push(i); return; }
+    (repeats[i] ? hollowIdx : solidIdx).push(i);
+  });
+
+  const hoverTexts = ABLATION_BUNDLES.map((b, i) => {
+    const p = preds[b.id];
+    if (p == null || !Number.isFinite(p)) {
+      return `<b>${b.label}</b><br><i>no data at this ablation</i>`;
+    }
+    const pctTxt = `${p >= 0 ? '+' : ''}${(p * 100).toFixed(2)}%`;
+    if (repeats[i]) {
+      return `<b>${b.label}</b><br>predicted: <b>${pctTxt}</b>` +
+             `<br><i>no new evidence at this step · repeats prior value</i>`;
+    }
+    return `<b>${b.label}</b><br>predicted: <b>${pctTxt}</b><br>${b.sub}`;
+  });
+
   const traces = [
-    // The connecting line — neutral navy so the per-point colors carry the story.
+    // The connecting line behind both kinds of markers.
     {
-      x: xs, y: ys,
-      mode: 'lines+markers',
+      x: xs, y: lineYs,
+      mode: 'lines',
       line: { color: '#0a1d36', width: 1.6, shape: 'linear' },
+      hoverinfo: 'skip',
+      showlegend: false,
+      name: 'line',
+    },
+    // SOLID diamonds: real ablation steps that added new evidence.
+    {
+      x: solidIdx.map(i => xs[i]),
+      y: solidIdx.map(i => ys[i]),
+      text: solidIdx.map(i => hoverTexts[i]),
+      mode: 'markers',
       marker: {
-        size: 13,
-        color: markerColors,
+        size: 14,
+        color: solidIdx.map(i => markerColors[i]),
         line: { color: '#fbfaf6', width: 1.5 },
         symbol: 'diamond',
       },
-      hovertemplate: '<b>%{x}</b><br>predicted return: <b>%{y:.2f}%</b><extra></extra>',
+      hovertemplate: '%{text}<extra></extra>',
       name: 'Predicted',
-      customdata: ABLATION_BUNDLES.map(b => b.sub),
+    },
+    // HOLLOW circles: steps that added zero new evidence — clearly
+    // different shape so the user can't mistake them for real ablations.
+    {
+      x: hollowIdx.map(i => xs[i]),
+      y: hollowIdx.map(i => ys[i]),
+      text: hollowIdx.map(i => hoverTexts[i]),
+      mode: 'markers',
+      marker: {
+        size: 12,
+        color: 'rgba(0,0,0,0)',
+        line: { color: hollowIdx.map(i => markerColors[i]), width: 2.2 },
+        symbol: 'circle-open',
+      },
+      hovertemplate: '%{text}<extra></extra>',
+      name: 'No new evidence',
     },
   ];
+
+  // If every visible diamond is at the same Y (or the visible range is
+  // tiny), the auto-scaled chart looks identical move-to-move and the
+  // user can't tell anything changed. Surface that explicitly with an
+  // annotation so the FLATNESS is itself the signal, not chart confusion.
+  const visibleYs = ys.filter(y => y != null);
+  const ySpread = visibleYs.length > 1
+    ? Math.max(...visibleYs) - Math.min(...visibleYs)
+    : 0;
+  const flatTrajectory = visibleYs.length > 1 && ySpread < 0.05; // <5bp of variation
 
   const realizedY = realized * 100;
   const layout = {
@@ -895,6 +1137,19 @@ function renderPredictionTrajectory(bundle, moveIdx) {
         bgcolor: '#fbfaf6',
         borderpad: 3,
       },
+      ...(flatTrajectory ? [{
+        xref: 'paper', x: 0.02, xanchor: 'left',
+        yref: 'paper', y: 0.96, yanchor: 'top',
+        text: `<b>Model held same prediction across all available evidence</b>` +
+              `<br><span style="font-size:9px;color:#6a6e7c;">${hollowIdx.length} of ${solidIdx.length + hollowIdx.length} steps added no new chunks · others didn't change the answer</span>`,
+        font: { family: 'Inter, sans-serif', size: 10, color: '#0a1d36' },
+        showarrow: false,
+        bgcolor: 'rgba(251,250,246,0.92)',
+        bordercolor: '#dcd9cf',
+        borderwidth: 1,
+        borderpad: 5,
+        align: 'left',
+      }] : []),
     ],
     showlegend: false,
   };
@@ -1237,11 +1492,53 @@ async function recomputeAttribution() {
   try {
     const data = await fetchAttribution(move, enabled);
     if (!data) return;
+    // Guard: some cached /api/attribute responses are degenerate — the
+    // pipeline's citation-validation fallback stuffed the same top-N chunk
+    // IDs into every dim and dropped all `cited_evidence` quotes. Rendering
+    // those would show identical boilerplate (e.g. operator intro) under
+    // every dimension card. Detect that signature and skip the live update,
+    // preserving the pre-baked attribution that applyPreBaked already
+    // painted. Still refresh chunks-considered count so the toggle caption
+    // doesn't lie about the request.
+    const liveDims = {
+      demand: data.attribution?.demand,
+      pricing: data.attribution?.pricing,
+      competitive: data.attribution?.competitive,
+      management_credibility: data.attribution?.management_credibility,
+      macro: data.attribution?.macro,
+    };
+    if (_isDegenerateAttribution(liveDims)) {
+      console.warn(
+        '[PRISM] live /api/attribute returned degenerate citations ' +
+        '(empty cited_evidence + uniform evidence_chunk_ids across dims). ' +
+        'Keeping pre-baked attribution for', move.move_date,
+      );
+      renderToggleCaption(enabled.length, totalAvail, data.chunks_considered);
+      return;
+    }
     applyAttributionResponse(move, data);
     renderToggleCaption(enabled.length, totalAvail, data.chunks_considered);
   } catch (err) {
     console.error('attribution fetch failed', err);
   }
+}
+
+// Degenerate signature: no rich `cited_evidence` on any dim AND every dim
+// carries the byte-identical `evidence_chunk_ids` array. That's the
+// "top-N chunks copied into every dimension" fallback the live pipeline
+// emits when LLM citations don't validate. Caller falls back to pre-baked.
+function _isDegenerateAttribution(dims) {
+  const keys = ['demand', 'pricing', 'competitive', 'management_credibility', 'macro'];
+  const sigs = keys.map(k => {
+    const d = dims[k] || {};
+    const rich = Array.isArray(d.cited_evidence) ? d.cited_evidence : [];
+    const ids  = Array.isArray(d.evidence_chunk_ids) ? d.evidence_chunk_ids : [];
+    return { hasRich: rich.length > 0, idSig: ids.join('|') };
+  });
+  if (sigs.some(s => s.hasRich)) return false;
+  const first = sigs[0].idSig;
+  if (!first) return false;
+  return sigs.every(s => s.idSig === first);
 }
 
 function applyAttributionResponse(move, response) {
@@ -1368,7 +1665,18 @@ async function selectTicker(t, opts = {}) {
 
 function selectMove(idx) {
   STATE.selectedMoveIdx = idx;
+  const wasUnselected = document.body.classList.contains('unselected');
   document.body.classList.remove('unselected');
+  // Plotly charts inside sections that were `display: none` while
+  // `body.unselected` was set rendered at zero width on initial paint
+  // (e.g., #pnl-chart, #dim-ts). Once those sections become visible,
+  // Plotly needs a resize signal to re-measure their containers — it
+  // won't notice the CSS change on its own. A window resize event is
+  // the cheapest universal trigger because every chart registered with
+  // `responsive: true` listens for it.
+  if (wasUnselected) {
+    requestAnimationFrame(() => window.dispatchEvent(new Event('resize')));
+  }
   const move = STATE.bundle.moves[idx];
   const counts = computeAvailableCounts(move);
   STATE.enabledSources = new Set(ALL_SOURCE_IDS.filter(id => (counts[id] ?? 0) > 0));
@@ -1381,6 +1689,7 @@ function selectMove(idx) {
   renderMoveNav();
   renderPredictionTrajectory(STATE.bundle, idx);
   renderCrossTickerScan(move.move_date);
+  renderSourceLive();
   syncHash();
 }
 
@@ -1599,6 +1908,7 @@ function resetToggles() {
   renderToggles(counts);
   applyPreBaked(STATE.bundle, STATE.selectedMoveIdx);
   if (STATE.bundle) renderChart(STATE.bundle);
+  renderSourceLive();
   // Pre-baked attribution carries fewer citations than the live endpoint,
   // so refresh from /api/attribute to restore the richer evidence the user
   // had before clicking reset.
@@ -1882,38 +2192,6 @@ function setupMoveNav() {
     if (e.key === 'ArrowRight') { e.preventDefault(); stepMove(+1); }
   });
 
-  // Permalink copy button — copies the current URL (hash already syncs).
-  const shareBtn = document.getElementById('move-share');
-  const shareLbl = document.getElementById('move-share-lbl');
-  if (!shareBtn || !shareLbl) return;
-  let resetTimer = null;
-  shareBtn.addEventListener('click', async () => {
-    syncHash();
-    const url = window.location.href;
-    let copied = false;
-    try {
-      if (navigator.clipboard?.writeText) {
-        await navigator.clipboard.writeText(url);
-        copied = true;
-      }
-    } catch (e) { /* fall through to manual fallback */ }
-    if (!copied) {
-      const ta = document.createElement('textarea');
-      ta.value = url;
-      ta.style.position = 'fixed'; ta.style.opacity = '0';
-      document.body.appendChild(ta);
-      ta.select();
-      try { copied = document.execCommand('copy'); } catch (e) { /* ignore */ }
-      ta.remove();
-    }
-    shareBtn.classList.toggle('copied', copied);
-    shareLbl.textContent = copied ? 'Copied ✓' : 'Copy failed';
-    if (resetTimer) clearTimeout(resetTimer);
-    resetTimer = setTimeout(() => {
-      shareBtn.classList.remove('copied');
-      shareLbl.textContent = 'Copy link';
-    }, 1800);
-  });
 }
 
 (async function init() {

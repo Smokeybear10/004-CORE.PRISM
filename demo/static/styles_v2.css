@@ -73,7 +73,6 @@ h2.ttl, h3.ttl { margin: 0; }
 
 /* Custom buttons need a visible focus state for keyboard users */
 .move-nav button:focus-visible,
-.share-btn:focus-visible,
 .dpill:focus-visible,
 .ticker-pill:focus-visible,
 .pnl-legend-row:focus-visible,
@@ -278,6 +277,10 @@ h2.ttl, h3.ttl { margin: 0; }
 .verdict-mini {
   text-align: right;
   align-self: end;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 3px;
 }
 .verdict-mini .lbl {
   font: 600 10px var(--mono);
@@ -286,9 +289,9 @@ h2.ttl, h3.ttl { margin: 0; }
   text-transform: uppercase;
 }
 .verdict-mini .word {
-  font: italic 600 84px/0.92 var(--serif);
-  letter-spacing: -0.04em;
-  margin-top: 2px;
+  font: italic 600 32px/1 var(--serif);
+  letter-spacing: -0.02em;
+  margin: 0;
   color: var(--ink-dim);
   transition: color 240ms;
   text-shadow: 0 1px 0 rgba(255,255,255,0.5);
@@ -297,18 +300,18 @@ h2.ttl, h3.ttl { margin: 0; }
 .verdict-mini .word[data-state="fade"] { color: var(--down); }
 .verdict-mini .word[data-state="skip"] { color: var(--ink-q); }
 .verdict-mini .strat {
-  font: italic 400 12px var(--serif);
+  font: italic 400 11px var(--serif);
   color: var(--ink-q);
-  margin-top: 4px;
+  margin: 0;
 }
 
 /* ── Verdict-character pill (STRUCTURAL / TRANSIENT / MIXED / UNCLEAR) ── */
 .verdict-mini .char-pill {
   display: inline-block;
-  margin-top: 8px;
-  padding: 3px 10px 3px 8px;
-  font: 600 9.5px var(--mono);
-  letter-spacing: 0.2em;
+  margin-top: 3px;
+  padding: 2px 8px 2px 7px;
+  font: 600 9px var(--mono);
+  letter-spacing: 0.18em;
   text-transform: uppercase;
   border-radius: 2px;
   border: 1px solid var(--rule-2);
@@ -343,7 +346,6 @@ h2.ttl, h3.ttl { margin: 0; }
   color: var(--ink-q); border-color: var(--rule-2);
 }
 .verdict-mini .char-pill[data-state="unclear"]::before { background: var(--ink-q); }
-
 
 /* ════════════════════════════════════════════════════════════
    Chart card
@@ -701,9 +703,14 @@ body.unselected .canvas-orient {
 }
 
 .src-grid {
-  display: grid;
-  grid-template-columns: repeat(4, 1fr);
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
   gap: 6px;
+}
+.src-grid > .src-toggle {
+  /* Four per row; partial last row stays centered via flex justify. */
+  flex: 0 0 calc((100% - 18px) / 4);
 }
 .src-toggle {
   background: var(--paper-2);
@@ -737,6 +744,7 @@ body.unselected .canvas-orient {
   font: 500 11px var(--mono);
   color: var(--ink-q);
   letter-spacing: 0.04em;
+  text-align: center;
 }
 .src-caption .pill {
   display: inline-block;
@@ -926,6 +934,143 @@ body.unselected .canvas-orient {
 
 .src-tab-panel { margin-top: 12px; }
 .src-tab-panel[hidden] { display: none; }
+
+/* ── Live "model with your selection" card · sits under the source
+   toggles and updates on every toggle. Shows the resolved ablation
+   bundle, predicted return at that rung, realized return, and the gap.
+   The ladder strip at the bottom shows where the user's selection sits
+   on the cumulative 0-7 ablation ladder; hover any rung for its
+   prediction. ── */
+.src-live {
+  margin-top: 20px;
+  padding: 16px 18px 18px;
+  background: var(--paper-2);
+  border: 1px solid var(--rule);
+  border-top: 2px solid var(--navy);
+  border-radius: var(--r-sm, 4px);
+}
+.src-live[hidden] { display: none; }
+.sl-kicker {
+  font: 600 9.5px var(--mono);
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--ink-q);
+  margin-bottom: 14px;
+}
+.sl-stats {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  gap: 14px;
+  margin-bottom: 16px;
+}
+.sl-stat .sl-stat-lbl {
+  font: 600 9px var(--mono);
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--ink-q);
+  margin-bottom: 4px;
+}
+.sl-stat .sl-stat-val {
+  font: 600 22px var(--mono);
+  letter-spacing: 0.02em;
+  color: var(--ink);
+  line-height: 1.1;
+}
+.sl-stat[data-dir="up"]   .sl-stat-val { color: var(--up); }
+.sl-stat[data-dir="down"] .sl-stat-val { color: var(--down); }
+.sl-stat[data-state="match"]   .sl-stat-val { color: var(--up); }
+.sl-stat[data-state="partial"] .sl-stat-val { color: var(--brass, #a87c3d); }
+.sl-stat[data-state="miss"]    .sl-stat-val { color: var(--down); }
+.sl-stat[data-state="idle"]    .sl-stat-val { color: var(--ink-q); }
+.sl-stat .sl-stat-sub {
+  font: 10px var(--mono);
+  color: var(--ink-q);
+  letter-spacing: 0.04em;
+  margin-top: 3px;
+  line-height: 1.4;
+}
+
+/* Ladder: 7 rungs (base_news → +positioning). Active rung filled
+   oxblood, prior rungs filled navy, future rungs hollow. Connectors
+   between rungs show "you came from here / you could go here." */
+.sl-ladder {
+  margin-top: 10px;
+}
+.sl-ladder-h {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  margin-bottom: 8px;
+  gap: 12px;
+}
+.sl-ladder-name {
+  font: 600 12px var(--mono);
+  color: var(--ink);
+  letter-spacing: 0.04em;
+}
+.sl-ladder-meta {
+  font: 10.5px var(--mono);
+  color: var(--ink-q);
+  letter-spacing: 0.04em;
+}
+.sl-ladder-track {
+  position: relative;
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  align-items: center;
+  gap: 0;
+}
+.sl-ladder-track::before {
+  content: '';
+  position: absolute;
+  left: 7%; right: 7%;
+  top: 50%;
+  height: 1px;
+  background: var(--rule);
+  transform: translateY(-50%);
+}
+.sl-rung {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  background: transparent;
+  border: 0;
+  padding: 4px 0;
+  cursor: default;
+}
+.sl-rung .sl-dot {
+  width: 11px; height: 11px;
+  border-radius: 50%;
+  background: var(--paper);
+  border: 1.6px solid var(--rule-2, var(--rule));
+  box-sizing: border-box;
+  z-index: 1;
+  transition: transform 120ms ease, background 120ms ease, border-color 120ms ease;
+}
+.sl-rung[data-state="prior"]  .sl-dot { background: var(--navy);    border-color: var(--navy); }
+.sl-rung[data-state="active"] .sl-dot {
+  background: var(--oxblood); border-color: var(--oxblood);
+  width: 14px; height: 14px;
+  box-shadow: 0 0 0 3px rgba(122, 31, 31, 0.18);
+}
+.sl-rung[data-state="future"] .sl-dot { background: var(--paper); border-color: var(--rule-2, var(--rule)); }
+.sl-rung .sl-rung-lbl {
+  font: 600 8.5px var(--mono);
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--ink-q);
+  white-space: nowrap;
+}
+.sl-rung[data-state="active"] .sl-rung-lbl { color: var(--oxblood); }
+.sl-rung[data-state="prior"]  .sl-rung-lbl { color: var(--navy); }
+.sl-rung[data-pred="null"] .sl-dot { background: var(--paper-2); border-style: dashed; }
+.sl-rung[data-pred="null"] .sl-rung-lbl { opacity: 0.55; }
+
+@media (max-width: 720px) {
+  .sl-stats { grid-template-columns: 1fr; }
+}
 
 .evd-context {
   font: 500 11px var(--mono);
@@ -1472,8 +1617,8 @@ body.unselected .canvas-orient {
 
 /* ── PnL strip · 5-day forward returns vs 4 baselines ── */
 .pnl-strip {
-  max-width: 1320px;
-  margin: 14px auto 0;
+  max-width: none;
+  margin: 14px 0 0;
   padding: 22px 26px;
   background: var(--paper);
   border: 1px solid var(--rule);
@@ -1523,7 +1668,7 @@ body.unselected .canvas-orient {
   border-radius: var(--r-sm, 4px);
   padding: 12px 14px 8px;
 }
-.pnl-strip #pnl-chart { width: 100%; height: 260px; }
+.pnl-strip #pnl-chart { width: 100%; height: 380px; }
 
 .pnl-strip .pnl-legend {
   display: grid;
@@ -1668,39 +1813,6 @@ body.unselected .canvas-orient {
   color: var(--navy);
   font-weight: 700;
 }
-.move-nav .share-btn {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  margin-left: 6px;
-  padding: 5px 10px;
-  background: var(--paper);
-  color: var(--ink-q);
-  border: 1px solid var(--rule-2);
-  border-radius: var(--r-sm, 4px);
-  font: 600 9.5px var(--mono);
-  letter-spacing: 0.16em;
-  text-transform: uppercase;
-  cursor: pointer;
-  height: 28px;
-  transition: background 140ms ease, color 140ms ease, border-color 140ms ease;
-}
-.move-nav .share-btn:hover {
-  background: var(--navy);
-  color: var(--brass, #c8a24c);
-  border-color: var(--navy);
-}
-.move-nav .share-btn .share-icon {
-  font-family: var(--mono);
-  font-size: 12px;
-  line-height: 1;
-}
-.move-nav .share-btn.copied {
-  background: var(--up-soft, rgba(46, 111, 72, 0.08));
-  color: var(--up);
-  border-color: var(--up-line, rgba(46, 111, 72, 0.4));
-}
-
 /* ── Eval headline strip ── */
 .eval-strip {
   max-width: 1320px;
@@ -1864,7 +1976,7 @@ body.unselected .canvas-orient {
   .verdict-mini { text-align: left; }
   .prism-grid { grid-template-columns: 240px 110px minmax(0, 1fr); min-height: 480px; }
   .bottom-row { grid-template-columns: 1fr; }
-  .src-grid { grid-template-columns: repeat(3, 1fr); }
+  .src-grid > .src-toggle { flex-basis: calc((100% - 12px) / 3); }
 }
 @media (max-width: 800px) {
   .prism-grid { grid-template-columns: 1fr; }
