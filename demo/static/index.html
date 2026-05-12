@@ -9,9 +9,9 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600;700&family=Source+Serif+4:ital,opsz,wght@0,8..60,400;0,8..60,500;0,8..60,600;0,8..60,700;1,8..60,400;1,8..60,500;1,8..60,600&display=swap" rel="stylesheet">
   <script src="https://cdn.plot.ly/plotly-2.35.2.min.js"></script>
-  <link rel="stylesheet" href="styles_v2.css?v=20260512r">
+  <link rel="stylesheet" href="styles_v2.css?v=20260513a">
 </head>
-<body class="unselected">
+<body class="unselected no-ticker">
 
 <!-- ───────────── Spectrum strip + masthead ───────────── -->
 <div class="page-spectrum">
@@ -34,6 +34,28 @@
     </div>
   </div>
 </header>
+
+<!-- ───────────── Landing · shown when no ticker is selected ───────────── -->
+<section class="landing" id="landing">
+  <div class="landing-inner">
+    <span class="landing-kicker">PRISM · the lean-or-fade desk</span>
+    <h1 class="landing-h">Why did the stock <em>actually</em> move?</h1>
+    <p class="landing-lede">
+      A financial historian for significant equity moves. Pick a ticker
+      and PRISM walks every flagged day backward — decomposing the move
+      across five structured drivers with cited evidence and a
+      <b>lean</b> (trust the move) or <b>fade</b> (mean-revert) verdict.
+    </p>
+    <div class="landing-five">
+      <span class="landing-pill" data-dim="demand">Demand</span>
+      <span class="landing-pill" data-dim="pricing">Pricing</span>
+      <span class="landing-pill" data-dim="competitive">Competitive</span>
+      <span class="landing-pill" data-dim="management_credibility">Management</span>
+      <span class="landing-pill" data-dim="macro">Macro</span>
+    </div>
+    <p class="landing-cta">Pick a ticker above to begin <span class="arrow">↑</span></p>
+  </div>
+</section>
 
 <!-- ───────────── Header strip: ticker name + verdict mini ───────────── -->
 <section class="strip">
@@ -259,6 +281,6 @@
   <span></span><span></span><span></span><span></span><span></span>
 </div>
 
-<script src="app_v2.js?v=20260512r"></script>
+<script src="app_v2.js?v=20260513a"></script>
 </body>
 </html>

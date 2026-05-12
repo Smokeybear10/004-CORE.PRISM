@@ -435,6 +435,107 @@ h2.ttl, h3.ttl { margin: 0; }
 .canvas-orient .up   { color: var(--up);   font-weight: 600; font-style: normal; }
 .canvas-orient .down { color: var(--down); font-weight: 600; font-style: normal; }
 
+/* No-ticker state — first paint before the user clicks a ticker pill.
+   Hides every per-ticker section so the page is just masthead + landing
+   hero. Toggled by app_v2.js when selectTicker runs. */
+body.no-ticker .strip,
+body.no-ticker .chart-card,
+body.no-ticker .prism-canvas,
+body.no-ticker .bottom-row,
+body.no-ticker #pnl-strip,
+body.no-ticker #dim-ts-card,
+body.no-ticker #xticker-scan,
+body.no-ticker #eval-strip,
+body.no-ticker #audit-panel { display: none !important; }
+body:not(.no-ticker) #landing { display: none; }
+
+#landing {
+  max-width: 880px;
+  margin: 96px auto 80px;
+  padding: 0 24px;
+  text-align: center;
+}
+.landing-inner { display: flex; flex-direction: column; align-items: center; gap: 22px; }
+.landing-kicker {
+  font: 600 10.5px var(--mono);
+  letter-spacing: 0.24em;
+  text-transform: uppercase;
+  color: var(--oxblood);
+}
+.landing-h {
+  margin: 0;
+  font: 600 56px/1.05 var(--serif, 'Source Serif 4', serif);
+  color: var(--ink);
+  letter-spacing: -0.01em;
+  max-width: 16ch;
+}
+.landing-h em {
+  font-style: italic;
+  color: var(--oxblood);
+  font-weight: 600;
+}
+.landing-lede {
+  margin: 0;
+  max-width: 62ch;
+  font: 17px/1.55 var(--serif, 'Source Serif 4', serif);
+  color: var(--ink-q);
+}
+.landing-lede b { color: var(--ink); font-weight: 600; }
+.landing-five {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 8px;
+  margin-top: 4px;
+}
+.landing-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 12px;
+  border-radius: 999px;
+  border: 1px solid var(--rule-2, var(--rule));
+  background: var(--paper);
+  font: 600 10px var(--mono);
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--ink-q);
+}
+.landing-pill::before {
+  content: '';
+  width: 7px; height: 7px;
+  border-radius: 50%;
+  background: var(--ink-q);
+}
+.landing-pill[data-dim="demand"]::before                 { background: var(--d-demand, #C8442C); }
+.landing-pill[data-dim="pricing"]::before                { background: var(--d-pricing, #d97c2a); }
+.landing-pill[data-dim="competitive"]::before            { background: var(--d-competitive, #c8a24c); }
+.landing-pill[data-dim="management_credibility"]::before { background: var(--d-mgmt, #4d6e89); }
+.landing-pill[data-dim="macro"]::before                  { background: var(--d-macro, #0a1d36); }
+.landing-cta {
+  margin-top: 8px;
+  font: 600 11px var(--mono);
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--ink-q);
+}
+.landing-cta .arrow {
+  display: inline-block;
+  margin-left: 4px;
+  color: var(--oxblood);
+  font-size: 14px;
+  animation: landingArrow 1.8s ease-in-out infinite;
+}
+@keyframes landingArrow {
+  0%, 100% { transform: translateY(0); }
+  50%      { transform: translateY(-4px); }
+}
+@media (max-width: 720px) {
+  #landing { margin: 56px auto 40px; }
+  .landing-h { font-size: 38px; }
+  .landing-lede { font-size: 15px; }
+}
+
 /* Unselected state — body.unselected toggled by app_v2.js. Hides every
    per-move analysis section so the page lands at "pick a flagged move on
    the chart" with the chart and the placeholder line only. */

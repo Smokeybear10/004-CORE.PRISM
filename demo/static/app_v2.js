@@ -1636,6 +1636,9 @@ async function selectTicker(t, opts = {}) {
   if (t === STATE.currentTicker) return;
   STATE.currentTicker = t;
   STATE.selectedMoveIdx = null;
+  // First successful ticker pick drops the landing-hero state. Charts
+  // and per-move sections become visible from here on.
+  document.body.classList.remove('no-ticker');
   renderTickerStrip();
   renderEvalStrip();  // re-evaluate visibility for the new ticker
   const bundle = await fetchJSON(`/data/${t}.json`);
@@ -2207,24 +2210,23 @@ function setupMoveNav() {
     setupMoveNav();
     renderEvalStrip();  // fires once; cached on STATE
 
-    // Resolve the initial ticker from URL hash if present, but deliberately
-    // ignore any moveDate in the hash on first load — the demo should land in
-    // an unselected state on every reload, not jump back to the last clicked
-    // move. (The hashchange handler below still honors moveDate so mid-session
-    // back/forward and pasted deep links work.)
+    // Only auto-load a ticker if the URL hash explicitly names one
+    // (deep-link from a copied URL). Otherwise land on the welcome
+    // hero so the demo doesn't pre-bias the viewer toward AMD.
     const requested = parseHash();
     const tickerIds = STATE.tickers.map(t => t.ticker);
     const initial = (requested?.ticker && tickerIds.includes(requested.ticker))
                   ? requested.ticker
-                  : (STATE.tickers.find(t => t.ticker === 'AMD')?.ticker
-                     || STATE.tickers[0]?.ticker);
-    // Rewrite the hash to ticker-only so the URL matches the visible
-    // (unselected) state — otherwise stale `#AMD/2023-02-01` URLs from prior
-    // sessions linger after reload.
-    if (initial && window.location.hash !== `#${initial}`) {
-      history.replaceState(null, '', `#${initial}`);
+                  : null;
+    if (initial) {
+      if (window.location.hash !== `#${initial}`) {
+        history.replaceState(null, '', `#${initial}`);
+      }
+      await selectTicker(initial);
+    } else if (window.location.hash) {
+      // Strip any stale hash that doesn't resolve to a known ticker.
+      history.replaceState(null, '', window.location.pathname);
     }
-    if (initial) await selectTicker(initial);
 
     // React to user-driven hash changes (back button, copy/paste link).
     window.addEventListener('hashchange', async () => {
