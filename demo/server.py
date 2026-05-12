@@ -302,7 +302,7 @@ def compute_attribution(req: AttributeRequest, response: Response) -> AttributeR
 @app.get("/")
 def _index() -> FileResponse:
     """Main demo — PRISM."""
-    return FileResponse(STATIC_DIR / "index_v2.html")
+    return FileResponse(STATIC_DIR / "index.html")
 
 
 @app.get("/prism-mark.svg")
@@ -319,7 +319,7 @@ def _about() -> FileResponse:
 @app.get("/v1")
 def _index_v1() -> FileResponse:
     """Original v1 demo (Bridgewater stacked layout). Kept for comparison."""
-    return FileResponse(STATIC_DIR / "index.html")
+    return FileResponse(STATIC_DIR / "index_v1.html")
 
 
 # Pitch deck (intro slides) lives at /presentation/. Mount BEFORE the
