@@ -1,6 +1,6 @@
 {
-  "outputDirectory": "demo/static",
-  "rewrites": [
-    { "source": "/", "destination": "/index_v2.html" }
-  ]
+  "framework": null,
+  "buildCommand": null,
+  "installCommand": null,
+  "outputDirectory": "demo/static"
 }
