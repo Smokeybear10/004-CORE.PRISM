@@ -240,7 +240,7 @@ h2.ttl, h3.ttl { margin: 0; }
   gap: 36px;
   align-items: end;
 }
-.tk-name h1 {
+.tk-name h2 {
   margin: 0;
   font-family: var(--serif);
   font-weight: 500;
@@ -1410,6 +1410,17 @@ body.unselected .canvas-orient {
   font: 500 12px var(--mono);
   color: var(--down);
   font-style: italic;
+}
+.evd-citation .demo-fill {
+  display: inline-block;
+  padding: 1px 6px;
+  border-radius: 2px;
+  background: rgba(168, 124, 61, 0.12);
+  color: var(--brass, #a87c3d);
+  border: 1px solid rgba(168, 124, 61, 0.32);
+  font: 600 9px var(--mono);
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
 }
 
 /* ════════════════════════════════════════════════════════════

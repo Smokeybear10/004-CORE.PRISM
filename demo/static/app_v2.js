@@ -2052,6 +2052,10 @@ function _renderCitation(c, chunkMap) {
     ? previewSrc.slice(0, 140).trimEnd() + '…'
     : previewSrc;
 
+  // Mock chunks injected for pre-2025 events carry "_mock_" in their
+  // chunk_id and a mock:// source_url. Flag them in the citation meta so
+  // anyone reading evidence knows the chunk is demo fill, not real data.
+  const isMock = typeof chunk.chunk_id === 'string' && chunk.chunk_id.includes('_mock_');
   const meta = [
     `<code>${escapeHtml(chunk.chunk_id)}</code>`,
     `<span class="sep">·</span>`,
@@ -2061,6 +2065,9 @@ function _renderCitation(c, chunkMap) {
   ];
   if (chunk.section_name) {
     meta.push(`<span class="sep">·</span><em>${escapeHtml(chunk.section_name)}</em>`);
+  }
+  if (isMock) {
+    meta.push(`<span class="sep">·</span><span class="demo-fill">demo fill</span>`);
   }
   let body = `<div class="meta">${meta.join(' ')}</div>`;
   if (c.quote) {
